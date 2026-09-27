@@ -58,8 +58,9 @@ delivered.
 - Pages are mobile-first. Every parameter lives in the URL. Show a clear
   message when WebGPU is unavailable.
 - Lean 4 + Mathlib, pinned by `lean-toolchain` and `lake-manifest.json`.
-- At seeding time this machine had no Node or Lean. Install them with
-  `brew install node elan-init`.
+- Lean is installed through elan at `~/.elan/bin`, which may not be on a
+  non-interactive `PATH`. Pin the toolchain per project with `lean-toolchain`.
+  Node is not installed yet; install it with `brew install node`.
 
 ## Lean ↔ simulation sync
 
