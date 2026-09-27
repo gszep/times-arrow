@@ -1,0 +1,22 @@
+name = "TimesArrow"
+defaultTargets = ["TimesArrow", "timesarrow"]
+
+[[require]]
+name = "physlib"
+git = "https://github.com/leanprover-community/physlib"
+rev = "44c66d54be78db4693be9f8f92bd3b5ad124ed6f"
+
+[[require]]
+name = "mathlib"
+git = "https://github.com/leanprover-community/mathlib4.git"
+rev = "v4.34.1"
+
+[[lean_lib]]
+name = "TimesArrow"
+
+[[lean_exe]]
+name = "timesarrow"
+root = "Main"
+
+[[lean_lib]]
+name = "Challenge"
