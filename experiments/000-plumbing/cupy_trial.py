@@ -163,7 +163,7 @@ props = cp.cuda.runtime.getDeviceProperties(0)
     json.dumps(
         dict(
             commit=git("rev-parse", "HEAD"),
-            dirty=git("status", "--porcelain") != "",
+            dirty=git("status", "--porcelain", "--untracked-files=no") != "",
             host=socket.gethostname(),
             backend="cupy",
             date=datetime.now(timezone.utc).isoformat(),

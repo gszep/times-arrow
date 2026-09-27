@@ -13,14 +13,36 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
-import jax
-
-jax.config.update("jax_enable_x64", True)
-import jax.numpy as jnp
 import numpy as np
 import scipy.linalg
 
 here = Path(__file__).parent
+sizes = (1000, 2000, 4000, 7000, 10000)
+
+
+def matrix(n):
+    b = np.random.default_rng(n).standard_normal((n, n))
+    return (b + b.T) / 2
+
+
+def residual(a, w, v):
+    return float(np.linalg.norm(a @ v - v * w) / np.linalg.norm(a))
+
+
+# CPU LAPACK runs before JAX is imported: with the XLA runtime live in the same
+# process, OpenBLAS ran 3-25x slower.
+runs, w_cpu = [], {}
+for n in sizes:
+    a = matrix(n)
+    t = time.perf_counter()
+    w_cpu[n], v = scipy.linalg.eigh(a, driver="evd")
+    runs.append(dict(n=n, cpuSeconds=time.perf_counter() - t, cpuResidual=residual(a, w_cpu[n], v)))
+    print(json.dumps(runs[-1]))
+
+import jax
+
+jax.config.update("jax_enable_x64", True)
+import jax.numpy as jnp
 ph = json.loads((here / "../../contract.json").read_text())["philox"]
 M0, M1 = (jnp.uint64(m) for m in ph["M"])
 W0, W1 = (jnp.uint32(w) for w in ph["W"])
@@ -65,26 +87,17 @@ for name, ok in checks:
 assert all(ok for _, ok in checks)
 
 gpu = jax.devices("gpu")[0]
-runs = []
-for n in (1000, 2000, 4000, 7000, 10000):
-    b = np.random.default_rng(n).standard_normal((n, n))
-    a = (b + b.T) / 2
-    norm = np.linalg.norm(a)
-    row = dict(n=n)
-    t = time.perf_counter()
-    w_cpu, v_cpu = scipy.linalg.eigh(a, driver="evd")
-    row["cpuSeconds"] = time.perf_counter() - t
-    row["cpuResidual"] = float(np.linalg.norm(a @ v_cpu - v_cpu * w_cpu) / norm)
+for row in runs:
+    a = matrix(row["n"])
     a_gpu = jax.device_put(a, gpu)
     jnp.linalg.eigh(a_gpu)[0].block_until_ready()  # compile
     t = time.perf_counter()
-    w_gpu, v_gpu = jnp.linalg.eigh(a_gpu)
-    w_gpu.block_until_ready()
+    w, v = jnp.linalg.eigh(a_gpu)
+    w.block_until_ready()
     row["gpuSeconds"] = time.perf_counter() - t
-    w_gpu, v_gpu = np.asarray(w_gpu), np.asarray(v_gpu)
-    row["gpuResidual"] = float(np.linalg.norm(a @ v_gpu - v_gpu * w_gpu) / norm)
-    row["maxEigenvalueDifference"] = float(np.max(np.abs(w_gpu - w_cpu)))
-    runs.append(row)
+    w, v = np.asarray(w), np.asarray(v)
+    row["gpuResidual"] = residual(a, w, v)
+    row["maxEigenvalueDifference"] = float(np.max(np.abs(w - w_cpu[row["n"]])))
     print(json.dumps(row))
 
 git = lambda *a: subprocess.run(["git", *a], capture_output=True, text=True, cwd=here).stdout.strip()
@@ -93,7 +106,7 @@ git = lambda *a: subprocess.run(["git", *a], capture_output=True, text=True, cwd
     json.dumps(
         dict(
             commit=git("rev-parse", "HEAD"),
-            dirty=git("status", "--porcelain") != "",
+            dirty=git("status", "--porcelain", "--untracked-files=no") != "",
             host=socket.gethostname(),
             backend="jax",
             date=datetime.now(timezone.utc).isoformat(),

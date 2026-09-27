@@ -1,0 +1,101 @@
+{
+ "commit": "352ae0ac4fe41bbfe0944e1719f19733bc3638b1",
+ "dirty": true,
+ "host": "artemis",
+ "backend": "dawn",
+ "date": "2026-09-27T15:13:14.756Z",
+ "steps": 500,
+ "adapter": {
+  "vendor": "nvidia",
+  "architecture": "lovelace",
+  "device": "nvidia-rtx-5000-ada-generation-laptop-gpu",
+  "description": "NVIDIA: 595.91.07 595.91.7.0",
+  "fallback": false
+ },
+ "runs": [
+  {
+   "n": 1024,
+   "steps": 510,
+   "seconds": 0.007174589000000083,
+   "cellUpdatesPerSecond": 73075684195.98586,
+   "checksum": 3466883482
+  },
+  {
+   "n": 1024,
+   "steps": 510,
+   "seconds": 0.005873999000000026,
+   "cellUpdatesPerSecond": 89255718293.44841,
+   "checksum": 3466883482
+  },
+  {
+   "n": 1024,
+   "steps": 510,
+   "seconds": 0.0055586150000000315,
+   "cellUpdatesPerSecond": 94319898032.15315,
+   "checksum": 3466883482
+  },
+  {
+   "n": 2048,
+   "steps": 510,
+   "seconds": 0.013951522999999952,
+   "cellUpdatesPerSecond": 150317065742.57214,
+   "checksum": 1735024366
+  },
+  {
+   "n": 2048,
+   "steps": 510,
+   "seconds": 0.012539579000000004,
+   "cellUpdatesPerSecond": 167242616358.9702,
+   "checksum": 1735024366
+  },
+  {
+   "n": 2048,
+   "steps": 510,
+   "seconds": 0.01253567899999996,
+   "cellUpdatesPerSecond": 167294647541.62952,
+   "checksum": 1735024366
+  },
+  {
+   "n": 4096,
+   "steps": 510,
+   "seconds": 0.13782859400000005,
+   "cellUpdatesPerSecond": 60862610265.03685,
+   "checksum": 2116496956
+  },
+  {
+   "n": 4096,
+   "steps": 510,
+   "seconds": 0.13824192599999993,
+   "cellUpdatesPerSecond": 60680636061.16139,
+   "checksum": 2116496956
+  },
+  {
+   "n": 4096,
+   "steps": 510,
+   "seconds": 0.13775605900000004,
+   "cellUpdatesPerSecond": 60894657272.38899,
+   "checksum": 2116496956
+  },
+  {
+   "n": 8192,
+   "steps": 510,
+   "seconds": 0.5641984019999997,
+   "cellUpdatesPerSecond": 59472752636.40328,
+   "checksum": 3575928183
+  },
+  {
+   "n": 8192,
+   "steps": 510,
+   "seconds": 0.5460944520000003,
+   "cellUpdatesPerSecond": 61444374461.43471,
+   "checksum": 3575928183
+  },
+  {
+   "n": 8192,
+   "steps": 510,
+   "seconds": 0.54399327,
+   "cellUpdatesPerSecond": 61681704260.78985,
+   "checksum": 3575928183
+  }
+ ]
+}

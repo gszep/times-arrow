@@ -1,0 +1,121 @@
+{
+ "commit": "352ae0ac4fe41bbfe0944e1719f19733bc3638b1",
+ "dirty": true,
+ "host": "artemis",
+ "backend": "cupy",
+ "date": "2026-09-27T15:14:05.513057+00:00",
+ "steps": 500,
+ "adapter": {
+  "device": "NVIDIA RTX 5000 Ada Generation Laptop GPU",
+  "cuda": 12090,
+  "cupy": "14.2.0"
+ },
+ "checks": [
+  {
+   "name": "Philox known-answer vectors",
+   "pass_": true
+  },
+  {
+   "name": "Philox stream and u01",
+   "pass_": true
+  },
+  {
+   "name": "HPP seed 1, n 32, t 0",
+   "pass_": true
+  },
+  {
+   "name": "HPP seed 1, n 32, t 1",
+   "pass_": true
+  },
+  {
+   "name": "HPP seed 7, n 32, t 100",
+   "pass_": true
+  }
+ ],
+ "runs": [
+  {
+   "n": 1024,
+   "steps": 510,
+   "seconds": 0.003266688108444214,
+   "cellUpdatesPerSecond": 160495273070.22168,
+   "checksum": 3466883482
+  },
+  {
+   "n": 1024,
+   "steps": 510,
+   "seconds": 0.003265536069869995,
+   "cellUpdatesPerSecond": 160551893711.2437,
+   "checksum": 3466883482
+  },
+  {
+   "n": 1024,
+   "steps": 510,
+   "seconds": 0.0036524479389190676,
+   "cellUpdatesPerSecond": 143544277363.51572,
+   "checksum": 3466883482
+  },
+  {
+   "n": 2048,
+   "steps": 510,
+   "seconds": 0.011410431861877441,
+   "cellUpdatesPerSecond": 183792517705.36758,
+   "checksum": 1735024366
+  },
+  {
+   "n": 2048,
+   "steps": 510,
+   "seconds": 0.012028927803039552,
+   "cellUpdatesPerSecond": 174342388144.52585,
+   "checksum": 1735024366
+  },
+  {
+   "n": 2048,
+   "steps": 510,
+   "seconds": 0.013558783531188966,
+   "cellUpdatesPerSecond": 154671102697.0796,
+   "checksum": 1735024366
+  },
+  {
+   "n": 4096,
+   "steps": 510,
+   "seconds": 0.13997056579589845,
+   "cellUpdatesPerSecond": 59931228771.56942,
+   "checksum": 2116496956
+  },
+  {
+   "n": 4096,
+   "steps": 510,
+   "seconds": 0.13961727905273438,
+   "cellUpdatesPerSecond": 60082878400.97189,
+   "checksum": 2116496956
+  },
+  {
+   "n": 4096,
+   "steps": 510,
+   "seconds": 0.13974937438964843,
+   "cellUpdatesPerSecond": 60026086246.446655,
+   "checksum": 2116496956
+  },
+  {
+   "n": 8192,
+   "steps": 510,
+   "seconds": 0.5570140380859375,
+   "cellUpdatesPerSecond": 60239831863.66865,
+   "checksum": 3575928183
+  },
+  {
+   "n": 8192,
+   "steps": 510,
+   "seconds": 0.5555794067382812,
+   "cellUpdatesPerSecond": 60395384697.55882,
+   "checksum": 3575928183
+  },
+  {
+   "n": 8192,
+   "steps": 510,
+   "seconds": 0.55682763671875,
+   "cellUpdatesPerSecond": 60259997506.10102,
+   "checksum": 3575928183
+  }
+ ]
+}

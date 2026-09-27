@@ -46,8 +46,7 @@ def claims : MetaM Json := do
       else if axioms.all allowedAxioms.contains then "proved"
       else "assumes"
     out := out.push (n, Json.mkObj [
-      ("name", toJson n), ("module", toJson mod),
-      ("statement", toJson (← statement mod n)),
+      ("name", toJson n), ("statement", toJson (← statement mod n)),
       ("doc", toJson doc.trimAscii.toString),
       ("axioms", toJson axioms), ("status", toJson status)])
   return toJson ((out.qsort fun a b => a.1.lt b.1).map (·.2))
@@ -78,7 +77,7 @@ def contract : MetaM Json := do
       ("collide", toJson ((List.range 16).map fun s => collide s.toUInt32)),
       ("golden", toJson hpp)])]
 
-unsafe def main : List String → IO Unit
+def main : List String → IO Unit
   | ["contract"] => do
     initSearchPath (← findSysroot)
     let env ← importModules #[{ module := `TimesArrow }] {}

@@ -1,0 +1,101 @@
+{
+ "commit": "352ae0ac4fe41bbfe0944e1719f19733bc3638b1",
+ "dirty": true,
+ "host": "artemis",
+ "backend": "chrome",
+ "date": "2026-09-27T15:13:08.747Z",
+ "steps": 500,
+ "adapter": {
+  "vendor": "nvidia",
+  "architecture": "lovelace",
+  "device": "",
+  "description": "",
+  "fallback": false
+ },
+ "runs": [
+  {
+   "n": 1024,
+   "steps": 510,
+   "seconds": 0.006599999994039535,
+   "cellUpdatesPerSecond": 79437575829.31589,
+   "checksum": 3466883482
+  },
+  {
+   "n": 1024,
+   "steps": 510,
+   "seconds": 0.006400000005960464,
+   "cellUpdatesPerSecond": 81919999923.70605,
+   "checksum": 3466883482
+  },
+  {
+   "n": 1024,
+   "steps": 510,
+   "seconds": 0.006699999988079071,
+   "cellUpdatesPerSecond": 78251940437.7367,
+   "checksum": 3466883482
+  },
+  {
+   "n": 2048,
+   "steps": 510,
+   "seconds": 0.013,
+   "cellUpdatesPerSecond": 161319384615.3846,
+   "checksum": 1735024366
+  },
+  {
+   "n": 2048,
+   "steps": 510,
+   "seconds": 0.013700000017881393,
+   "cellUpdatesPerSecond": 153076788121.37036,
+   "checksum": 1735024366
+  },
+  {
+   "n": 2048,
+   "steps": 510,
+   "seconds": 0.014400000005960464,
+   "cellUpdatesPerSecond": 145635555495.27393,
+   "checksum": 1735024366
+  },
+  {
+   "n": 4096,
+   "steps": 510,
+   "seconds": 0.13780000001192094,
+   "cellUpdatesPerSecond": 60875239472.23737,
+   "checksum": 2116496956
+  },
+  {
+   "n": 4096,
+   "steps": 510,
+   "seconds": 0.13709999999403955,
+   "cellUpdatesPerSecond": 61186053977.860664,
+   "checksum": 2116496956
+  },
+  {
+   "n": 4096,
+   "steps": 510,
+   "seconds": 0.13769999998807908,
+   "cellUpdatesPerSecond": 60919448080.80041,
+   "checksum": 2116496956
+  },
+  {
+   "n": 8192,
+   "steps": 510,
+   "seconds": 0.544,
+   "cellUpdatesPerSecond": 61680941176.47058,
+   "checksum": 3575928183
+  },
+  {
+   "n": 8192,
+   "steps": 510,
+   "seconds": 0.543800000011921,
+   "cellUpdatesPerSecond": 61703626331.85809,
+   "checksum": 3575928183
+  },
+  {
+   "n": 8192,
+   "steps": 510,
+   "seconds": 0.5480999999940396,
+   "cellUpdatesPerSecond": 61219543879.519966,
+   "checksum": 3575928183
+  }
+ ]
+}

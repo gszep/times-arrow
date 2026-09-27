@@ -7,7 +7,7 @@ import { headless } from "../../scripts/headless.ts";
 
 const steps = 500;
 const git = (cmd: string) => execSync(`git ${cmd}`, { encoding: "utf8" }).trim();
-const provenance = { commit: git("rev-parse HEAD"), dirty: git("status --porcelain") !== "", host: hostname() };
+const provenance = { commit: git("rev-parse HEAD"), dirty: git("status --porcelain --untracked-files=no") !== "", host: hostname() };
 
 const result = await headless("experiments/000-plumbing/", async (evaluate) => {
   const runs = [];
