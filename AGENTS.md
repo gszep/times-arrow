@@ -37,7 +37,42 @@ delivered.
    or literature (see `README.md`). Report negative results as prominently as
    positive ones. Don't tune parameters to confirm a hypothesis.
 6. **Literature before invention.** Search before calling anything new, and
-   verify citations before writing them into `docs/background.md`.
+   verify citations before writing them into `docs/background.md`. Check them
+   against the Crossref or arXiv APIs over plain HTTP, which has no search
+   quota.
+
+## Experiment discipline
+
+Lessons from `space-filling-curves`, whose history includes confounded
+results that had to be retracted:
+
+- **One engine.** The interactive page and the batch sweeps run the same
+  simulation code. A sweep is a TypeScript script that drives the page's own
+  functions over CDP. There is no separate "demo" solver.
+- **Paired comparisons.** An A/B toggle re-runs the same initial condition
+  with the same seed. Only the variable under test changes. Unpinned
+  comparisons, or comparisons across code paths (CPU versus GPU, different
+  sessions), are confounds.
+- **Clean nulls.** Report every metric on a null model first (for example
+  an equilibrium, an undriven or a shuffled system), then read meaning into
+  the structured case. Choose the null that differs from the test in exactly
+  one respect.
+- **Statistical claims are labelled as statistical.** Show the number of
+  paired wins and the confidence intervals. Say on the page when a single
+  run can go against the trend.
+- **Provenance.** Every sweep writes JSON recording the commit, parameters,
+  seeds and GPU adapter. Results from code that has since changed are stale.
+  Re-run them or delete them.
+- **Retract loudly.** When a result turns out to be an artefact, mark it
+  refuted in the experiment's README with the cause, delete the
+  contaminated data and re-queue the runs.
+- **Lattice artefact or physics?** State whether a finding should survive
+  the continuum limit, or holds only because space is discrete (the lattice
+  breaks Lorentz invariance). Name the assumptions before generalising:
+  2+1 dimensions, square lattice, periodic boundaries, the choice of
+  coarse-graining.
+- **GPU hygiene.** Wait for pending GPU work to finish before swapping
+  buffers or resetting. Batch all readbacks into one mapped buffer per frame.
 
 ## Conventions
 
