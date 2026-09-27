@@ -1,0 +1,65 @@
+{
+ "commit": "9045c0ae4e99ef6987ab8bfc9d0754c42cb0dfd8",
+ "dirty": false,
+ "host": "artemis",
+ "backend": "jax",
+ "date": "2026-09-27T15:26:23.997281+00:00",
+ "adapter": {
+  "device": "NVIDIA RTX 5000 Ada Generation Laptop GPU",
+  "jax": "0.11.2",
+  "cpus": 32,
+  "blas": "scipy-openblas"
+ },
+ "checks": [
+  {
+   "name": "Philox known-answer vectors",
+   "pass_": true
+  },
+  {
+   "name": "Philox stream and u01",
+   "pass_": true
+  }
+ ],
+ "runs": [
+  {
+   "n": 1000,
+   "cpuSeconds": 0.16059346901602112,
+   "cpuResidual": 2.2144119771797032e-15,
+   "gpuSeconds": 0.035215788026107475,
+   "gpuResidual": 3.5832400905380026e-15,
+   "maxEigenvalueDifference": 4.973799150320701e-14
+  },
+  {
+   "n": 2000,
+   "cpuSeconds": 0.7089574720012024,
+   "cpuResidual": 2.441932318586304e-15,
+   "gpuSeconds": 0.12261354000656866,
+   "gpuResidual": 4.577204928590368e-15,
+   "maxEigenvalueDifference": 8.526512829121202e-14
+  },
+  {
+   "n": 4000,
+   "cpuSeconds": 3.946542977995705,
+   "cpuResidual": 2.6969809097485586e-15,
+   "gpuSeconds": 0.7870690700074192,
+   "gpuResidual": 4.476438540543904e-15,
+   "maxEigenvalueDifference": 1.8474111129762605e-13
+  },
+  {
+   "n": 7000,
+   "cpuSeconds": 25.76068373399903,
+   "cpuResidual": 2.9513669286463922e-15,
+   "gpuSeconds": 3.437930904008681,
+   "gpuResidual": 6.5522845666570694e-15,
+   "maxEigenvalueDifference": 1.7053025658242404e-13
+  },
+  {
+   "n": 10000,
+   "cpuSeconds": 90.8492217019957,
+   "cpuResidual": 3.2032159704737105e-15,
+   "gpuSeconds": 9.48492359102238,
+   "gpuResidual": 7.553883930714941e-15,
+   "maxEigenvalueDifference": 3.268496584496461e-13
+  }
+ ]
+}

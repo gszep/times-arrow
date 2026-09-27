@@ -66,7 +66,7 @@ end-to-end test of the harness.
 
 | # | Question | Model | Status |
 |---|---|---|---|
-| 000 | Which plumbing? | RNG bit-exactness across Lean, WGSL, CUDA and JAX; lattice-step throughput; f64 eigensolvers; contract export; Lean-generated WGSL | planned |
+| 000 | Which plumbing? | RNG bit-exactness across Lean, WGSL, CUDA and JAX; lattice-step throughput; f64 eigensolvers; contract export; Lean-generated WGSL | [done](experiments/000-plumbing/README.md) |
 | 001 | How does irreversibility emerge from reversible, causal microdynamics? | 2D reversible lattice gas: integer arithmetic (bit-exact against Lean), a strict light cone of one cell per step, a Loschmidt echo, coarse-grainings as partitions | planned |
 | 002 | Is the arrow of time measurable as `D_KL(P_F ‖ P_R)`? | Driven Markov jump process on a 2D torus; live Crooks/Jarzynski checks | planned |
 | 003 | Can light cones emerge from locality alone? (Q3) | Lattice Klein–Gordon field and a nonlinear lattice | planned |

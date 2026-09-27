@@ -167,8 +167,11 @@ Gotchas that each cost a debugging round:
     check from this Mac, tunnel the port with
     `ssh -N -L 9223:localhost:9222 artemis`, and open and close only your
     own targets.
-  - Commit the results JSON (with its provenance) back to `main`.
-  - Artemis has CUDA (`nvcc`) and no Lean install.
+  - Commit the results JSON (with its provenance) back to `main`. Artemis's
+    clone is read-only over https, so copy results to this Mac with `scp`
+    and then delete Artemis's copies. Untracked copies make its next
+    `git pull` abort.
+  - Artemis has CUDA (`nvcc`), `uv` in `~/.local/bin`, and no Lean install.
 - **Validate with numbers, not screenshots.** Each page exposes a probe on
   `window` that reads GPU buffers back and returns invariants and
   observables (NaN checks, conserved quantities, the measured versus
@@ -195,13 +198,14 @@ Gotchas that each cost a debugging round:
 ## Backends
 
 WebGPU is how results are reviewed. Batch work may use a faster backend,
-but only one tier above what has been shown to be necessary.
+but only one tier above what has been shown to be necessary. Experiment 000
+(`experiments/000-plumbing/README.md`) measured the tiers.
 
 | Tier | Use | Backend |
 |---|---|---|
-| 0 | All review pages and batch sweeps by default | WGSL from TypeScript: the browser for review, headless Chrome or native Dawn (`webgpu` npm) on Artemis for sweeps |
-| 1 | Measured need: a per-thread kernel is too slow in WGSL | CUDA C++ kernels through CuPy `RawKernel` on Artemis. CUDA is the closest shape to WGSL, so porting in either direction is mechanical |
-| 2 | f64, dense linear algebra, statistics over large ensembles | JAX with x64 enabled on Artemis. For large f64 `eigh`, compare against CPU LAPACK: an Ada laptop GPU runs f64 at 1/64 of f32 speed |
+| 0 | All review pages and batch sweeps | WGSL from TypeScript: the browser for review, headless Chrome for sweeps (`scripts/headless.ts`). On Artemis, a DRAM-bound lattice step reaches about 61 × 10⁹ cell updates/s. Native Dawn was no faster, so it is not used |
+| 1 | Only after a new measured need. Currently none: for the HPP step at 4096², CUDA was 0.99× WGSL | CUDA C++ kernels through CuPy `RawKernel` on Artemis. CUDA is the closest shape to WGSL, so porting in either direction is mechanical |
+| 2 | f64, dense linear algebra, statistics over large ensembles | JAX with x64 enabled on Artemis. For f64 `eigh` at `N = 10³…10⁴` it is 5–10× faster than CPU LAPACK, despite the 1/64 f64 rate. Time any CPU baseline before JAX starts, or in another process: a live XLA runtime slowed OpenBLAS 3–25× |
 
 - Python is allowed only for tiers 1 and 2. Arrays pass between CuPy and
   JAX through DLPack.
@@ -215,29 +219,6 @@ but only one tier above what has been shown to be necessary.
   and RNG streams are bit-exact on every backend. Float models are compared
   against a tolerance, because FMA contraction and operation reordering
   differ between backends.
-
-## Plumbing trials (experiment 000)
-
-Choose the stack with cheap, measured trials, not by assumption. Run them
-before experiment 001. Record the decision table in
-`experiments/000-plumbing/README.md`, keep only the code that wins, and
-delete the rest. These are engineering results, not physics: a table is
-enough and no review page is needed.
-
-1. **RNG:** Philox4x32-10 implemented in Lean, WGSL, CuPy (cuRAND or
-   hand-written) and JAX. Check that all four are bit-exact on the golden
-   vectors.
-2. **Lattice step throughput:** one 2D reversible lattice-gas update, run in
-   WGSL in the browser (Mac and Artemis), in WGSL through native Dawn on
-   Artemis, and through a CuPy `RawKernel`. Measure cell updates per second
-   and check bit-exactness against Lean. This decides whether tier 1 is ever
-   needed.
-3. **f64 eigendecomposition** for `N` from 10³ to 10⁴: JAX on the GPU versus
-   CPU LAPACK on Artemis.
-4. **Contract export:** a `lake exe` that exports claims using
-   `Lean.collectAxioms`, with Comparator certifying the proved claims in CI.
-5. **Lean-generated kernels:** write trial 2's update rule in Hesper, and
-   judge whether Lean-emitted WGSL could replace hand-written WGSL.
 
 ## Upstream contributions
 
