@@ -7,8 +7,11 @@ export function checksum(s: Uint32Array): number {
   return acc;
 }
 
-/** HPP cell updates per second for `steps` steps of an `n × n` lattice from seed 1. */
+/** HPP cell updates per second for `steps` steps of an `n × n` lattice from
+seed 1. Throws on any GPU error, which would otherwise read back as zeros. */
 export async function bench(device: GPUDevice, n: number, steps: number) {
+  device.pushErrorScope("out-of-memory");
+  device.pushErrorScope("validation");
   const hpp = new Hpp(device, n);
   hpp.init(1);
   hpp.step(10);
@@ -19,5 +22,7 @@ export async function bench(device: GPUDevice, n: number, steps: number) {
   const seconds = (performance.now() - t0) / 1000;
   const sum = checksum(await hpp.words());
   hpp.destroy();
+  const errors = [await device.popErrorScope(), await device.popErrorScope()].filter((e) => e !== null);
+  if (errors.length) throw new Error(errors.map((e) => e.message).join("; "));
   return { n, steps: steps + 10, seconds, cellUpdatesPerSecond: (n * n * steps) / seconds, checksum: sum };
 }
