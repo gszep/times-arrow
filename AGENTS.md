@@ -52,15 +52,22 @@ delivered.
 
 ## Stack
 
+The repo is still docs only: no `package.json`, lakefile, CI workflow or
+checks exist yet. The first experiment creates them. When it does, record the
+exact build, check and dev commands here.
+
 - TypeScript, Vite and WebGPU (WGSL), with no UI framework. One route per
   experiment plus an index page. Deploy to GitHub Pages on push to `main`.
   Run `vite --host` for phone access over the LAN.
 - Pages are mobile-first. Every parameter lives in the URL. Show a clear
   message when WebGPU is unavailable.
 - Lean 4 + Mathlib, pinned by `lean-toolchain` and `lake-manifest.json`.
-- Lean is installed through elan at `~/.elan/bin`, which may not be on a
-  non-interactive `PATH`. Pin the toolchain per project with `lean-toolchain`.
-  Node is not installed yet; install it with `brew install node`.
+- elan is not on the shell tool's `PATH`. Call `~/.elan/bin/lake` and
+  `~/.elan/bin/lean` by full path, or prepend `~/.elan/bin` to `PATH`. Its
+  default is `stable`, so every Lean project must pin its own
+  `lean-toolchain`.
+- Node is not installed. Install it with `brew install node` before any
+  TypeScript work.
 
 ## Lean ↔ simulation sync
 
