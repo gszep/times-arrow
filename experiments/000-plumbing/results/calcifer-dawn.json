@@ -1,0 +1,101 @@
+{
+ "commit": "7d1188a6d7005648c05e19eba3447fd0b388a31b",
+ "dirty": false,
+ "host": "calcifer.local",
+ "backend": "dawn",
+ "date": "2026-09-27T15:14:22.995Z",
+ "steps": 500,
+ "adapter": {
+  "vendor": "intel",
+  "architecture": "gen-9",
+  "device": "intel-r-uhd-graphics-630",
+  "description": "Metal driver on macOS Version 15.7.9 (Build 24G830)",
+  "fallback": false
+ },
+ "runs": [
+  {
+   "n": 1024,
+   "steps": 510,
+   "seconds": 0.36966584999999996,
+   "cellUpdatesPerSecond": 1418275450.6536107,
+   "checksum": 3466883482
+  },
+  {
+   "n": 1024,
+   "steps": 510,
+   "seconds": 0.305305702,
+   "cellUpdatesPerSecond": 1717255840.8358846,
+   "checksum": 3466883482
+  },
+  {
+   "n": 1024,
+   "steps": 510,
+   "seconds": 0.3018240540000002,
+   "cellUpdatesPerSecond": 1737064998.8022482,
+   "checksum": 3466883482
+  },
+  {
+   "n": 2048,
+   "steps": 510,
+   "seconds": 1.2163778269999999,
+   "cellUpdatesPerSecond": 1724095879.9555628,
+   "checksum": 1735024366
+  },
+  {
+   "n": 2048,
+   "steps": 510,
+   "seconds": 1.1969902339999998,
+   "cellUpdatesPerSecond": 1752020977.6414938,
+   "checksum": 1735024366
+  },
+  {
+   "n": 2048,
+   "steps": 510,
+   "seconds": 1.1990878029999998,
+   "cellUpdatesPerSecond": 1748956160.4689262,
+   "checksum": 1735024366
+  },
+  {
+   "n": 4096,
+   "steps": 510,
+   "seconds": 4.770089332,
+   "cellUpdatesPerSecond": 1758585094.7749083,
+   "checksum": 2116496956
+  },
+  {
+   "n": 4096,
+   "steps": 510,
+   "seconds": 4.837914152,
+   "cellUpdatesPerSecond": 1733930726.4334443,
+   "checksum": 2116496956
+  },
+  {
+   "n": 4096,
+   "steps": 510,
+   "seconds": 4.722570630999999,
+   "cellUpdatesPerSecond": 1776280050.7281606,
+   "checksum": 2116496956
+  },
+  {
+   "n": 8192,
+   "steps": 510,
+   "seconds": 18.798569669,
+   "cellUpdatesPerSecond": 1784946014.0221906,
+   "checksum": 3575928183
+  },
+  {
+   "n": 8192,
+   "steps": 510,
+   "seconds": 19.02577929,
+   "cellUpdatesPerSecond": 1763629835.527226,
+   "checksum": 3575928183
+  },
+  {
+   "n": 8192,
+   "steps": 510,
+   "seconds": 19.397119689999993,
+   "cellUpdatesPerSecond": 1729866729.5072,
+   "checksum": 3575928183
+  }
+ ]
+}

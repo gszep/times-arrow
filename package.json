@@ -11,7 +11,6 @@
     "@types/node": "^24.19.0",
     "@webgpu/types": "^0.1.74",
     "typescript": "^7.0.2",
-    "vite": "^8.3.1",
-    "webgpu": "^0.6.1"
+    "vite": "^8.3.1"
   }
 }
