@@ -56,6 +56,18 @@ The repo is still docs only: no `package.json`, lakefile, CI workflow or
 checks exist yet. The first experiment creates them. When it does, record the
 exact build, check and dev commands here.
 
+- TypeScript by default for all code, including scripts, codegen and tests.
+  Use another language only where the platform requires it (Lean, WGSL).
+- Drive the browser through the Chrome DevTools Protocol, attached to the
+  collaborator's running Chrome, which has remote debugging enabled. That
+  Chrome has a real GPU and WebGPU. Discover the endpoint with
+  `curl -s localhost:9222/json/version` or the `DevToolsActivePort` file in
+  the Chrome profile directory. If neither exists, ask the collaborator; do
+  not launch a separate headless browser. Attach with `puppeteer-core`
+  (`connect`), Playwright (`connectOverCDP`) or `chrome-devtools-mcp`
+  (`--browser-url`). Use it for screenshots, console and GPU errors, and for
+  running kernel checks against golden vectors in real WebGPU. Open your own
+  tabs and close them when you finish; never touch the collaborator's tabs.
 - TypeScript, Vite and WebGPU (WGSL), with no UI framework. One route per
   experiment plus an index page. Deploy to GitHub Pages on push to `main`.
   Run `vite --host` for phone access over the LAN.
