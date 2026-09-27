@@ -66,8 +66,9 @@ exact build, check and dev commands here.
   `~/.elan/bin/lean` by full path, or prepend `~/.elan/bin` to `PATH`. Its
   default is `stable`, so every Lean project must pin its own
   `lean-toolchain`.
-- Node is not installed. Install it with `brew install node` before any
-  TypeScript work.
+- Node 24 and npm are installed through nvm but are not on the shell tool's
+  `PATH`. Prepend `~/.nvm/versions/node/v24.18.0/bin` to `PATH`. Do not
+  install another Node.
 
 ## Lean ↔ simulation sync
 
