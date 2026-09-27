@@ -110,6 +110,22 @@ exact build, check and dev commands here.
   (`PUT /json/new?<url>`) and close them afterwards (`/json/close/<id>`).
   Match targets by their exact page URL. The CDP browser does not pick up
   hot reloads, so navigate again after rebuilding.
+- **More compute: `ssh artemis`.** Artemis is a Linux machine with an
+  NVIDIA RTX 5000 Ada GPU (16 GB), 32 cores and 188 GB of RAM. Use it for
+  sweeps or lattices too large for this Mac.
+  - It already runs Chrome Canary on port 9222 with WebGPU on the NVIDIA
+    adapter (Lovelace, hardware, 2 GB storage-buffer bindings). Other
+    projects share that browser: reuse it, open and close only your own
+    targets, and never restart it.
+  - Run sweeps on Artemis itself: `git pull` in
+    `~/Documents/repos/times-arrow` (clone it the first time), then start
+    the dev server and the sweep script there with
+    `PATH=$HOME/.nvm/versions/node/v24.18.0/bin:$PATH`.
+  - To drive it from this Mac instead, tunnel the port:
+    `ssh -N -L 9223:localhost:9222 artemis`.
+  - Commit the results JSON (with its provenance) back to `main`.
+  - Artemis has no Lean install and has `nvcc`. The one-engine rule still
+    applies: add no CUDA path alongside WebGPU.
 - **Validate with numbers, not screenshots.** Each page exposes a probe on
   `window` that reads GPU buffers back and returns invariants and
   observables (NaN checks, conserved quantities, the measured versus
