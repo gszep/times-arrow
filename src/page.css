@@ -1,0 +1,16 @@
+body {
+  font: 16px/1.5 system-ui, sans-serif;
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: 1rem;
+}
+table {
+  border-collapse: collapse;
+}
+td {
+  padding: 0.2rem 0.5rem;
+  border-bottom: 1px solid #ddd;
+}
+code {
+  font-size: 0.9em;
+}
