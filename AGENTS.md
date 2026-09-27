@@ -58,16 +58,29 @@ exact build, check and dev commands here.
 
 - TypeScript by default for all code, including scripts, codegen and tests.
   Use another language only where the platform requires it (Lean, WGSL).
-- Drive the browser through the Chrome DevTools Protocol, attached to the
-  collaborator's running Chrome, which has remote debugging enabled. That
-  Chrome has a real GPU and WebGPU. Discover the endpoint with
-  `curl -s localhost:9222/json/version` or the `DevToolsActivePort` file in
-  the Chrome profile directory. If neither exists, ask the collaborator; do
-  not launch a separate headless browser. Attach with `puppeteer-core`
-  (`connect`), Playwright (`connectOverCDP`) or `chrome-devtools-mcp`
-  (`--browser-url`). Use it for screenshots, console and GPU errors, and for
-  running kernel checks against golden vectors in real WebGPU. Open your own
-  tabs and close them when you finish; never touch the collaborator's tabs.
+- Drive a visible Chrome over the Chrome DevTools Protocol (CDP) at
+  `http://localhost:9222`. If `curl -s localhost:9222/json/version` answers,
+  reuse that browser. Otherwise launch one:
+  ```sh
+  "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
+    --remote-debugging-port=9222 --user-data-dir=$HOME/.config/chrome-cdp-times-arrow \
+    --no-first-run --no-default-browser-check about:blank &
+  ```
+  The dedicated profile is required: since Chrome 136 the debug port is
+  ignored on the default profile. Never use headless Chrome, which may fall
+  back to a software GPU. On this machine WebGPU gives a hardware Intel gen-9
+  adapter. It needs a secure context (`localhost` or https), not
+  `about:blank`. Use raw CDP over Node's built-in `WebSocket`, or
+  `puppeteer-core` `connect({ browserURL })`. Open your own targets
+  (`PUT /json/new?<url>`) and close them afterwards (`/json/close/<id>`).
+  Match targets by their exact page URL. The CDP browser does not pick up
+  hot reloads, so navigate again after rebuilding.
+- **Validate with numbers, not screenshots.** Each page exposes a probe on
+  `window` that reads GPU buffers back and returns invariants and
+  observables (NaN checks, conserved quantities, the measured versus
+  predicted values). Assert on them with `Runtime.evaluate`
+  (`awaitPromise: true`). The golden-vector checks run the same way, in real
+  WebGPU. Screenshots are for the collaborator, not for deciding correctness.
 - TypeScript, Vite and WebGPU (WGSL), with no UI framework. One route per
   experiment plus an index page. Deploy to GitHub Pages on push to `main`.
   Run `vite --host` for phone access over the LAN.
