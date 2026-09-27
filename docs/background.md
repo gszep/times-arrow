@@ -95,4 +95,15 @@ The core framing: relativity gives the cone, thermodynamics picks the half.
 - leanblueprint (Massot). <https://github.com/PatrickMassot/leanblueprint>
 - Cedar: verification-guided development, with an executable Lean model
   differentially tested against production code.
-- PhysLean (formerly HepLean): Lorentz group and physics formalizations in Lean 4.
+- physlib (formerly PhysLean/HepLean), `leanprover-community/physlib`: the
+  Lorentz group, special relativity, statistical mechanics and
+  thermodynamics. It has an AI contribution policy (`AI-POLICY.md`).
+- Mathlib: KL divergence (`InformationTheory/KullbackLeibler`) and
+  `Kernel.Invariant`. As far as we found, it has no finite Markov chains
+  with detailed balance and no fluctuation theorems.
+- Comparator (Lean FRO): a sandboxed judge that re-checks proofs against a
+  permitted-axiom list.
+- FloatLib (arXiv:2609.19352): verified IEEE floating-point in Lean.
+  *(verify)*
+- Hesper (`Verilean/hesper`): a Lean DSL that generates WGSL and CUDA
+  kernels. Alpha.

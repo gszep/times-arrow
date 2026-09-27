@@ -46,9 +46,11 @@ delivered.
 Lessons from `space-filling-curves`, whose history includes confounded
 results that had to be retracted:
 
-- **One engine.** The interactive page and the batch sweeps run the same
-  simulation code. A sweep is a TypeScript script that drives the page's own
-  functions over CDP, in a headless browser (see Stack). There is no separate "demo" solver.
+- **One source per kernel.** Each kernel has exactly one implementation per
+  tier (see Backends). Every backend must pass the same Lean contract tests.
+  A result found in a batch backend is **promoted** to review only when the
+  WebGPU page reproduces one pinned configuration from the sweep (same seed
+  and parameters, same observable within the stated tolerance).
 - **Paired comparisons.** An A/B toggle re-runs the same initial condition
   with the same seed. Only the variable under test changes. Unpinned
   comparisons, or comparisons across code paths (CPU versus GPU, different
@@ -136,8 +138,7 @@ exact build, check and dev commands here.
     `ssh -N -L 9223:localhost:9222 artemis`, and open and close only your
     own targets.
   - Commit the results JSON (with its provenance) back to `main`.
-  - Artemis has no Lean install and has `nvcc`. The one-engine rule still
-    applies: add no CUDA path alongside WebGPU.
+  - Artemis has CUDA (`nvcc`) and no Lean install.
 - **Validate with numbers, not screenshots.** Each page exposes a probe on
   `window` that reads GPU buffers back and returns invariants and
   observables (NaN checks, conserved quantities, the measured versus
@@ -149,7 +150,10 @@ exact build, check and dev commands here.
   Run `vite --host` for phone access over the LAN.
 - Pages are mobile-first. Every parameter lives in the URL. Show a clear
   message when WebGPU is unavailable.
-- Lean 4 + Mathlib, pinned by `lean-toolchain` and `lake-manifest.json`.
+- Lean 4 + Mathlib + physlib (`leanprover-community/physlib`, which provides
+  the Lorentz group, special relativity and the statistical ensembles).
+  Pin `leanprover/lean4:v4.34.1`, physlib's toolchain, together with
+  `lake-manifest.json`. Search Mathlib and physlib before defining anything.
 - elan is not on the shell tool's `PATH`. Call `~/.elan/bin/lake` and
   `~/.elan/bin/lean` by full path, or prepend `~/.elan/bin` to `PATH`. Its
   default is `stable`, so every Lean project must pin its own
@@ -158,11 +162,83 @@ exact build, check and dev commands here.
   `PATH`. Prepend `~/.nvm/versions/node/v24.18.0/bin` to `PATH`. Do not
   install another Node.
 
+## Backends
+
+WebGPU is how results are reviewed. Batch work may use a faster backend,
+but only one tier above what has been shown to be necessary.
+
+| Tier | Use | Backend |
+|---|---|---|
+| 0 | All review pages and batch sweeps by default | WGSL from TypeScript: the browser for review, headless Chrome or native Dawn (`webgpu` npm) on Artemis for sweeps |
+| 1 | Measured need: a per-thread kernel is too slow in WGSL | CUDA C++ kernels through CuPy `RawKernel` on Artemis. CUDA is the closest shape to WGSL, so porting in either direction is mechanical |
+| 2 | f64, dense linear algebra, statistics over large ensembles | JAX with x64 enabled on Artemis. For large f64 `eigh`, compare against CPU LAPACK: an Ada laptop GPU runs f64 at 1/64 of f32 speed |
+
+- Python is allowed only for tiers 1 and 2. Arrays pass between CuPy and
+  JAX through DLPack.
+- Don't use: Taichi (unmaintained since 2025), Mojo, rust-cuda, Futhark's
+  WebGPU backend (unmerged), Triton.
+- Keep an eye on, but don't adopt yet: Slang (one source compiling to WGSL
+  and CUDA), CubeCL, and Hesper (WGSL generated from Lean).
+- The RNG is pinned in the Lean spec: Philox4x32-10 with the Random123
+  key/counter layout and one fixed conversion from integers to uniforms.
+  WGSL emulates the 32×32→64 multiply with 16-bit halves. Integer models
+  and RNG streams are bit-exact on every backend. Float models are compared
+  against a tolerance, because FMA contraction and operation reordering
+  differ between backends.
+
+## Plumbing trials (experiment 000)
+
+Choose the stack with cheap, measured trials, not by assumption. Run them
+before experiment 001. Record the decision table in
+`experiments/000-plumbing/README.md`, keep only the code that wins, and
+delete the rest. These are engineering results, not physics: a table is
+enough and no review page is needed.
+
+1. **RNG:** Philox4x32-10 implemented in Lean, WGSL, CuPy (cuRAND or
+   hand-written) and JAX. Check that all four are bit-exact on the golden
+   vectors.
+2. **Lattice step throughput:** one 2D reversible lattice-gas update, run in
+   WGSL in the browser (Mac and Artemis), in WGSL through native Dawn on
+   Artemis, and through a CuPy `RawKernel`. Measure cell updates per second
+   and check bit-exactness against Lean. This decides whether tier 1 is ever
+   needed.
+3. **f64 eigendecomposition** for `N` from 10³ to 10⁴: JAX on the GPU versus
+   CPU LAPACK on Artemis.
+4. **Contract export:** a `lake exe` that exports claims using
+   `Lean.collectAxioms`, with Comparator certifying the proved claims in CI.
+5. **Lean-generated kernels:** write trial 2's update rule in Hesper, and
+   judge whether Lean-emitted WGSL could replace hand-written WGSL.
+
+## Upstream contributions
+
+As far as we have found, Mathlib and physlib have no finite Markov chains
+with detailed balance and no fluctuation theorems. Mathlib does have KL
+divergence and `Kernel.Invariant`. The Lean we write for these topics is a
+candidate for contribution upstream:
+- entropy production as a KL divergence that is never negative;
+- detailed and path-level fluctuation theorems (Crooks, Jarzynski);
+- the reversible cellular automata results.
+
+- Write this code to upstream standards from the start. Follow the naming
+  and docstring conventions of Mathlib and physlib, use no `sorry`, and
+  keep it in its own directory with no dependencies on project-specific
+  code.
+- physlib's `AI-POLICY.md` and `AGENTS.md` bind any contribution:
+  - the collaborator vouches for every statement and verifies every
+    bibliographic reference personally;
+  - all communication with reviewers is by the human.
+
+  Agents prepare the branch and the PR description. Agents never open the
+  PR or reply to reviewers.
+
 ## Lean ↔ simulation sync
 
 No off-the-shelf tool exists. Build the smallest harness that enforces these
-invariants, following the Cedar pattern (an executable Lean model with
-differential testing):
+invariants, following the Cedar pattern: an executable Lean model with
+differential testing. On top of the fixed golden vectors, run randomised
+differential tests, with fresh random inputs checked against the Lean
+reference on each run. The contract records each backend's assurance level:
+compiles, matches Lean exactly, or proved.
 
 - **Lean is the single source of truth.** Each experiment has a Lean
   specification (theorems) and a runnable reference implementation.

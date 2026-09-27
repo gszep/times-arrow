@@ -41,6 +41,12 @@ literature: [`docs/background.md`](docs/background.md).
   written in Lean. The GPU code is generated from, and tested against, a
   contract that Lean exports. See [`AGENTS.md`](AGENTS.md).
 - **Hypotheses are pre-registered** before any simulation is written.
+- **Batch sweeps** may run on faster backends (CUDA, JAX). Their results
+  are promoted to a WebGPU page for review.
+- **Open-source contributions.** Formalisations of finite Markov chains
+  with detailed balance and of fluctuation theorems (Crooks, Jarzynski,
+  entropy production as a KL divergence) are written to upstream standards
+  for Mathlib and [physlib](https://github.com/leanprover-community/physlib).
 
 ## Claim labels
 
@@ -55,10 +61,12 @@ literature: [`docs/background.md`](docs/background.md).
 
 ## Experiments
 
-001 is also the end-to-end test of the harness.
+000 chooses the tech stack through cheap, measured trials. 001 is the
+end-to-end test of the harness.
 
 | # | Question | Model | Status |
 |---|---|---|---|
+| 000 | Which plumbing? | RNG bit-exactness across Lean, WGSL, CUDA and JAX; lattice-step throughput; f64 eigensolvers; contract export; Lean-generated WGSL | planned |
 | 001 | How does irreversibility emerge from reversible, causal microdynamics? | 2D reversible lattice gas: integer arithmetic (bit-exact against Lean), a strict light cone of one cell per step, a Loschmidt echo, coarse-grainings as partitions | planned |
 | 002 | Is the arrow of time measurable as `D_KL(P_F ‖ P_R)`? | Driven Markov jump process on a 2D torus; live Crooks/Jarzynski checks | planned |
 | 003 | Can light cones emerge from locality alone? (Q3) | Lattice Klein–Gordon field and a nonlinear lattice | planned |
