@@ -48,7 +48,7 @@ results that had to be retracted:
 
 - **One engine.** The interactive page and the batch sweeps run the same
   simulation code. A sweep is a TypeScript script that drives the page's own
-  functions over CDP. There is no separate "demo" solver.
+  functions over CDP, in a headless browser (see Stack). There is no separate "demo" solver.
 - **Paired comparisons.** An A/B toggle re-runs the same initial condition
   with the same seed. Only the variable under test changes. Unpinned
   comparisons, or comparisons across code paths (CPU versus GPU, different
@@ -102,10 +102,21 @@ exact build, check and dev commands here.
     --no-first-run --no-default-browser-check about:blank &
   ```
   The dedicated profile is required: since Chrome 136 the debug port is
-  ignored on the default profile. Never use headless Chrome, which may fall
-  back to a software GPU. On this machine WebGPU gives a hardware Intel gen-9
-  adapter. It needs a secure context (`localhost` or https), not
-  `about:blank`. Use raw CDP over Node's built-in `WebSocket`, or
+  ignored on the default profile. This visible browser is for interactive
+  checks. WebGPU needs a secure context (`localhost` or https), not
+  `about:blank`.
+- **Sweeps run headless**, in their own browser instance with a throwaway
+  `--user-data-dir` and a free debug port (not 9222), which is killed at the
+  end. Launch it with `--headless=new`. On Linux, also pass
+  `--enable-unsafe-webgpu --ignore-gpu-blocklist --enable-features=Vulkan
+  --use-angle=vulkan --disable-vulkan-surface`.
+  - Headless mode can silently fall back to a software GPU. Every sweep
+    first requests the WebGPU adapter and aborts unless
+    `isFallbackAdapter` is false and the vendor is the expected one. Record
+    the adapter in the results JSON.
+  - Verified on 2026-09-27: headless gives a hardware adapter on this Mac
+    (Intel gen-9) and on Artemis (NVIDIA Lovelace, Chrome stable and
+    Canary). Use raw CDP over Node's built-in `WebSocket`, or
   `puppeteer-core` `connect({ browserURL })`. Open your own targets
   (`PUT /json/new?<url>`) and close them afterwards (`/json/close/<id>`).
   Match targets by their exact page URL. The CDP browser does not pick up
@@ -113,16 +124,17 @@ exact build, check and dev commands here.
 - **More compute: `ssh artemis`.** Artemis is a Linux machine with an
   NVIDIA RTX 5000 Ada GPU (16 GB), 32 cores and 188 GB of RAM. Use it for
   sweeps or lattices too large for this Mac.
-  - It already runs Chrome Canary on port 9222 with WebGPU on the NVIDIA
-    adapter (Lovelace, hardware, 2 GB storage-buffer bindings). Other
-    projects share that browser: reuse it, open and close only your own
-    targets, and never restart it.
+  - WebGPU there gets the NVIDIA adapter (Lovelace, hardware, 2 GB
+    storage-buffer bindings).
   - Run sweeps on Artemis itself: `git pull` in
-    `~/Documents/repos/times-arrow` (clone it the first time), then start
-    the dev server and the sweep script there with
+    `~/Documents/repos/times-arrow` (clone it the first time), then run the
+    headless sweep there with
     `PATH=$HOME/.nvm/versions/node/v24.18.0/bin:$PATH`.
-  - To drive it from this Mac instead, tunnel the port:
-    `ssh -N -L 9223:localhost:9222 artemis`.
+  - Artemis also runs a shared visible Chrome Canary on port 9222, used by
+    other projects. Don't restart it or run sweeps in it. For an interactive
+    check from this Mac, tunnel the port with
+    `ssh -N -L 9223:localhost:9222 artemis`, and open and close only your
+    own targets.
   - Commit the results JSON (with its provenance) back to `main`.
   - Artemis has no Lean install and has `nvcc`. The one-engine rule still
     applies: add no CUDA path alongside WebGPU.
