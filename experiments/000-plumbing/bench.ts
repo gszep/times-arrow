@@ -8,7 +8,8 @@ export function checksum(s: Uint32Array): number {
 }
 
 /** HPP cell updates per second for `steps` steps of an `n × n` lattice from
-seed 1. Throws on any GPU error, which would otherwise read back as zeros. */
+seed 1. Throws on any GPU error or device loss, which would otherwise read
+back as zeros or a partial state. */
 export async function bench(device: GPUDevice, n: number, steps: number) {
   device.pushErrorScope("out-of-memory");
   device.pushErrorScope("validation");
@@ -24,5 +25,7 @@ export async function bench(device: GPUDevice, n: number, steps: number) {
   hpp.destroy();
   const errors = [await device.popErrorScope(), await device.popErrorScope()].filter((e) => e !== null);
   if (errors.length) throw new Error(errors.map((e) => e.message).join("; "));
+  const lost = await Promise.race([device.lost, null]);
+  if (lost) throw new Error(`device lost: ${lost.message}`);
   return { n, steps: steps + 10, seconds, cellUpdatesPerSecond: (n * n * steps) / seconds, checksum: sum };
 }

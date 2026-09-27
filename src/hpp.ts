@@ -89,9 +89,11 @@ export class Hpp {
     this.encode(this.pipelines.init, 1);
   }
 
-  /** Queue `t` steps in one submission. */
+  /** Queue `t` steps, about 2²⁷ cell updates per submission so that no
+  command buffer runs long enough to trip a GPU watchdog. */
   step(t: number): void {
-    this.encode(this.pipelines.step, t);
+    const chunk = Math.max(1, Math.floor(2 ** 27 / (this.n * this.n)));
+    for (let k = 0; k < t; k += chunk) this.encode(this.pipelines.step, Math.min(chunk, t - k));
   }
 
   private encode(pipeline: GPUComputePipeline, count: number): void {

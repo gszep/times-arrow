@@ -9,7 +9,9 @@ export type Adapter = {
 /** A device with the adapter's largest buffer limits, and the adapter's identity. */
 export async function gpu(): Promise<{ device: GPUDevice; adapter: Adapter }> {
   if (!navigator.gpu) throw new Error("WebGPU is not available in this browser.");
-  const a = await navigator.gpu.requestAdapter({ powerPreference: "high-performance" });
+  // Headless Chrome on Linux returns null on the first request, and an adapter on the second.
+  const request = () => navigator.gpu.requestAdapter({ powerPreference: "high-performance" });
+  const a = (await request()) ?? (await request());
   if (!a) throw new Error("WebGPU is available, but no GPU adapter was found.");
   const device = await a.requestDevice({
     requiredLimits: {
