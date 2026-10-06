@@ -52,6 +52,10 @@ theorem column_momentum_refuted :
     ∑ y, px16 (stepState 4 east4 (0, y)) ≠ ∑ y, px16 (east4 (0, y)) := by
   sorry
 
+theorem checkerboard (n : ℕ) [NeZero n] (h2 : 2 ∣ n) (t : ℕ) (c : ZMod 2) (s : State n) :
+    labelMass n h2 t c ((stepState n)^[t] s) = labelMass n h2 0 c s := by
+  sorry
+
 theorem step_inverse (n : ℕ) [NeZero n] :
     Function.Bijective (stepState n) ∧ ∀ s : State n,
       stepState n (revState n (stepState n (revState n s))) = s ∧

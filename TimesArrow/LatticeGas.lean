@@ -101,6 +101,15 @@ def stepState (n : ℕ) [NeZero n] (s : State n) : State n :=
 /-- Reverse velocities and collide everywhere: the time-reversal conjugator. -/
 def revState (n : ℕ) (s : State n) : State n := fun p => rev16 (s p)
 
+/-- The checkerboard label of site `p` at time `t`: `(x + y + t) mod 2`.
+Consistent across the periodic seam only when `n` is even. -/
+def lab (n : ℕ) (h2 : 2 ∣ n) (t : ℕ) (p : Site n) : ℕ :=
+  ((ZMod.castHom h2 (ZMod 2) p.1).val + (ZMod.castHom h2 (ZMod 2) p.2).val + t) % 2
+
+/-- The mass on the `c`-labelled checkerboard at time `t`. -/
+def labelMass (n : ℕ) [NeZero n] (h2 : 2 ∣ n) (t : ℕ) (c : ZMod 2) (s : State n) : ℕ :=
+  ∑ p, if lab n h2 t p = c.val then mass16 (s p) else 0
+
 /-- The forward light cone of `p`: sites within lattice L1 distance `t`,
 with periodic distance, so the diamond |dx| + |dy| ≤ t wraps around the
 lattice. -/
@@ -442,5 +451,76 @@ theorem stepState_total_py (n : ℕ) [NeZero n] (s : State n) :
   rw [Fintype.sum_prod_type (fun p => py16 (stepState n s p)),
     Fintype.sum_prod_type (fun p => py16 (s p))]
   refine Finset.sum_congr rfl fun x _ => stepState_col_py n s x
+
+/-! ## The checkerboard -/
+
+/-- Translating sites is a bijection. -/
+theorem bijective_sub_vel (n : ℕ) [NeZero n] (k : Fin 4) :
+    Function.Bijective fun p => p - vel n k :=
+  ⟨fun p₁ p₂ h => by simpa using congrArg (fun q => q + vel n k) h,
+   fun q => ⟨q + vel n k, by simp⟩⟩
+
+/-- An `if` independent of the summation variable can be pulled out of a sum. -/
+theorem sum_ite_const {α β : Type*} [AddCommMonoid β] (s : Finset α) (P : Prop) [Decidable P]
+    (f : α → β) : ∑ x ∈ s, (if P then f x else 0) = if P then ∑ x ∈ s, f x else 0 := by
+  by_cases h : P <;> simp [h]
+
+/-- A step moves a particle to the other sublattice, so reading the label at
+time `t + 1` at the source of an incoming bit gives the label at time `t`. -/
+theorem lab_vel (n : ℕ) [NeZero n] (h2 : 2 ∣ n) (t : ℕ) (q : Site n) (k : Fin 4) :
+    lab n h2 (t + 1) (q + vel n k) = lab n h2 t q := by
+  have key : ∀ (a : ZMod n) (v : ℤ),
+      (ZMod.castHom h2 (ZMod 2) (a + (v : ZMod n))).val
+        = ((ZMod.castHom h2 (ZMod 2) a).val + ((v : ZMod 2)).val) % 2 := by
+    intro a v
+    rw [map_add, map_intCast, ZMod.val_add]
+  show ((ZMod.castHom h2 (ZMod 2) (q.1 + (velInt k).1 : ZMod n)).val
+        + (ZMod.castHom h2 (ZMod 2) (q.2 + (velInt k).2 : ZMod n)).val + (t + 1)) % 2
+      = ((ZMod.castHom h2 (ZMod 2) q.1).val + (ZMod.castHom h2 (ZMod 2) q.2).val + t) % 2
+  rw [key, key]
+  have h : (((velInt k).1 : ℤ) : ZMod 2).val + (((velInt k).2 : ℤ) : ZMod 2).val = 1 := by
+    decide +kernel +revert
+  omega
+
+/-- One step preserves the mass on each labelled checkerboard. -/
+theorem labelMass_stepState (n : ℕ) [NeZero n] (h2 : 2 ∣ n) (t : ℕ) (c : ZMod 2)
+    (s : State n) : labelMass n h2 (t + 1) c (stepState n s) = labelMass n h2 t c s := by
+  have expand : ∀ p : Site n,
+      (if lab n h2 (t + 1) p = c.val then mass16 (stepState n s p) else 0)
+        = ∑ k : Fin 4,
+          (if lab n h2 (t + 1) p = c.val then (bits k (collide16 (s (p - vel n k)))).toNat
+            else 0) := by
+    intro p
+    by_cases h : lab n h2 (t + 1) p = c.val <;>
+      simp [h, stepState, streamState, collideState, mass16, bits_assemble]
+  simp only [labelMass, expand]
+  rw [Finset.sum_comm]
+  have reidx : ∀ k : Fin 4,
+      (∑ p : Site n,
+          (if lab n h2 (t + 1) p = c.val then (bits k (collide16 (s (p - vel n k)))).toNat
+            else 0))
+      = ∑ q : Site n,
+          (if lab n h2 t q = c.val then (bits k (collide16 (s q))).toNat else 0) := by
+    intro k
+    refine Finset.sum_bijective (fun p => p - vel n k) (bijective_sub_vel n k)
+      (fun p => ⟨fun _ => Finset.mem_univ _, fun _ => Finset.mem_univ _⟩) (fun p _ => ?_)
+    have hv := lab_vel n h2 t (p - vel n k) k
+    rw [sub_add_cancel] at hv
+    rw [hv]
+  rw [Finset.sum_congr rfl fun k _ => reidx k, Finset.sum_comm]
+  refine Finset.sum_congr rfl fun q _ => ?_
+  by_cases h : lab n h2 t q = c.val
+  · simp only [h, ite_true]
+    exact collide16_mass16 (s q)
+  · simp [h]
+
+/-- The checkerboard mass is conserved for every number of steps. -/
+theorem labelMass_iter (n : ℕ) [NeZero n] (h2 : 2 ∣ n) (t : ℕ) (c : ZMod 2) (s : State n) :
+    labelMass n h2 t c ((stepState n)^[t] s) = labelMass n h2 0 c s := by
+  induction t with
+  | zero => rfl
+  | succ t ih =>
+    rw [Function.iterate_succ_apply', labelMass_stepState n h2 t c ((stepState n)^[t] s)]
+    exact ih
 
 end TimesArrow.LatticeGas

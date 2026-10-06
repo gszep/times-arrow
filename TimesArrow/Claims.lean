@@ -79,6 +79,15 @@ theorem column_momentum_refuted :
     ∑ y, px16 (stepState 4 east4 (0, y)) ≠ ∑ y, px16 (east4 (0, y)) := by
   decide +kernel
 
+/-- Checkerboard (even n only): every particle carries the label
+(x + y + t) mod 2 forever — streaming moves it to the other sublattice each
+step and collisions happen within a sublattice — so the mass sitting on each
+labelled checkerboard is conserved. The wrap across the periodic seam keeps
+the labelling consistent only when n is even; odd n has no such invariant. -/
+theorem checkerboard (n : ℕ) [NeZero n] (h2 : 2 ∣ n) (t : ℕ) (c : ZMod 2) (s : State n) :
+    labelMass n h2 t c ((stepState n)^[t] s) = labelMass n h2 0 c s :=
+  labelMass_iter n h2 t c s
+
 /-- One HPP step is a bijection. Its inverse is the step conjugated by
 `revState`: reverse every velocity and collide (an involution), step, and do
 both again. Plain velocity reversal does not invert the step — with

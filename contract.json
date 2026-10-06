@@ -183,6 +183,13 @@
   "collide": [0, 1, 2, 3, 4, 10, 6, 7, 8, 9, 5, 11, 12, 13, 14, 15]},
  "claims":
  [{"status": "proved",
+   "statement":
+   "checkerboard (n : ℕ) [NeZero n] (h2 : 2 ∣ n) (t : ℕ) (c : ZMod 2) (s : State n) : labelMass n h2 t c ((stepState n)^[t] s) = labelMass n h2 0 c s",
+   "name": "TimesArrow.LatticeGas.checkerboard",
+   "doc":
+   "Checkerboard (even n only): every particle carries the label\n(x + y + t) mod 2 forever — streaming moves it to the other sublattice each\nstep and collisions happen within a sublattice — so the mass sitting on each\nlabelled checkerboard is conserved. The wrap across the periodic seam keeps\nthe labelling consistent only when n is even; odd n has no such invariant.",
+   "axioms": ["propext", "Classical.choice", "Quot.sound"]},
+  {"status": "proved",
    "statement": "collide_collide (s : UInt32) : collide (collide s) = s",
    "name": "TimesArrow.LatticeGas.collide_collide",
    "doc": "Collisions are their own inverse.",
