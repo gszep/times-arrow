@@ -31,6 +31,8 @@ The full occupancy-chain HMM reproduces all corner KLs and every rational
 3-time cell; the same forward step serves the per-path and all-path passes.
 Missing or failing goldens prevent either sweep from starting.
 
+Both WGSL entry points share one hop function; the gate checks the edge-count
+path and the ensemble's tally-only path against the same Lean vectors.
 With the Lean executable built, `check:gpu` additionally draws fresh seeds,
 lattice sizes, walker counts and horizons for all five arms and compares
 `probe.walk()` with `timesarrow walkjson SEED ARM N M T`.

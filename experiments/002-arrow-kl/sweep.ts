@@ -23,7 +23,7 @@ const cfg = smoke ? tiny : full;
 const git = (cmd: string) => execSync(`git ${cmd}`, { encoding: "utf8" }).trim();
 const provenance = {
   commit: git("rev-parse HEAD"),
-  dirty: git("status --porcelain --untracked-files=no") !== "",
+  dirty: git("status --porcelain") !== "",
   host: hostname().split(".")[0],
   date: new Date().toISOString(),
   smoke,

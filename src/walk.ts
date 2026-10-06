@@ -38,40 +38,8 @@ fn init(@builtin(global_invocation_id) g: vec3u) {
   pos[b * p.m + id % p.m] = (w % p.n) | (((w >> p.shift) % p.n) << 8u);
 }
 
-// One synchronous step: every walker draws rand(seed, t, i).x (hops use
-// t ∈ {1..T}, the constructor draw used t = 0, so no counter repeats) and
-// hops or stays. The per-(seed, step) tally n_E − n_W accumulates atomically.
-@compute @workgroup_size(256)
-fn step(@builtin(global_invocation_id) g: vec3u) {
-  let id = g.x;
-  let b = id / p.m;
-  if (b >= p.batch) { return; }
-  let j = b * p.m + id % p.m;
-  let d = rand(p.seed0 + b, p.t, id % p.m).x >> 24u;
-  let t = thr[p.t - 1u];
-  let s = pos[j];
-  var x = s & 0xffu;
-  var y = (s >> 8u) & 0xffu;
-  if (d < t.x) {
-    atomicAdd(&tally[b * p.T + p.t - 1u], 1);
-    x = (x + 1u) & p.mask;
-  } else if (d < t.y) {
-    atomicAdd(&tally[b * p.T + p.t - 1u], -1);
-    x = (x - 1u) & p.mask;
-  } else if (d < t.z) {
-    y = (y + 1u) & p.mask;
-  } else if (d < t.w) {
-    y = (y - 1u) & p.mask;
-  }
-  pos[j] = x | (y << 8u);
-}
-
-// The step with per-edge bookkeeping: each hop also counts on its source
-// cell's out-edge, so integer hop counts per edge stay available to any
-// observer (002 reads the boundary crossings σ_∂ from them).
-@compute @workgroup_size(256)
-fn stepEdges(@builtin(global_invocation_id) g: vec3u) {
-  let id = g.x;
+// One dynamics implementation; the corner also counts each source out-edge.
+fn hop(id: u32, recordEdges: bool) {
   let b = id / p.m;
   if (b >= p.batch) { return; }
   let j = b * p.m + id % p.m;
@@ -83,22 +51,28 @@ fn stepEdges(@builtin(global_invocation_id) g: vec3u) {
   let cell = 4u * (y * p.n + x);
   let base = b * 4u * p.n * p.n;
   if (d < t.x) {
-    atomicAdd(&edges[base + cell], 1u);
+    if (recordEdges) { atomicAdd(&edges[base + cell], 1u); }
     atomicAdd(&tally[b * p.T + p.t - 1u], 1);
     x = (x + 1u) & p.mask;
   } else if (d < t.y) {
-    atomicAdd(&edges[base + cell + 1u], 1u);
+    if (recordEdges) { atomicAdd(&edges[base + cell + 1u], 1u); }
     atomicAdd(&tally[b * p.T + p.t - 1u], -1);
     x = (x - 1u) & p.mask;
   } else if (d < t.z) {
-    atomicAdd(&edges[base + cell + 2u], 1u);
+    if (recordEdges) { atomicAdd(&edges[base + cell + 2u], 1u); }
     y = (y + 1u) & p.mask;
   } else if (d < t.w) {
-    atomicAdd(&edges[base + cell + 3u], 1u);
+    if (recordEdges) { atomicAdd(&edges[base + cell + 3u], 1u); }
     y = (y - 1u) & p.mask;
   }
   pos[j] = x | (y << 8u);
 }
+
+@compute @workgroup_size(256)
+fn step(@builtin(global_invocation_id) g: vec3u) { hop(g.x, false); }
+
+@compute @workgroup_size(256)
+fn stepEdges(@builtin(global_invocation_id) g: vec3u) { hop(g.x, true); }
 
 // Region occupancies at time t: cnt[(b·(T+1) + t)·2 + region], one pass over
 // the walkers with the masks as per-site membership indicators.

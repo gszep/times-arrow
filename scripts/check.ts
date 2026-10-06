@@ -2,10 +2,8 @@
 // reference, in headless Chrome. Exits non-zero on any mismatch.
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import contract from "../contract.json" with { type: "json" };
 import { f32Bits, same } from "../src/check.ts";
 import { damageDepths } from "../experiments/001-irreversibility/run.ts";
-import { thresholds } from "../src/walk.ts";
 import { ARMS, protocolOf, sigma } from "../experiments/002-arrow-kl/score.ts";
 import { compareWalk } from "../experiments/002-arrow-kl/check.ts";
 import { headless } from "./headless.ts";
@@ -109,90 +107,10 @@ const smokeFailures = await headless("experiments/001-irreversibility/", async (
   return results.filter((x) => !x.pass).length;
 });
 
-// The 002 walker kernel: the contract goldens when the Lean lane has pinned
-// them (checked bit for bit through the page's probe — until then reported
-// as skipped), randomised differential tests against a TypeScript
-// reference whose Philox is itself verified against the contract's stream
-// vectors first, and the 002 protocol end to end on a small configuration:
-// mechanics only, never the registered statistics.
+// The 002 contract gate and fresh differential tests against Lean, followed
+// by a small protocol smoke check (not the registered ensemble).
 const walkFailures = await headless("experiments/002-arrow-kl/", async (evaluate) => {
   console.log("adapter", await evaluate("probe.adapter"));
-
-  // The TypeScript Philox reference, validated against the contract first.
-  const mulhilo = (a: number, b: number): [number, number] => {
-    const al = a & 0xffff;
-    const ah = a >>> 16;
-    const bl = b & 0xffff;
-    const bh = b >>> 16;
-    const ll = Math.imul(al, bl);
-    const lh = Math.imul(al, bh);
-    const hl = Math.imul(ah, bl);
-    const mid = ((ll >>> 16) + (lh & 0xffff) + (hl & 0xffff)) >>> 0;
-    return [(ah * bh + (lh >>> 16) + (hl >>> 16) + (mid >>> 16)) >>> 0, Math.imul(a, b) >>> 0];
-  };
-  const philoxWord = (seed: number, step: number, site: number): number => {
-    let c0 = site;
-    let c1 = step;
-    let c2 = 0;
-    let c3 = 0;
-    let k0 = seed;
-    let k1 = 0;
-    for (let r = 0; r < 10; r++) {
-      const p0 = mulhilo(0xd2511f53, c0);
-      const p1 = mulhilo(0xcd9e8d57, c2);
-      c0 = (p1[0] ^ c1 ^ k0) >>> 0;
-      c1 = p1[1];
-      c2 = (p0[0] ^ c3 ^ k1) >>> 0;
-      c3 = p0[1];
-      k0 = (k0 + 0x9e3779b9) >>> 0;
-      k1 = (k1 + 0xbb67ae85) >>> 0;
-    }
-    return c0;
-  };
-  const streamPass = contract.philox.stream.filter((v) => philoxWord(v.seed, v.step, v.site) === v.out[0]).length;
-  check("TS Philox reference against the contract stream", streamPass === contract.philox.stream.length, `${streamPass}/${contract.philox.stream.length}`);
-
-  // The walker reference: the constructor, the step, the tallies and the
-  // out-edge counts, mirroring the WGSL exactly.
-  const refTrace = (seed: number, n: number, m: number, T: number, e: number, w: number) => {
-    const shift = Math.log2(n);
-    const pos = new Uint32Array(m);
-    for (let i = 0; i < m; i++) {
-      const word = philoxWord(seed, 0, i);
-      pos[i] = (word % n) | ((((word >>> shift) % n) << 8) >>> 0);
-    }
-    const tally = new Int32Array(T);
-    const edges = new Uint32Array(4 * n * n);
-    const thr = thresholds({ e, w, n: 24, s: 24, zero: 256 - 48 - e - w });
-    for (let t = 1; t <= T; t++)
-      for (let i = 0; i < m; i++) {
-        const d = philoxWord(seed, t, i) >>> 24;
-        let x = pos[i] & 0xff;
-        let y = (pos[i] >>> 8) & 0xff;
-        const cell = 4 * (y * n + x);
-        if (d < thr[0]) {
-          edges[cell]++;
-          tally[t - 1]++;
-          x = (x + 1) & (n - 1);
-        } else if (d < thr[1]) {
-          edges[cell + 1]++;
-          tally[t - 1]--;
-          x = (x - 1) & (n - 1);
-        } else if (d < thr[2]) {
-          edges[cell + 2]++;
-          y = (y + 1) & (n - 1);
-        } else if (d < thr[3]) {
-          edges[cell + 3]++;
-          y = (y - 1) & (n - 1);
-        }
-        pos[i] = x | (y << 8);
-      }
-    return {
-      pos: Array.from(pos, (s) => `${(s & 0xff).toString(16)}${((s >>> 8) & 0xff).toString(16)}`).join(""),
-      tally: Array.from(tally),
-      edges: Array.from(edges),
-    };
-  };
 
   results.push(...await evaluate("probe.check()"));
   if (existsSync(lean)) {
@@ -207,23 +125,6 @@ const walkFailures = await headless("experiments/002-arrow-kl/", async (evaluate
       }
     }
   } else console.log(`${lean} not built: skipping walker differential tests against Lean`);
-
-  // Randomised differential tests, WGSL against the TypeScript reference.
-  for (let i = 0; i < 4; i++) {
-    const seed = u32();
-    const n = [4, 8, 16][i % 3];
-    const m = [1, 4, 16][i % 3];
-    const T = 1 + Math.floor(Math.random() * 8);
-    const e = 8 + Math.floor(Math.random() * 96);
-    const w = 8 + Math.floor(Math.random() * Math.min(96, 200 - e));
-    const gpu = await evaluate(`probe.trace(${seed}, ${n}, ${m}, ${T}, ${e}, ${w})`);
-    const ref = refTrace(seed, n, m, T, e, w);
-    check(
-      `random walker trace seed ${seed}, n ${n}, m ${m}, T ${T}, e/w ${e}/${w}`,
-      gpu.pos === ref.pos && same(gpu.tally, ref.tally) && same(gpu.edges, ref.edges),
-      gpu.pos === ref.pos ? "" : `pos ${gpu.pos} vs ${ref.pos}`,
-    );
-  }
 
   // The 002 protocol end to end on a small configuration.
   const cfgR = 512;

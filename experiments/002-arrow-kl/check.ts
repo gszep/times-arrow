@@ -27,10 +27,11 @@ export async function walkVector(device: GPUDevice, g: Pick<WalkVector, "seed" |
     const { pos, tallies, edges } = await watch.race(walk.snapshot());
     const counts = [0, 0];
     for (let i = 0; i < edges.length; i++) if (i % 4 < 2) counts[i % 4] += edges[i];
+    const plain = g.t === 0 ? new Int32Array() : (await watch.race(walk.runSeeds(g.seed, 1))).tallies;
     return {
       state: Array.from(pos, (s) => `${(s & 0xff).toString(16)}${((s >>> 8) & 0xff).toString(16)}`).join(""),
       nE: counts[0], nW: counts[1], tallies: Array.from(tallies).slice(0, g.t),
-      sigma: sigma(tallies.subarray(0, g.t), protocol),
+      plainTallies: Array.from(plain), sigma: sigma(plain, protocol),
     };
   } finally { walk.destroy(); }
 }
@@ -41,6 +42,7 @@ export function compareWalk(g: WalkVector, got: Awaited<ReturnType<typeof walkVe
     { name: `${name}: trajectory`, pass: got.state === g.state, detail: "" },
     { name: `${name}: tallies`, pass: got.nE === g.nE && got.nW === g.nW &&
       JSON.stringify(got.tallies) === JSON.stringify(g.tallies), detail: "" },
+    { name: `${name}: ensemble tallies`, pass: JSON.stringify(got.plainTallies) === JSON.stringify(g.tallies), detail: "" },
     { name: `${name}: σ`, pass: Number.isFinite(g.sigma) && Number.isFinite(got.sigma) &&
       Math.abs(got.sigma - g.sigma) <= 1e-9, detail: `${got.sigma} vs ${g.sigma}` },
   ];

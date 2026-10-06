@@ -28,7 +28,7 @@ const url = (patch: Record<string, string | number>) =>
 const link = (text: string, patch: Record<string, string | number>) => `<a href="${url(patch)}">${text}</a>`;
 
 /** the constant live protocol at drive `d` */
-const driveWeights = (d: number): Weights => ({ e: 32 + d, w: 32 - d, n: 24, s: 24, zero: 144 });
+const driveWeights = (d: number): Weights => ({ ...ARMS.null, e: ARMS.null.e + d, w: ARMS.null.w - d });
 
 type Series = { points: [number, number][]; color: string; dash?: boolean; label?: string };
 type Spec = {
@@ -329,23 +329,6 @@ try {
       runCorner: (cfg: { R: number; blocks?: number; T?: number }) => runCorner(device, cfg),
       check: () => checkWalk(device),
       walk: (g: Pick<WalkVector, "seed" | "arm" | "n" | "m" | "t">) => walkVector(device, g),
-      /** one full trace for differential tests: positions, per-step tallies
-       * and per-cell out-edge counts of one path under given weights
-       * (transverse weights fixed at the registered 24/24) */
-      trace: async (gseed: number, gn: number, gm: number, gt: number, ge: number, gw: number) => {
-        const walk = new Walk(device, { n: gn, m: gm, T: gt, batch: 1 });
-        const q: Weights = { e: ge, w: gw, n: 24, s: 24, zero: 256 - 48 - ge - gw };
-        walk.setProtocol(Array.from({ length: gt }, () => q));
-        walk.init(gseed);
-        for (let t = 1; t <= gt; t++) walk.step(t, gseed, true);
-        const { pos, tallies, edges } = await walk.snapshot();
-        walk.destroy();
-        return {
-          pos: Array.from(pos, (s) => `${(s & 0xff).toString(16)}${((s >>> 8) & 0xff).toString(16)}`).join(""),
-          tally: Array.from(tallies),
-          edges: Array.from(edges),
-        };
-      },
       corner: () => corner,
       hmm: () => hmm,
       live: {

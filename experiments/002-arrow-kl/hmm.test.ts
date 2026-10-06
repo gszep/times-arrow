@@ -5,18 +5,14 @@
 //     path (n = 4, M = 2, T = 2: 256 position pairs × 625 direction tuples),
 //     exact in f64, for both corner regions and both arms — the differential
 //     test of the kernel, the initial law and the forward pass.
-// (2) The registered marginal facts: the 2-time marginal is drive-blind for
-//     both regions (any region, by the flux argument), and the 3-time
-//     marginal of both corner regions is blind too — the value the contract
-//     must pin as a golden (KL = 0 exactly, rational arithmetic). The 4-
-//     and 5-time KLs (1.28e-5, 3.00e-5) are deferred to the goldens: the
-//     f64 enumeration that would check them here costs ~10⁹ entry visits.
-// (3) The half-count blindness at the registered corner: σ_cg ≡ 0 on
+// (2) The half-count blindness at the registered corner: σ_cg ≡ 0 on
 //     synthetic populated half paths, within the 1e-12 the falsifier
 //     allows (exactly 0 in the rational goldens).
-// (4) The null structure: the null's reversed kernel equals its forward
+// (3) The null structure: the null's reversed kernel equals its forward
 //     kernel (q_E = q_W), so σ_cg ≡ 0 — checked both on the weights and by
 //     an identical-passes computation returning exactly 0.
+// All 2–5-time marginals are compared with Lean by the shared contract gate
+// in check.ts, run through npm run check:gpu.
 import assert from "node:assert/strict";
 import { ARMS, LN3 } from "./score.ts";
 import { buildHmm, pathProbability, sigmaCg } from "./hmm.ts";
@@ -90,44 +86,11 @@ function bruteLaw(m: number, T: number, q: Weights, mask: Uint32Array): Map<stri
   }
 }
 
-/** the KL between the arms' k-time count marginals, by enumerating the
- * count sequences (every sequence with P_F > 0) */
-function marginalKl(hmm: ReturnType<typeof buildHmm>, region: number, k: number): number {
-  const m = hmm.m;
-  let kl = 0;
-  const rec = (path: number[]) => {
-    if (path.length === k) {
-      const pf = pathProbability(hmm, path, region, ARMS.driven);
-      if (pf <= 0) return;
-      const pr = pathProbability(hmm, path, region, ARMS.reversed);
-      kl += pf * Math.log(pf / pr);
-      return;
-    }
-    for (let c = 0; c <= m; c++) {
-      if (path.length && Math.abs(c - path[path.length - 1]) > m) continue;
-      path.push(c);
-      rec(path);
-      path.pop();
-    }
-  };
-  rec([]);
-  return kl;
-}
-
-// (2) the registered marginal facts at the corner.
 {
   const masks = [halfMask(N), lMask(N)];
   const hmm = buildHmm(N, 4, ARMS.driven, masks);
   assert.equal(hmm.states, 3876, "C(19,15) = 3876 compositions");
-  for (const [region, name] of masks.entries()) {
-    const kl2 = marginalKl(hmm, region, 2);
-    const kl3 = marginalKl(hmm, region, 3);
-    assert.ok(Math.abs(kl2) < 1e-12, `region ${name}: 2-time KL ${kl2.toExponential(2)} ≠ 0`);
-    assert.ok(Math.abs(kl3) < 1e-12, `region ${name}: 3-time KL ${kl3.toExponential(2)} ≠ 0`);
-    console.log(`pass: region ${region}: 2-time KL ${kl2.toExponential(2)}, 3-time KL ${kl3.toExponential(2)} — both drive-blind (registered goldens: exactly 0)`);
-  }
-
-  // (3) the half-count blindness on synthetic populated half paths.
+  // (2) the half-count blindness on synthetic populated half paths.
   let worstHalf = 0;
   for (let j = 0; j < 5; j++) {
     const path: number[] = [];
@@ -147,7 +110,7 @@ function marginalKl(hmm: ReturnType<typeof buildHmm>, region: number, k: number)
   assert.ok(Number.isFinite(scgL), `L-count σ_cg = ${scgL}`);
   console.log(`pass: L-count σ_cg finite (${scgL.toExponential(2)} nats on a synthetic path)`);
 
-  // (4) the null structure.
+  // (3) the null structure.
   assert.equal(ARMS.null.e, ARMS.null.w, "the null swaps nothing: q_E = q_W");
   const hmmNull = buildHmm(N, 4, ARMS.null, masks);
   const path = Array.from({ length: 33 }, (_, t) => t % 5);
@@ -168,4 +131,3 @@ function marginalKl(hmm: ReturnType<typeof buildHmm>, region: number, k: number)
   assert.ok(Math.abs(drift * 32 * LN3 - 16 * LN3) < 1e-9, `corner ⟨σ⟩ prediction ${drift * 32 * LN3} ≠ 16 ln 3`);
   console.log(`pass: the HMM's own per-step drift gives ⟨σ⟩_c = 16 ln 3 (drift ${drift}/step, T = 32)`);
 }
-
