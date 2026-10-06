@@ -145,6 +145,19 @@ def init (seed : UInt32) (n : Nat) : Array UInt32 :=
 def run (seed : UInt32) (n t : Nat) : Array UInt32 :=
   t.repeat (step n) (init seed n)
 
+/-- Reverse every velocity and collide on the materialised representation. -/
+def rev (n : ℕ) (a : Array UInt32) : Array UInt32 :=
+  match n with
+  | 0 => #[]
+  | n + 1 => toArray (n + 1) (revState (n + 1) (fromArray (n + 1) a))
+
+/-- The inverse step on the materialised representation: the step conjugated
+by the reversal (`stepState_rev`). -/
+def inv (n : ℕ) (a : Array UInt32) : Array UInt32 :=
+  match n with
+  | 0 => #[]
+  | n + 1 => rev (n + 1) (step (n + 1) (rev (n + 1) a))
+
 /-! ## Site algebra -/
 
 /-- `assemble` rebuilds exactly the given bits. -/

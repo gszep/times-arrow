@@ -4,8 +4,11 @@ import TimesArrow
 /-!
 `lake exe timesarrow contract` prints the contract JSON. The other commands
 evaluate the reference implementation for randomised differential tests:
-`rand <seed> <step> <site>` prints four words and `hpp <seed> <n> <t>` prints
-the lattice as one hex digit per site.
+`rand <seed> <step> <site>` prints four words, `hpp <seed> <n> <t>` prints
+the lattice as one hex digit per site, `hppinv <seed> <n> <t>` prints the
+state after undoing `t` steps with the inverse map, and `hppecho <seed>
+<n> <t>` prints the full Loschmidt-echo result, which must equal the
+initial state.
 -/
 
 open Lean TimesArrow Philox LatticeGas
@@ -65,6 +68,13 @@ def contract : MetaM Json := do
   let hpp := [(1, 32, 0), (1, 32, 1), (7, 32, 100)].map fun (seed, n, t) =>
     Json.mkObj [("seed", toJson seed), ("n", toJson n), ("t", toJson t),
       ("state", toJson (hexState (run seed n t)))]
+  let triples : List (Nat × Nat × Nat) := [(1, 32, 0), (1, 32, 1), (7, 32, 100)]
+  let invGold := triples.map fun (seed, n, t) =>
+    Json.mkObj [("seed", toJson seed), ("n", toJson n), ("t", toJson t),
+      ("state", toJson (hexState (t.repeat (inv n) (run seed.toUInt32 n t))))]
+  let echoGold := triples.map fun (seed, n, t) =>
+    Json.mkObj [("seed", toJson seed), ("n", toJson n), ("t", toJson t),
+      ("state", toJson (hexState (rev n (t.repeat (step n) (rev n (run seed.toUInt32 n t))))))]
   return Json.mkObj [
     ("allowedAxioms", toJson allowedAxioms),
     ("claims", ← claims),
@@ -75,7 +85,9 @@ def contract : MetaM Json := do
       ("stream", toJson stream)]),
     ("hpp", Json.mkObj [
       ("collide", toJson ((List.range 16).map fun s => collide s.toUInt32)),
-      ("golden", toJson hpp)])]
+      ("golden", toJson hpp),
+      ("inverse", toJson invGold),
+      ("echo", toJson echoGold)])]
 
 def main : List String → IO Unit
   | ["contract"] => do
@@ -87,4 +99,10 @@ def main : List String → IO Unit
     let b := rand seed.toNat!.toUInt32 step.toNat!.toUInt32 site.toNat!.toUInt32
     IO.println s!"{b.x0} {b.x1} {b.x2} {b.x3}"
   | ["hpp", seed, n, t] => IO.println (hexState (run seed.toNat!.toUInt32 n.toNat! t.toNat!))
-  | _ => throw (IO.userError "usage: timesarrow contract | rand SEED STEP SITE | hpp SEED N T")
+  | ["hppinv", seed, n, t] =>
+    IO.println (hexState (t.toNat!.repeat (inv n.toNat!) (run seed.toNat!.toUInt32 n.toNat! t.toNat!)))
+  | ["hppecho", seed, n, t] =>
+    IO.println (hexState (rev n.toNat!
+      (t.toNat!.repeat (step n.toNat!) (rev n.toNat! (run seed.toNat!.toUInt32 n.toNat! t.toNat!)))))
+  | _ => throw (IO.userError
+      "usage: timesarrow contract | rand SEED STEP SITE | hpp SEED N T | hppinv SEED N T | hppecho SEED N T")
