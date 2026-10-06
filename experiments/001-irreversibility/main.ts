@@ -1,7 +1,9 @@
 import contract from "../../contract.json" with { type: "json" };
+import ensembleJson from "./results/artemis.json" with { type: "json" };
 import { gpu } from "../../src/gpu.ts";
 import { Hpp, nullState, packedState } from "../../src/hpp.ts";
-import { nullBand } from "./score.ts";
+import { nullBand, renderVerdict, score } from "./score.ts";
+import type { Results } from "./score.ts";
 import { run } from "./run.ts";
 import type { RunConfig, RunResult } from "./run.ts";
 
@@ -101,6 +103,91 @@ function plot(canvas: HTMLCanvasElement, spec: Spec) {
 }
 
 const out = $("out");
+
+// The measured pre-registered ensemble (results/artemis.json, headless on
+// Artemis), rendered with the same committed functions the scorer uses
+// (nullBand, score, renderVerdict). Pure data — no GPU — so the verdict
+// and the measured curves are readable even without WebGPU.
+{
+  const ensemble = ensembleJson as Results & {
+    adapter: { vendor: string; architecture: string; description: string; fallback: boolean };
+  };
+  const packed = ensemble.runs.filter((r) => r.config.mode === "packed");
+  const { n, tE, tMax } = ensemble.params;
+  const m = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
+  const meanAt = (b: number) => packed[0].forward.map((s, i) => [s.t, m(packed.map((r) => r.forward[i].S[b]))] as [number, number]);
+  const band = nullBand(ensemble.runs.filter((r) => r.config.mode === "null"), 16);
+  const bandSpec = (from: number, to: number) => {
+    const pts = band.filter((e) => e.t >= from && e.t <= to);
+    return { points: pts.map((e) => [e.t, e.mu] as [number, number]), half: pts.map((e) => e.half), color: "#047857" };
+  };
+  $("mprov").textContent =
+    `The full registered ensemble — 16 packed + 16 null paired seeds, n = ${n}, tMax = ${tMax}, tE = ${tE} — ` +
+    `run headless on ${ensemble.host} (${ensemble.adapter.vendor} ${ensemble.adapter.architecture}, hardware adapter) at commit ${ensemble.commit}, ${ensemble.date}. ` +
+    `Verdict by the committed scorer (score.ts); the registered E[S_16(0)] mark and the S1 marks are drawn on the measured curves.`;
+  const s = score(ensemble, "experiments/001-irreversibility/results/artemis.json");
+  $("verdict").textContent = renderVerdict(s);
+  plot($("mplot1") as HTMLCanvasElement, {
+    series: [{ points: meanAt(16), color: "#047857", label: "S_16(t) packed, 16-seed mean" }],
+    band: bandSpec(0, tMax),
+    marks: [{ y: registered.S16_0, color: "#999", label: `registered E[S_16(0)] = ${registered.S16_0.toExponential(2)}` }, { x: tE, color: "#999" }],
+    logX: true,
+    yLabel: "nats",
+    xLabel: "t",
+  });
+  plot($("mplot2") as HTMLCanvasElement, {
+    series: [{ points: meanAt(16).filter(([t]) => t >= tMax - 2048), color: "#047857", label: "S_16 tail: the period-512 limit cycle" }],
+    band: bandSpec(tMax - 2048, tMax),
+    yLabel: "nats",
+    xLabel: `t (last 2048 of ${tMax} steps, every 128)`,
+  });
+  plot($("mplot3") as HTMLCanvasElement, {
+    series: [{ points: packed[0].echo.map((e, i) => [e.r, m(packed.map((r) => r.echo[i].H))] as [number, number]), color: "#dc2626", label: "H(r), 16-seed mean" }],
+    marks: [
+      { y: 1000, color: "#999", label: "S1(b): H(512) ≥ 1000" },
+      { y: 0.0605 * 4 * n * n, color: "#999", label: "S1(c) estimate 0.0605·4n² (window 0.05–0.07)" },
+    ],
+    logX: true,
+    yLabel: "XOR slots",
+    xLabel: "reverse depth r",
+  });
+  plot($("mplot4") as HTMLCanvasElement, {
+    series: [
+      { points: meanAt(16).filter(([t]) => t <= tE), color: "#047857", label: "forward" },
+      { points: packed[0].echo.map((e, i) => [tE - e.r, m(packed.map((r) => r.echo[i].Sp[16]))] as [number, number]), color: "#b45309", dash: true, label: "echo (exact inverse)" },
+      { points: packed[0].echo.map((e, i) => [tE - e.r, m(packed.map((r) => r.echo[i].Sd[16]))] as [number, number]), color: "#dc2626", dash: true, label: "echo, one bit flipped" },
+    ],
+    band: bandSpec(0, tE),
+    marks: [{ y: registered.S16_0, color: "#999", label: `packed S_16(0) = ${registered.S16_0.toExponential(2)}` }],
+    logX: true,
+    yLabel: "nats",
+    xLabel: "t (echo at aligned t = tE − r)",
+  });
+  // E2, as registered: the 16 per-seed ratios, their bootstrap CI, and the
+  // paired counts against each edge.
+  const e2 = s.claims.E2;
+  let a = 0x12345678;
+  const u32 = () => {
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 2 ** 32;
+  };
+  const ratios = e2.perSeed.map((x) => x.ratio);
+  const resampled = Array.from({ length: 10000 }, () => {
+    let sum = 0;
+    for (let i = 0; i < ratios.length; i++) sum += ratios[Math.min(ratios.length - 1, Math.floor(u32() * ratios.length))];
+    return sum / ratios.length;
+  }).sort((p, q) => p - q);
+  const bs = [4, 8, 16, 32, 64];
+  $("e2block").textContent =
+    `rise_i(64)/rise_i(4) = ${ratios.map((x) => x.toFixed(4)).join(", ")} — mean ${e2.meanRatio.toFixed(4)}, ` +
+    `s.d. ${e2.sdRatio.toExponential(2)}, bootstrap 95% CI [${resampled[249].toFixed(4)}, ${resampled[9749].toFixed(4)}] (10⁴ resamples; registered window [1.2, 1.5]); ` +
+    `monotone in b in ${e2.perSeed.length - e2.inversions.length}/${e2.perSeed.length} seeds; paired edge wins ` +
+    `${e2.edges.map((e) => `${e.from}→${e.to} ${e.wins}/${e2.perSeed.length}`).join(" · ")}. ` +
+    `Seed-mean rise by b: ${bs.map((b) => `S_${b} +${m(e2.perSeed.map((x) => x.rise[b])).toExponential(3)}`).join(", ")} nats (registered estimates 3.0–4.0 × 10⁵ to the null level).`;
+}
+
 try {
   const { device, adapter } = await gpu();
   const { n, seed, mode, tE } = config;

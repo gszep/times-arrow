@@ -18,6 +18,10 @@
       section {
         margin-top: 1.5rem;
       }
+      #verdict {
+        font-size: 0.72rem;
+        white-space: pre-wrap;
+      }
       .on {
         background: #047857;
         color: #fff;
@@ -33,6 +37,16 @@
       bit destroys the reversal while the naive flip-only reversal fails to retrace.
       Pre-registration: <a href="https://github.com/gszep/times-arrow/blob/main/experiments/001-irreversibility/README.md">README</a>.
     </p>
+    <section id="measured">
+      <h2>Measured ensemble (Artemis, headless)</h2>
+      <p id="mprov"></p>
+      <pre id="verdict"></pre>
+      <canvas id="mplot1" height="300"></canvas>
+      <canvas id="mplot2" height="220"></canvas>
+      <canvas id="mplot3" height="220"></canvas>
+      <canvas id="mplot4" height="260"></canvas>
+      <p id="e2block"></p>
+    </section>
     <p id="params"></p>
     <p>
       <button id="reset">reset</button>
@@ -45,7 +59,7 @@
     <canvas id="lattice"></canvas>
     <p id="live"></p>
     <section>
-      <h2>Block entropy S<sub>b</sub>(t)</h2>
+      <h2>Live block entropy S<sub>b</sub>(t) (your GPU)</h2>
       <p>
         <button id="runForward">run forward grid</button>
         <button id="runBand">null band (16 seeds)</button>
@@ -55,7 +69,7 @@
       <p id="snotes"></p>
     </section>
     <section>
-      <h2>Damage H(r) and the light cone</h2>
+      <h2>Live damage H(r) and the light cone</h2>
       <canvas id="hplot" height="220"></canvas>
       <canvas id="cplot" height="220"></canvas>
       <p id="eresults"></p>

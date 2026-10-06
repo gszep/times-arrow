@@ -150,5 +150,113 @@ over it; `t_max = 2 T_pred`.
 
 ## Result
 
-Not run. The predictions above are frozen at this commit (rule 4); this
-section will hold the labelled outcomes with the results-JSON provenance.
+The full registered ensemble — 16 packed + 16 null paired seeds, `n = 1024`,
+`tMax = 32768`, `tE = 16384` — ran headless on Artemis at commit `6af4454`
+(NVIDIA RTX 5000 Ada, Lovelace, hardware adapter; `results/artemis.json`,
+`dirty: false`, scored by the committed scorer into
+`results/artemis.score.json`). Two registered predictions are **refuted**;
+the exact claims are verified; E2 and the R1 control are supported.
+
+### Refuted
+
+**E1 — the packed block never enters the null band.** The initial state is
+as registered (seed-mean `S_16(0)` = 1.806 × 10⁵ nats, −0.20% off), but the
+entry check fails in 16 of 16 seeds (registered: ≥ 2 refutes): no seed ever
+enters μ̂ ± 3σ̂, and none is in band at `t_max`. The gas does not relax to
+the uniform-Bernoulli level (μ̂₁₆ = 5.704 × 10⁵ nats, flat at every sampled
+t and at every phase). It settles instead into an undamped statistical limit
+cycle of period 512 steps = `n/2`, phase-locked across all 16 seeds
+(seed-to-seed spread ≤ 0.2%, within-phase wander s.d. 540–920 nats), with
+16-seed-mean `S_16` levels 3.342, 4.565, 5.202, 4.564 × 10⁵ nats at
+`t mod 512` = 0, 128, 256, 384. Even at the cycle maximum it stays
+5.0 × 10⁴ nats (≈ 390 half-widths, 3σ̂ ≈ 130) below the band. The seed-mean
+rise is large (1.81 × 10⁵ → 3.34 × 10⁵ nats) but not monotone on average:
+126 decreases over 259 samples — the cycle.
+
+**S1(c), (d) — one flipped bit does not destroy the reversal.** The bundle
+(b)–(d) is refuted: (c) and (d) fail in 16 of 16 runs. (b) passes
+(H(512) = 3.05–3.64 × 10⁴ ≥ 1000 in 16/16). But the damage does not
+decorrelate the state: `H(r)` saturates at ≈ 1.02 × 10⁵ XOR slots
+(`H(T_e)/4n²` = 0.0244–0.0247, outside [0.05, 0.07] in 16/16), growing in
+steps at `r` = 512, 640, 1024 — the ballistic self-intersection depths of
+the torus — with near-constant plateaus between them, not exponentially.
+The damaged reverse follows the pristine one: it is out of band at all 124
+sampled depths `r ≥ 1024` and ends at undo fraction U = 0.226–0.231
+(registered ≤ 0.05; the pristine U = 1 exactly): the echo recovers three
+quarters of the entropy drop despite the flipped bit. β̂ = 0.016/step
+(exploratory; reference 0.032) over `H ∈ [4, 10⁴]`, but the growth
+decelerates, so the exponential fit is a poor model of it.
+
+### Verdict table (the committed scorer's output)
+
+| # | Claim | Registered criterion | Measured | Label |
+|---|---|---|---|---|
+| E1 | entropy entry | `S_16(0)` within 1%; entry ≤ 16384, excursion ≤ 32 samples, in band at `t_max`; ≥ 2 of 16 failing refutes | `S_16(0)` = 1.806 × 10⁵ (−0.20%); entry never 0/16, in band at `t_max` 0/16 | **refuted** |
+| S1 | echo sensitivity | (a) support ⊆ diamond; (b) H(512) ≥ 1000; (c) H(T_e)/4n² ∈ [0.05, 0.07]; (d) in band from r = 1024 and U ≤ 0.05; (b)–(d) failing in ≥ 2 of 16 refutes | (a) worst slack 0; (b) 16/16; (c) 0.0244–0.0247 in 0/16; (d) out of band 124/124 depths, U = 0.226–0.231 | (a) **verified**; (b)–(d) **refuted**; β̂ 0.016/step **exploratory** |
+| L1 | exact echo | Hamming 0 over 4n² slots; reverse `S_b` = forward sample for sample | 0 in 16/16; 0 mismatches over 2112 aligned depths | **verified** (proved in Lean) |
+| L2 | particle number | constant at every sample | 0 of 32 runs drift (the damaged twin carries N ± 1) | **verified** (proved) |
+| L3 | light cone | damage support inside the torus diamond for r ≤ n/2 | worst slack 0 at every sampled r ≤ 512 | **verified** (proved) |
+| E2 | partition robustness | ratio ∈ [1.2, 1.5]; s.d. ≤ 0.05; monotone in b; inversion in ≥ 2 refutes | mean 1.2484, s.d. 1.03 × 10⁻³, monotone 16/16, every edge 16/16 | **supported** (statistical) |
+| R1 | reversal and control | exact echo Hamming 0; the flip-only control must not recover | exact 0 in 16/16; control Hamming 2.071–2.077 × 10⁵ (≥ 1) | exact **verified**; control **supported** |
+
+### Statistics
+
+- Every comparison is paired (same seeds, same grid, same code path; only
+  the variable under test changes). All decisive counts are 16/16 or 0/16,
+  each with two-sided sign-test p = 2 · 2⁻¹⁶ = 3.1 × 10⁻⁵. The registered
+  one-run allowance was never needed: every pass and every failure is
+  unanimous.
+- Null band: μ̂₁₆ = 5.7044 × 10⁵ nats, flat at every sampled `t` (no phase
+  dependence); 3σ̂ = 87–146 nats over the tail samples. Within one null
+  seed over time, the s.d. is 45.6 nats — the registered exact
+  hypergeometric 44.9, as predicted.
+- E2: per-seed ratios 1.2464–1.2499 (all 16 on the page); mean 1.2484,
+  s.d. 1.03 × 10⁻³, bootstrap 95% CI [1.2479, 1.2489] (10⁴ resamples) —
+  inside the registered [1.2, 1.5]. Mean rise by `b`:
+  +1.33, +1.48, +1.54, +1.58, +1.66 × 10⁵ nats (the registered estimates
+  3.0–4.0 × 10⁵ assumed the rise reaches the null level; the stunted rise
+  kept its partition shape).
+- Monitored invariants: per-row x- and per-column y-momentum never deviated
+  (momDev = 0 over all 32 runs, 8320 samples), consistent with the proved
+  `momentum_conserved`; the profiles are recorded in the results JSON.
+
+### Lattice artefact or physics?
+
+- L1–L3, R1 exact echo: physics of the model (reversibility, conservation,
+  causality); the diamond shape is the lattice bit. The flip-only control's
+  ≈ 2.1 × 10⁵ differing slots is an order-level match to the registered
+  `2p(1−p) · 4n²` estimate.
+- E1 refuted: the cycle's period is a lattice number (the ballistic wrap of
+  the 1024-torus as seen by a 16-divisible block partition, at half-period
+  512); the failure of the molecular-chaos assumption behind the registered
+  D and t* is a property of HPP at this density. The registered checkerboard
+  parity (two non-communicating sublattice gases, Wolf-Gladrow §3.1.1) is
+  consistent with the observed coherence but does not by itself force the
+  cycle. Conjecture, for judgment: the block emits four coherent ballistic
+  beams; head-on partners can meet only inside scheduled time windows set
+  by the torus geometry, so collisions stay coherent instead of Poisson-like
+  and the beams never disperse.
+- E2 supported: partition robustness of the rise is the physics of
+  coarse-graining; 1.2484 sits inside the registered window but below the
+  1.33 point prediction, which assumed the rise reaches the Bernoulli level.
+- S1(c), (d) refuted: the "one bit scrambles the reversal" picture assumed
+  exponential damage branching in a collision-rich gas. The measured gas is
+  collision-poor and scheduled: the damage saturates at 2.4% of slots and
+  the reversal survives to U = 0.23. Whether this robustness would survive
+  a continuum limit — or is a finite-density lattice effect of sparse,
+  geometrically scheduled collisions — is open.
+
+### Surprises (unregistered, exploratory)
+
+- The period-512 limit cycle: undamped over the last ~28,000 steps (≈ 550
+  nominal collision times λ = 34), phase-locked across 16 independent
+  initial subsets, same period and phase at every `b ∈ {4 … 64}`. The null
+  ensemble shows no cycle at any phase.
+- The damage staircase: `H(r)` plateaus between the ballistic
+  self-intersection depths `r` = 512, 640, 1024, then sits at
+  ≈ 1.02 × 10⁵ slots for the remaining ~14,000 reverse steps.
+- The damaged reverse tracks the pristine reverse curve through the whole
+  reverse phase (the page's echo plot); it peels away only near full depth,
+  ending 23% — not ≤ 5% — of the way down the entropy drop.
+- The null ensemble's within-seed temporal s.d. (45.6 nats) matches the
+  registered σ_S = 44.9 to 1.5%.
