@@ -101,6 +101,13 @@ def stepState (n : ℕ) [NeZero n] (s : State n) : State n :=
 /-- Reverse velocities and collide everywhere: the time-reversal conjugator. -/
 def revState (n : ℕ) (s : State n) : State n := fun p => rev16 (s p)
 
+/-- The forward light cone of `p`: sites within lattice L1 distance `t`,
+with periodic distance, so the diamond |dx| + |dy| ≤ t wraps around the
+lattice. -/
+def diamond (n : ℕ) (p : Site n) (t : ℕ) : Set (Site n) :=
+  {q | ∃ u v : ℤ, u.natAbs + v.natAbs ≤ t ∧
+    (u : ZMod n) = q.1 - p.1 ∧ (v : ZMod n) = q.2 - p.2}
+
 /-! ## The executable -/
 
 /-- Read a state from an array of site values, keeping the low four bits. -/
@@ -252,5 +259,78 @@ theorem streamState_mass (n : ℕ) [NeZero n] (s : State n) :
     _ = ∑ k : Fin 4, ∑ p, (bits k (s p)).toNat :=
         Finset.sum_congr rfl fun k _ => sum_sub_vel n k fun q => (bits k (s q)).toNat
     _ = ∑ p, ∑ k : Fin 4, (bits k (s p)).toNat := Finset.sum_comm.symm
+
+/-! ## The light cone -/
+
+/-- The source site of bit `k` lies in the unit diamond of its target. -/
+theorem sub_vel_mem_diamond (n : ℕ) [NeZero n] (p : Site n) (k : Fin 4) :
+    p - vel n k ∈ diamond n p 1 := by
+  refine ⟨-(velInt k).1, -(velInt k).2, ?_, ?_, ?_⟩
+  · rw [Int.natAbs_neg, Int.natAbs_neg]; exact (velInt_natAbs k).le
+  · rw [Int.cast_neg]
+    show -((velInt k).1 : ZMod n) = (p.1 - (velInt k).1 : ZMod n) - p.1
+    rw [sub_sub_cancel_left]
+  · rw [Int.cast_neg]
+    show -((velInt k).2 : ZMod n) = (p.2 - (velInt k).2 : ZMod n) - p.2
+    rw [sub_sub_cancel_left]
+
+/-- Diamonds nest: a unit diamond around a point of the radius-`t` diamond
+sits inside the radius-`t+1` diamond. -/
+theorem diamond_subset (n : ℕ) {p q r : Site n} {t : ℕ}
+    (hq : q ∈ diamond n p t) (hr : r ∈ diamond n q 1) :
+    r ∈ diamond n p (t + 1) := by
+  obtain ⟨u, v, huv, hx, hy⟩ := hq
+  obtain ⟨u', v', huv', hx', hy'⟩ := hr
+  refine ⟨u + u', v + v', ?_, ?_, ?_⟩
+  · have h1 := Int.natAbs_add_le u u'
+    have h2 := Int.natAbs_add_le v v'
+    omega
+  · rw [Int.cast_add, hx', hx]; exact sub_add_sub_cancel' _ _ _
+  · rw [Int.cast_add, hy', hy]; exact sub_add_sub_cancel' _ _ _
+
+/-- The diamond is symmetric in its two sites. -/
+theorem diamond_symm (n : ℕ) {p q : Site n} {t : ℕ} (h : q ∈ diamond n p t) :
+    p ∈ diamond n q t := by
+  obtain ⟨u, v, huv, hx, hy⟩ := h
+  refine ⟨-u, -v, ?_, ?_, ?_⟩
+  · rw [Int.natAbs_neg, Int.natAbs_neg]; exact huv
+  · rw [Int.cast_neg, hx, neg_sub]
+  · rw [Int.cast_neg, hy, neg_sub]
+
+/-- The bit written by one step at `q` is read from `q − vel k`, after
+collision. -/
+theorem stepState_bits (n : ℕ) [NeZero n] (s : State n) (q : Site n) (k : Fin 4) :
+    bits k (stepState n s q) = bits k (collide16 (s (q - vel n k))) :=
+  streamState_bits n (collideState n s) q k
+
+/-- One step is local: if two states agree on the unit diamond of `q`, they
+step to the same value at `q`. -/
+theorem stepState_eq_of_diamond (n : ℕ) [NeZero n] {s₁ s₂ : State n} {q : Site n}
+    (h : ∀ r ∈ diamond n q 1, s₁ r = s₂ r) : stepState n s₁ q = stepState n s₂ q := by
+  refine bits_ext _ _ fun k => ?_
+  rw [stepState_bits, stepState_bits, h _ (sub_vel_mem_diamond n q k)]
+
+/-- Light cone: after `t` steps the value at `p` depends only on the initial
+values within lattice L1 distance `t` of `p`. -/
+theorem lightcone_agreement (n : ℕ) [NeZero n] (t : ℕ) (p : Site n) (s₁ s₂ : State n)
+    (h : ∀ q ∈ diamond n p t, s₁ q = s₂ q) :
+    (stepState n)^[t] s₁ p = (stepState n)^[t] s₂ p := by
+  induction t generalizing s₁ s₂ with
+  | zero => exact h p ⟨0, 0, by omega, by simp, by simp⟩
+  | succ t ih =>
+    simp only [Function.iterate_succ_apply]
+    exact ih _ _ fun q hq =>
+      stepState_eq_of_diamond n fun r hr => h r (diamond_subset n hq hr)
+
+/-- A change confined to sites outside `r`'s diamond of radius `t` cannot be
+seen at `p` (in or out of the diamond) after `t` steps. -/
+theorem lightcone_outside (n : ℕ) [NeZero n] (t : ℕ) (r p : Site n) (s₁ s₂ : State n)
+    (h : ∀ q, q ≠ r → s₁ q = s₂ q) (hp : p ∉ diamond n r t) :
+    (stepState n)^[t] s₁ p = (stepState n)^[t] s₂ p := by
+  refine lightcone_agreement n t p s₁ s₂ fun q hq => ?_
+  by_cases hqr : q = r
+  · subst hqr
+    exact absurd (diamond_symm n hq) hp
+  · exact h q hqr
 
 end TimesArrow.LatticeGas

@@ -46,6 +46,21 @@ theorem mass_conserved (n : ℕ) [NeZero n] (s : State n) :
   rw [h]
   exact Finset.sum_congr rfl fun p _ => collide16_mass16 (s p)
 
+/-- Light cone: after `t` steps the value at any site `p` depends only on
+the initial values within lattice L1 distance `t` of `p` — the diamond
+|dx| + |dy| ≤ t with periodic distance, so it wraps around the lattice. -/
+theorem lightcone (n : ℕ) [NeZero n] (t : ℕ) (p : Site n) (s₁ s₂ : State n)
+    (h : ∀ q ∈ diamond n p t, s₁ q = s₂ q) :
+    (stepState n)^[t] s₁ p = (stepState n)^[t] s₂ p :=
+  lightcone_agreement n t p s₁ s₂ h
+
+/-- A change at a single site `r` can only be seen, `t` steps later, at
+sites within `r`'s diamond of radius `t`. -/
+theorem lightcone_point (n : ℕ) [NeZero n] (t : ℕ) (r p : Site n) (s₁ s₂ : State n)
+    (h : ∀ q, q ≠ r → s₁ q = s₂ q) (hp : p ∉ diamond n r t) :
+    (stepState n)^[t] s₁ p = (stepState n)^[t] s₂ p :=
+  lightcone_outside n t r p s₁ s₂ h hp
+
 /-- One HPP step is a bijection. Its inverse is the step conjugated by
 `revState`: reverse every velocity and collide (an involution), step, and do
 both again. Plain velocity reversal does not invert the step — with

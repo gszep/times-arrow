@@ -31,6 +31,16 @@ theorem mass_conserved (n : ℕ) [NeZero n] (s : State n) :
     ∑ p, mass16 (stepState n s p) = ∑ p, mass16 (s p) := by
   sorry
 
+theorem lightcone (n : ℕ) [NeZero n] (t : ℕ) (p : Site n) (s₁ s₂ : State n)
+    (h : ∀ q ∈ diamond n p t, s₁ q = s₂ q) :
+    (stepState n)^[t] s₁ p = (stepState n)^[t] s₂ p := by
+  sorry
+
+theorem lightcone_point (n : ℕ) [NeZero n] (t : ℕ) (r p : Site n) (s₁ s₂ : State n)
+    (h : ∀ q, q ≠ r → s₁ q = s₂ q) (hp : p ∉ diamond n r t) :
+    (stepState n)^[t] s₁ p = (stepState n)^[t] s₂ p := by
+  sorry
+
 theorem step_inverse (n : ℕ) [NeZero n] :
     Function.Bijective (stepState n) ∧ ∀ s : State n,
       stepState n (revState n (stepState n (revState n s))) = s ∧
