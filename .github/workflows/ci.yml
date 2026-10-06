@@ -37,6 +37,28 @@ jobs:
           git checkout -q d03acab154d269c06e60e4de7e4cc85deebff94b
           lake build comparator
           echo "$PWD/.lake/build/bin" >> "$GITHUB_PATH"
+      - name: Sandbox is engaged (landrun denies writes outside the allowed set)
+        run: |
+          set -euo pipefail
+          # Comparator runs Submission's elaboration with
+          #   --best-effort --ro / --rw /dev -ldd -add-exec --rwx <project>/.lake
+          # so only .lake (and /dev) is writable. Re-run landrun with the same
+          # filesystem restrictions: a write inside .lake must succeed, and a
+          # write outside must fail. On a kernel without Landlock, --best-effort
+          # silently drops the sandbox and the forbidden write would succeed.
+          probe="$RUNNER_TEMP/sandbox-probe"
+          mkdir -p "$probe/.lake"
+          landrun --best-effort --ro / --rw /dev --ldd --add-exec \
+            --rwx "$probe/.lake" -- /bin/sh -c "echo allowed > '$probe/.lake/allowed'"
+          test -s "$probe/.lake/allowed"
+          rm -f "$probe/forbidden"
+          if landrun --best-effort --ro / --rw /dev --ldd --add-exec \
+              --rwx "$probe/.lake" -- /bin/sh -c "echo escaped > '$probe/forbidden'"; then
+            echo "::error::landrun allowed a write outside the allowed set; the sandbox is not engaged"
+            exit 1
+          fi
+          echo "landrun allowed the permitted write and denied the forbidden one"
+
       - name: Comparator certifies every proved claim against Challenge.lean
         run: |
           jq '{challenge_module: "Challenge", solution_module: "TimesArrow",

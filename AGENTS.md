@@ -105,7 +105,7 @@ Commands, run from the repo root with `~/.elan/bin` and
 | `uv run <script>.py` | Runs a tier 1 or tier 2 script on Artemis. Dependencies are declared inline in a `# /// script` block |
 
 CI (`.github/workflows/ci.yml`):
-- It runs `lake build`, checks that the contract is fresh, runs Comparator on every proved claim, runs `npm run build`, and on `main` deploys to Pages.
+- It runs `lake build`, checks that the contract is fresh, proves Comparator's landrun sandbox is engaged (a write outside the allowed set must be denied before Comparator runs), runs Comparator on every proved claim, runs `npm run build`, and on `main` deploys to Pages.
 - It has no GPU. Run `npm run check:gpu` yourself before every push that touches Lean, WGSL or `contract.json`.
 - The live site is <https://gszep.github.io/times-arrow/>, which redirects to `https://gszep.com/times-arrow/`. Plain http has no WebGPU.
 
