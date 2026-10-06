@@ -89,6 +89,32 @@ The core framing: relativity gives the cone, thermodynamics picks the half.
   Kato, Wakakuwa & Buscemi, Phys. Rev. Research **6**, 043327 (2024).
 - Deutsch, "Quantum statistical mechanics in a closed system", PRA **43**, 2046
   (1991): coarse-grained entropy from a density matrix.
+- Information-theoretic bounds on observational entropy via strengthened
+  relative-entropy monotonicity; Petz recovery; the "coarse-grained state" from
+  retrodiction. Buscemi, Schindler & Šafránek, New J. Phys. **25**, 053002 (2023).
+
+## Coarse-graining as a channel (Q5)
+
+- Lumped Markov chains: the coarse-grained thermodynamics is exact only when
+  intra-macrostate states equilibrate; otherwise hidden terms enter the entropy
+  balance. Esposito, PRE **85**, 041125 (2012).
+- Partial entropy production over a subset of transitions satisfies its own
+  integral fluctuation theorem (the origin of hidden entropy production).
+  Shiraishi & Sagawa, PRE **91**, 012130 (2015).
+- A marginal observer still gets an effective thermodynamics with a fluctuation
+  relation and second law, built on a hidden time reversal. Polettini & Esposito,
+  PRL **119**, 240601 (2017).
+- Observable entropy production is a lower bound on the total; the gap (hidden
+  EP) and the observable part each satisfy an IFT. Bisker, Polettini, Gingrich &
+  Horowitz, J. Stat. Mech. (2017) 093210.
+- Equality in relative-entropy monotonicity holds exactly for sufficient
+  statistics/subalgebras: the coarse-grainings that lose no information.
+  Petz, Commun. Math. Phys. **105**, 123 (1986).
+- Entropy inequalities over the lattice of set partitions (Han's inequality, the
+  submodularity side of the refinement order). Han, Inf. Control **36**, 133 (1978).
+- A one-parameter coarse-graining semigroup with a monotone already exists in
+  physics: the renormalization group, along which relative entropy decreases.
+  Apenko, Physica A **391**, 62 (2012).
 
 ## Relativistic thermodynamics and horizons
 
@@ -180,6 +206,11 @@ The core framing: relativity gives the cone, thermodynamics picks the half.
 - Quantum reference frames. Giacomini, Castro-Ruiz & Brukner, Nat. Commun.
   10, 494 (2019). Perspective-neutral framework: Vanrietvelde, Höhn, Giacomini &
   Castro-Ruiz, Quantum 4, 225 (2020).
+- Quantum reference-frame changes as symmetries, with relational observables and
+  a relational trace. Krumm, Höhn & Müller, Quantum **5**, 530 (2021).
+- Relative subsystems: frame transformations are reversible only relative to the
+  chosen subsystem, not for the whole universe. Castro-Ruiz & Oreshkov,
+  arXiv:2110.13199.
 
 ## Clocks
 
