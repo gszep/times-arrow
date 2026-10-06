@@ -46,4 +46,18 @@ theorem reversed_arm_is_reversal (n : ℕ) [NeZero n] (M T : ℕ) :
         (prodK n M reversedW reversedW_sum) T :=
   reversedPathPMF_prodK n M T
 
+/-- **Pathwise σ is the signed E/W hop tally** (M1, K1): on every
+positive-probability trajectory of the driven product chain on a torus with
+`3 ≤ n`, the path entropy production is the number of east hops minus the
+number of west hops, times the drive `ln 3` — one integer per path, the
+observable the simulation accumulates. -/
+theorem path_sigma_eq_hop_tally (n : ℕ) [NeZero n] (h3 : 3 ≤ n) (M T : ℕ)
+    (ω : Fin (T + 1) → Fin M → Site n)
+    (hω : TimesArrow.Markov.pathPMF (uniformConfig n M)
+        (prodK n M drivenW drivenW_sum) T ω ≠ 0) :
+    TimesArrow.Markov.pathEntropyProduction (uniformConfig n M)
+        (prodK n M drivenW drivenW_sum) T ω
+      = (netHops n M T ω : ℝ) * Real.log 3 :=
+  pathEntropyProduction_eq_netHops n h3 M T ω hω
+
 end TimesArrow.Walker

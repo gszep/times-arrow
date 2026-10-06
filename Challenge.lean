@@ -37,6 +37,15 @@ theorem reversed_arm_is_reversal (n : ℕ) [NeZero n] (M T : ℕ) :
         (prodK n M reversedW reversedW_sum) T := by
   sorry
 
+theorem path_sigma_eq_hop_tally (n : ℕ) [NeZero n] (h3 : 3 ≤ n) (M T : ℕ)
+    (ω : Fin (T + 1) → Fin M → Site n)
+    (hω : TimesArrow.Markov.pathPMF (uniformConfig n M)
+        (prodK n M drivenW drivenW_sum) T ω ≠ 0) :
+    TimesArrow.Markov.pathEntropyProduction (uniformConfig n M)
+        (prodK n M drivenW drivenW_sum) T ω
+      = (netHops n M T ω : ℝ) * Real.log 3 := by
+  sorry
+
 end TimesArrow.Walker
 
 namespace TimesArrow.Markov

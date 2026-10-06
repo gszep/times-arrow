@@ -1,5 +1,6 @@
 import TimesArrow.Philox
 import TimesArrow.Markov.Chain
+import TimesArrow.Markov.EntropyProduction
 import Mathlib.Data.ZMod.Basic
 import Mathlib.Algebra.BigOperators.Fin
 import Mathlib.Data.Fin.Tuple.Basic
@@ -515,6 +516,168 @@ theorem reversedPathPMF_prodK (n : ℕ) [NeZero n] (M T : ℕ) :
   refine TimesArrow.Markov.reversedPathPMF_eq_pathPMF_transpose _ _
     (fun i j => prodK_transpose n M drivenW reversedW drivenW_sum reversedW_sum
       reversedW_eq i j) _ (uniformConfig_const n M) T
+
+/-! ## Pathwise σ: the signed east/west tally
+
+The observable a simulation accumulates: on every positive-probability
+trajectory of the driven product chain, the path entropy production is the
+number of east hops minus the number of west hops, times the drive
+`ln 3`. -/
+
+/-- A nonzero kernel entry has a nonzero hop mass. -/
+theorem hopMass_ne_zero_of_walkerK (n : ℕ) [NeZero n] (w : Dir → ℕ)
+    (hw : ∑ d, w d = 256) {s s' : Site n} (h : walkerK n w hw s s' ≠ 0) :
+    hopMass n w s s' ≠ 0 := by
+  intro h0
+  apply h
+  rw [walkerK_apply, h0, Nat.cast_zero]
+  simp
+
+/-- The signed E/W score of one hop, read off the displacement: `+1` east,
+`-1` west, `0` otherwise. -/
+def netHop (n : ℕ) [NeZero n] (s s' : Site n) : ℤ :=
+  if s' = s + vel n 0 then 1 else if s' = s + vel n 1 then -1 else 0
+
+/-- The signed E/W score of one hop, by direction. -/
+def hopDirScore (d : Dir) : ℤ := if d = 0 then 1 else if d = 1 then -1 else 0
+
+/-- Distinct directions have distinct displacements. -/
+theorem vel_pair_ne (n : ℕ) [NeZero n] (h3 : 3 ≤ n) {d d' : Dir} (h : d ≠ d') :
+    vel n d ≠ vel n d' := fun h' => h (vel_inj n h3 h')
+
+/-- A hop out of `s` lands on `s + vel k` exactly when its direction is
+`k`. -/
+theorem hop_eq_iff_dir (n : ℕ) [NeZero n] (h3 : 3 ≤ n) (s : Site n) (d k : Dir) :
+    hop n s d = s + vel n k ↔ d = k := by
+  simp only [hop]
+  rw [add_left_cancel_iff]
+  exact (vel_inj n h3).eq_iff
+
+theorem netHop_hop (n : ℕ) [NeZero n] (h3 : 3 ≤ n) (s : Site n) (d : Dir) :
+    netHop n s (hop n s d) = hopDirScore d := by
+  simp only [netHop, hopDirScore, hop_eq_iff_dir n h3 s d 0, hop_eq_iff_dir n h3 s d 1]
+
+/-- The driven one-step log-ratio, by direction: east and west carry the
+drive `± ln 3`, north, south and stay carry none. -/
+theorem logRatio_drivenW_dir (d : Dir) :
+    Real.log ((drivenW d : ℝ) / (drivenW (opp d) : ℝ))
+      = (hopDirScore d : ℝ) * Real.log 3 := by
+  fin_cases d
+  · show Real.log ((drivenW (0 : Dir) : ℝ) / (drivenW (opp 0) : ℝ))
+        = (hopDirScore (0 : Dir) : ℝ) * Real.log 3
+    rw [show ((drivenW (0 : Dir) : ℝ) / (drivenW (opp 0) : ℝ)) = 3 by norm_num
+      [drivenW, opp]]
+    simp [hopDirScore]
+  · show Real.log ((drivenW (1 : Dir) : ℝ) / (drivenW (opp 1) : ℝ))
+        = (hopDirScore (1 : Dir) : ℝ) * Real.log 3
+    rw [show ((drivenW (1 : Dir) : ℝ) / (drivenW (opp 1) : ℝ)) = (3 : ℝ)⁻¹ by norm_num
+      [drivenW, opp], Real.log_inv]
+    simp [hopDirScore]
+  · show Real.log ((drivenW (2 : Dir) : ℝ) / (drivenW (opp 2) : ℝ))
+        = (hopDirScore (2 : Dir) : ℝ) * Real.log 3
+    rw [show ((drivenW (2 : Dir) : ℝ) / (drivenW (opp 2) : ℝ)) = 1 by norm_num
+      [drivenW, opp], Real.log_one]
+    simp [hopDirScore]
+  · show Real.log ((drivenW (3 : Dir) : ℝ) / (drivenW (opp 3) : ℝ))
+        = (hopDirScore (3 : Dir) : ℝ) * Real.log 3
+    rw [show ((drivenW (3 : Dir) : ℝ) / (drivenW (opp 3) : ℝ)) = 1 by norm_num
+      [drivenW, opp], Real.log_one]
+    simp [hopDirScore]
+  · show Real.log ((drivenW (4 : Dir) : ℝ) / (drivenW (opp 4) : ℝ))
+        = (hopDirScore (4 : Dir) : ℝ) * Real.log 3
+    rw [show ((drivenW (4 : Dir) : ℝ) / (drivenW (opp 4) : ℝ)) = 1 by norm_num
+      [drivenW, opp], Real.log_one]
+    simp [hopDirScore]
+
+/-- **Per-hop σ is the E/W score times the drive.** For any hop-connected
+pair of sites, the log-ratio of the step to its reverse is the direction's
+score times `ln 3`. -/
+theorem logRatio_pair (n : ℕ) [NeZero n] (h3 : 3 ≤ n) {s s' : Site n}
+    (h : walkerK n drivenW drivenW_sum s s' ≠ 0) :
+    Real.log ((walkerK n drivenW drivenW_sum s s').toReal
+        / (walkerK n drivenW drivenW_sum s' s).toReal)
+      = (netHop n s s' : ℝ) * Real.log 3 := by
+  obtain ⟨d, hd⟩ := exists_hop_of_pos n drivenW drivenW_pos
+    (hopMass_ne_zero_of_walkerK n drivenW drivenW_sum h)
+  subst hd
+  rw [walkerK_hop_logRatio n h3 drivenW drivenW_sum s d, logRatio_drivenW_dir d,
+    netHop_hop n h3 s d]
+
+/-- The signed E/W tally of a whole trajectory of the product chain: the
+integer the simulation accumulates per path. -/
+def netHops (n : ℕ) [NeZero n] (M T : ℕ) (ω : Fin (T + 1) → Fin M → Site n) : ℤ :=
+  ∑ t : Fin T, ∑ m : Fin M, netHop n (ω t.castSucc m) (ω t.succ m)
+
+/-- **Pathwise σ is the hop tally** (M1, K1): on every positive-probability
+trajectory of the driven product chain on a torus with `3 ≤ n`, the path
+entropy production is the signed E/W hop count times `ln 3` — one integer
+per path. -/
+theorem pathEntropyProduction_eq_netHops (n : ℕ) [NeZero n] (h3 : 3 ≤ n)
+    (M T : ℕ) (ω : Fin (T + 1) → Fin M → Site n)
+    (hω : TimesArrow.Markov.pathPMF (uniformConfig n M)
+        (prodK n M drivenW drivenW_sum) T ω ≠ 0) :
+    TimesArrow.Markov.pathEntropyProduction (uniformConfig n M)
+        (prodK n M drivenW drivenW_sum) T ω
+      = (netHops n M T ω : ℝ) * Real.log 3 := by
+  have hstat := prodK_stationary n M drivenW drivenW_sum
+  have hsym := prodK_support n M drivenW drivenW_sum drivenW_pos
+  have hfac : ∀ (t : Fin T) (m : Fin M),
+      walkerK n drivenW drivenW_sum (ω t.castSucc m) (ω t.succ m) ≠ 0 := by
+    intro t m
+    have h1 := TimesArrow.Markov.pathPMF_apply (uniformConfig n M)
+      (prodK n M drivenW drivenW_sum) T ω
+    rw [h1] at hω
+    have h2 := (Finset.prod_ne_zero_iff.mp (mul_ne_zero_iff.mp hω).2) t
+      (Finset.mem_univ t)
+    rw [prodK_apply] at h2
+    exact (Finset.prod_ne_zero_iff.mp h2) m (Finset.mem_univ m)
+  have hterm : ∀ t : Fin T,
+      Real.log (((uniformConfig n M) (ω t.castSucc)
+          * prodK n M drivenW drivenW_sum (ω t.castSucc) (ω t.succ)).toReal
+        / ((uniformConfig n M) (ω t.succ)
+          * prodK n M drivenW drivenW_sum (ω t.succ) (ω t.castSucc)).toReal)
+      = ∑ m : Fin M, (netHop n (ω t.castSucc m) (ω t.succ m) : ℝ) * Real.log 3 := by
+    intro t
+    have hnn : ∀ m : Fin M,
+        (walkerK n drivenW drivenW_sum (ω t.castSucc m) (ω t.succ m)).toReal ≠ 0 :=
+      fun m => ENNReal.toReal_ne_zero.mpr ⟨hfac t m, PMF.apply_ne_top _ _⟩
+    have hnn' : ∀ m : Fin M,
+        (walkerK n drivenW drivenW_sum (ω t.succ m) (ω t.castSucc m)).toReal ≠ 0 :=
+      fun m => ENNReal.toReal_ne_zero.mpr
+        ⟨fun h0 => hfac t m
+            ((walkerK_support n drivenW drivenW_sum drivenW_pos (ω t.succ m)
+              (ω t.castSucc m)).mp h0),
+          PMF.apply_ne_top _ _⟩
+    have hc : ((uniformConfig n M) (ω t.succ)).toReal ≠ 0 := by
+      have h0 : (0 : ℝ) < ((Fintype.card (Fin M → Site n) : ℕ) : ℝ) := by
+        exact_mod_cast Fintype.card_pos
+      rw [uniformConfig_apply, ENNReal.toReal_inv, ENNReal.toReal_natCast]
+      exact inv_ne_zero (ne_of_gt h0)
+    rw [uniformConfig_const n M (ω t.castSucc) (ω t.succ)]
+    rw [toReal_mul, prodK_apply_toReal, toReal_mul, prodK_apply_toReal]
+    field_simp
+    rw [Real.log_div (Finset.prod_ne_zero_iff.mpr fun m _ => hnn m)
+      (Finset.prod_ne_zero_iff.mpr fun m _ => hnn' m), Real.log_prod
+      (fun m _ => hnn m), Real.log_prod (fun m _ => hnn' m),
+      ← Finset.sum_sub_distrib]
+    refine Finset.sum_congr rfl fun m _ => ?_
+    rw [← Real.log_div (hnn m) (hnn' m)]
+    exact logRatio_pair n h3 (hfac t m)
+  rw [TimesArrow.Markov.pathEntropyProduction_eq_sum (prodK n M drivenW drivenW_sum)
+    (uniformConfig n M) hstat hsym T ω hω]
+  rw [Finset.sum_congr rfl fun t _ => hterm t]
+  have hcast : (netHops n M T ω : ℝ)
+      = ∑ t : Fin T, ∑ m : Fin M, (netHop n (ω t.castSucc m) (ω t.succ m) : ℝ) := by
+    rw [netHops]
+    push_cast
+    rfl
+  have hdist : ((netHops n M T ω : ℤ) : ℝ) * Real.log 3
+      = ∑ t : Fin T, ∑ m : Fin M,
+          (netHop n (ω t.castSucc m) (ω t.succ m) : ℝ) * Real.log 3 := by
+    rw [hcast]
+    simp only [Finset.sum_mul]
+  exact hdist.symm
+
 
 /-! ## The executable
 

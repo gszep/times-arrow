@@ -6014,6 +6014,13 @@
    "axioms": ["propext", "Classical.choice", "Quot.sound"]},
   {"status": "proved",
    "statement":
+   "path_sigma_eq_hop_tally (n : ℕ) [NeZero n] (h3 : 3 ≤ n) (M T : ℕ) (ω : Fin (T + 1) → Fin M → Site n) (hω : TimesArrow.Markov.pathPMF (uniformConfig n M) (prodK n M drivenW drivenW_sum) T ω ≠ 0) : TimesArrow.Markov.pathEntropyProduction (uniformConfig n M) (prodK n M drivenW drivenW_sum) T ω = (netHops n M T ω : ℝ) * Real.log 3",
+   "name": "TimesArrow.Walker.path_sigma_eq_hop_tally",
+   "doc":
+   "**Pathwise σ is the signed E/W hop tally** (M1, K1): on every\npositive-probability trajectory of the driven product chain on a torus with\n`3 ≤ n`, the path entropy production is the number of east hops minus the\nnumber of west hops, times the drive `ln 3` — one integer per path, the\nobservable the simulation accumulates.",
+   "axioms": ["propext", "Classical.choice", "Quot.sound"]},
+  {"status": "proved",
+   "statement":
    "product_support_symmetric (n : ℕ) [NeZero n] (M : ℕ) (w : Dir → ℕ) (hw : ∑ d, w d = 256) (hwpos : ∀ d, 0 < w d) (i j : Fin M → Site n) : prodK n M w hw i j = 0 ↔ prodK n M w hw j i = 0",
    "name": "TimesArrow.Walker.product_support_symmetric",
    "doc":
