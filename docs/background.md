@@ -21,6 +21,8 @@ The core framing: relativity gives the cone, thermodynamics picks the half.
 - Crooks fluctuation theorem, `P_F(W)/P_R(−W) = e^{β(W−ΔF)}`. Crooks, PRE 60, 2721 (1999).
 - Mean dissipation as a relative entropy between forward and reversed path
   measures. Kawai, Parrondo & Van den Broeck, PRL 98, 080602 (2007).
+- Trajectory entropy production `σ = Δs_sys + Q/T` and the integral fluctuation
+  theorem `⟨e^{−σ}⟩ = 1`. Seifert, PRL 95, 040602 (2005).
 - Entropy production as system–reservoir correlation,
   `Σ = I(S:E) + D(ρ_E' ‖ ρ_E^eq)`. Esposito, Lindenberg & Van den Broeck,
   New J. Phys. 12, 013013 (2010).
@@ -92,7 +94,8 @@ The core framing: relativity gives the cone, thermodynamics picks the half.
 
 - Tolman–Ehrenfest: `T √(−g_00)` is constant in equilibrium. Tolman, Phys. Rev. 35, 904 (1930).
   Tolman & Ehrenfest, Phys. Rev. 36, 1791 (1930).
-- Covariant inverse temperature `β^μ = u^μ / T`. Global equilibrium requires
+- Covariant inverse temperature `β^μ = u^μ / T`; the equilibrium phase-space
+  density is `∝ exp(β_μ p^μ)` in signature `(−,+,+)`. Global equilibrium requires
   `β^μ` to be a Killing vector. Israel & Stewart, Ann. Phys. **118**, 341
   (1979); Becattini, PRL **108**, 244502 (2012).
 - Temperature transformation debate: Planck/Einstein (`T' = T/γ`) versus Ott
@@ -102,9 +105,6 @@ The core framing: relativity gives the cone, thermodynamics picks the half.
   Hiscock & Lindblom, PRD 31, 725 (1985).
 - Link between the second law and causality. Gavassino, "Can we make sense of
   dissipation without causality?", PRX 12, 041001 (2022).
-- Relativistic Brownian motion review. Dunkel & Hänggi, Phys. Rep. 471, 1 (2009).
-- Stochastic thermodynamics of relativistic Brownian motion. Pal & Deffner,
-  New J. Phys. 22, 073054 (2020).
 - Unruh effect, `T = a / 2π`. Unruh, PRD 14, 870 (1976).
 - Bisognano–Wichmann: the modular flow of the vacuum on a Rindler wedge is
   the boost. J. Math. Phys. 16, 985 (1975) and 17, 303 (1976).
@@ -113,6 +113,52 @@ The core framing: relativity gives the cone, thermodynamics picks the half.
 - KMS condition: thermal states are periodic in imaginary time with period `β`.
 - Einstein equation as an equation of state (`δQ = T dS` on local Rindler
   horizons). Jacobson, PRL 75, 1260 (1995). Verlinde, JHEP 04 (2011) 029.
+
+## Relativistic stochastic dynamics and trajectory entropy (004)
+
+- Covariant relativistic Brownian motion. Hakim, J. Math. Phys. **6**, 1482
+  (1965).
+- Relativistic Ornstein–Uhlenbeck (ROU) process: a covariant relativistic
+  Langevin process with a relativistic fluctuation–dissipation theorem; the
+  Jüttner equilibrium is confirmed by simulation. Debbasch, Mallick & Rivet,
+  J. Stat. Phys. **88**, 945 (1997).
+- The ROU process in an arbitrary inertial frame: it has a preferred frame —
+  the fluid rest frame, "mandatory", no contradiction of relativity — while
+  the formalism stays "perfectly covariant, although not manifestly
+  covariant", and its distribution function is a Lorentz scalar.
+  Barbachoux, Debbasch & Rivet, EPJ B **19**, 37 (2001). Covariant Kolmogorov
+  equation and entropy current, so the mean entropy production is the
+  divergence of a covariant current (a scalar): EPJ B **23**, 487 (2001).
+- Discretization dilemma of the relativistic Langevin equation: of the
+  Ito/Stratonovich/Hänggi–Klimontovich interpretations only HK has the Jüttner
+  distribution stationary. Dunkel & Hänggi, PRE **71**, 016124 (2005) and
+  PRE **72**, 036106 (2005); review, incl. Lorentz transformations of SDEs,
+  Phys. Rep. **471**, 1 (2009).
+- Reparametrizing from coordinate time to proper time multiplies the
+  stationary density by 1/energy. Dunkel, Hänggi & Weber, PRE **79**, 010101
+  (2009). Stationary distributions and entropy depend on the time
+  parameterization. Cubero & Dunkel, EPL **87**, 30005 (2009).
+- A dilute relativistic gas equilibrates to Jüttner, measured simultaneously
+  in its rest frame. Cubero, Casado-Pascual, Dunkel, Talkner & Hänggi, PRL
+  **99**, 170601 (2007). Finite-propagation-velocity (Poisson–Kac) noise is
+  also consistent with Jüttner. Giona, EPL **126**, 50001 (2019).
+- Lorentz-invariance of the distribution in phase space. Van Kampen, Physica
+  **43**, 244 (1969).
+- Relativistic fluctuation theorems: heat is the exchanged four-momentum
+  projected on the bath's local time axis, and the theorems pick the physical
+  discretization. Fingerle, C. R. Physique **8**, 696 (2007). Stochastic heat
+  and work for the relativistic Langevin equation, with a simultaneity caveat
+  for feedback: Pal & Deffner, New J. Phys. **22**, 073054 (2020). Heat
+  statistics of the ROU particle: Paraguassú & Morgado, EPJ B **94**, 197
+  (2021).
+- Covariant stochastic thermodynamics and fluctuation theorems in curved
+  spacetime, with time reversal defined as the map to the past-directed
+  observer. Wang, Cai, Cui & Zhao, SciPost Phys. Core **7**, 082 (2024);
+  Cai, Wang & Zhao, PRE **111**, 024102 (2025) and Phys. Lett. B **860**,
+  139220 (2025).
+- Open (004's opening): the per-path flat-spacetime claim `σ[Λγ] = σ[γ]` —
+  entropy production as a Lorentz scalar along a worldline, with `β^μ` a
+  four-vector and the reversal fixed by the bath — is stated nowhere we found.
 
 ## Emergent time and emergent causality
 
