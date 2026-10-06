@@ -1,5 +1,6 @@
 import TimesArrow.Philox
 import TimesArrow.LatticeGas
+import TimesArrow.Selection
 
 /-!
 The claim statements that Comparator certifies, each proved by `sorry` here
@@ -29,6 +30,22 @@ theorem collide_mass :
 
 theorem mass_conserved (n : ℕ) [NeZero n] (s : State n) :
     ∑ p, mass16 (stepState n s p) = ∑ p, mass16 (s p) := by
+  sorry
+
+theorem subset_mass (seed : UInt32) (n x0 y0 side count : ℕ) [NeZero n]
+    (hx : x0 + side ≤ n) (hy : y0 + side ≤ n) :
+    ∑ p, mass16 (subsetState seed n x0 y0 side count p) = min count (4 * side * side) := by
+  sorry
+
+theorem packed_start (seed : UInt32) (n : ℕ) [NeZero n] (h8 : 8 ∣ n) :
+    ∑ p, mass16 (packedState seed n p) = n * n / 8 ∧
+    ∀ p : Site n,
+      ¬ inRegion n (n / 2 - (n / 4) / 2) (n / 2 - (n / 4) / 2) (n / 4) p →
+        packedState seed n p = 0 := by
+  sorry
+
+theorem null_start (seed : UInt32) (n : ℕ) [NeZero n] :
+    ∑ p, mass16 (nullState seed n p) = n * n / 8 := by
   sorry
 
 theorem lightcone (n : ℕ) [NeZero n] (t : ℕ) (p : Site n) (s₁ s₂ : State n)

@@ -306,10 +306,31 @@
    "axioms": ["propext", "Classical.choice", "Quot.sound"]},
   {"status": "proved",
    "statement":
+   "null_start (seed : UInt32) (n : ℕ) [NeZero n] : ∑ p, mass16 (nullState seed n p) = n * n / 8",
+   "name": "TimesArrow.LatticeGas.null_start",
+   "doc":
+   "The null start of 001 is exact-`n²/8`: the uniform subset over all\n`4n²` velocity slots holds exactly `n²/8` particles.",
+   "axioms": ["propext", "Classical.choice", "Quot.sound"]},
+  {"status": "proved",
+   "statement":
+   "packed_start (seed : UInt32) (n : ℕ) [NeZero n] (h8 : 8 ∣ n) : ∑ p, mass16 (packedState seed n p) = n * n / 8 ∧ ∀ p : Site n, ¬ inRegion n (n / 2 - (n / 4) / 2) (n / 2 - (n / 4) / 2) (n / 4) p → packedState seed n p = 0",
+   "name": "TimesArrow.LatticeGas.packed_start",
+   "doc":
+   "The packed start of 001: exactly `n²/8` particles — half the velocity\nslots of the centred block of side `n/4` — and no particle outside the\nblock (the block geometry is exact once `8 ∣ n`, in particular for every\npower-of-two lattice of the registered sizes).",
+   "axioms": ["propext", "Classical.choice", "Quot.sound"]},
+  {"status": "proved",
+   "statement":
    "step_inverse (n : ℕ) [NeZero n] : Function.Bijective (stepState n) ∧ ∀ s : State n, stepState n (revState n (stepState n (revState n s))) = s ∧ revState n (stepState n (revState n (stepState n s))) = s",
    "name": "TimesArrow.LatticeGas.step_inverse",
    "doc":
    "One HPP step is a bijection. Its inverse is the step conjugated by\n`revState`: reverse every velocity and collide (an involution), step, and do\nboth again. Plain velocity reversal does not invert the step — with\nstep = stream ∘ collide, flip ∘ step ∘ flip = stream⁻¹ ∘ collide, which\ndiffers from step⁻¹ = collide ∘ stream⁻¹ because collisions and streaming\ndo not commute.",
+   "axioms": ["propext", "Classical.choice", "Quot.sound"]},
+  {"status": "proved",
+   "statement":
+   "subset_mass (seed : UInt32) (n x0 y0 side count : ℕ) [NeZero n] (hx : x0 + side ≤ n) (hy : y0 + side ≤ n) : ∑ p, mass16 (subsetState seed n x0 y0 side count p) = min count (4 * side * side)",
+   "name": "TimesArrow.LatticeGas.subset_mass",
+   "doc":
+   "Selection sampling selects exactly the particles asked for: the\nexact-`count` subset state of a lattice region holds exactly\n`min count (4 · side²)` particles — every slot when the count exceeds the\nregion.",
    "axioms": ["propext", "Classical.choice", "Quot.sound"]},
   {"status": "proved",
    "statement": "philox_kat : ∀ v ∈ kat, philox v.1 v.2.1 v.2.2.1 = v.2.2.2",

@@ -1,5 +1,6 @@
 import TimesArrow.Philox
 import TimesArrow.LatticeGas
+import TimesArrow.Selection
 import TimesArrow.Reversible
 
 /-!
@@ -45,6 +46,58 @@ theorem mass_conserved (n : ℕ) [NeZero n] (s : State n) :
     streamState_mass n (collideState n s)
   rw [h]
   exact Finset.sum_congr rfl fun p _ => collide16_mass16 (s p)
+
+/-- Selection sampling selects exactly the particles asked for: the
+exact-`count` subset state of a lattice region holds exactly
+`min count (4 · side²)` particles — every slot when the count exceeds the
+region. -/
+theorem subset_mass (seed : UInt32) (n x0 y0 side count : ℕ) [NeZero n]
+    (hx : x0 + side ≤ n) (hy : y0 + side ≤ n) :
+    ∑ p, mass16 (subsetState seed n x0 y0 side count p) = min count (4 * side * side) :=
+  subsetState_mass seed n x0 y0 side count hx hy
+
+/-- The packed start of 001: exactly `n²/8` particles — half the velocity
+slots of the centred block of side `n/4` — and no particle outside the
+block (the block geometry is exact once `8 ∣ n`, in particular for every
+power-of-two lattice of the registered sizes). -/
+theorem packed_start (seed : UInt32) (n : ℕ) [NeZero n] (h8 : 8 ∣ n) :
+    ∑ p, mass16 (packedState seed n p) = n * n / 8 ∧
+    ∀ p : Site n,
+      ¬ inRegion n (n / 2 - (n / 4) / 2) (n / 2 - (n / 4) / 2) (n / 4) p →
+        packedState seed n p = 0 := by
+  obtain ⟨m, rfl⟩ : ∃ m, n = 8 * m := h8
+  have hx : 8 * m / 2 - (8 * m / 4) / 2 + 8 * m / 4 ≤ 8 * m := by omega
+  have hy : 8 * m / 2 - (8 * m / 4) / 2 + 8 * m / 4 ≤ 8 * m := by omega
+  refine ⟨?_, fun p hp =>
+    subsetState_outside seed (8 * m) (8 * m / 2 - (8 * m / 4) / 2)
+      (8 * m / 2 - (8 * m / 4) / 2) (8 * m / 4) (8 * m * (8 * m) / 8) p
+      (by simpa using hp)⟩
+  have h := subsetState_mass seed (8 * m) (8 * m / 2 - (8 * m / 4) / 2)
+    (8 * m / 2 - (8 * m / 4) / 2) (8 * m / 4) (8 * m * (8 * m) / 8) hx hy
+  simp only [packedState, subsetState] at h ⊢
+  have e1 : 8 * m * (8 * m) / 8 = 8 * m * m := by
+    have re : 8 * m * (8 * m) = 8 * (8 * m * m) := by ring
+    rw [re, Nat.mul_div_cancel_left (8 * m * m) (by omega : 0 < 8)]
+  have e2 : 4 * (8 * m / 4) * (8 * m / 4) = 16 * m * m := by
+    have hdiv : 8 * m / 4 = 2 * m := by omega
+    rw [hdiv]; ring
+  have e3 : 8 * m * m ≤ 16 * m * m :=
+    Nat.mul_le_mul_right m (by omega : 8 * m ≤ 16 * m)
+  rw [h, e1, e2]
+  omega
+
+/-- The null start of 001 is exact-`n²/8`: the uniform subset over all
+`4n²` velocity slots holds exactly `n²/8` particles. -/
+theorem null_start (seed : UInt32) (n : ℕ) [NeZero n] :
+    ∑ p, mass16 (nullState seed n p) = n * n / 8 := by
+  have h := subsetState_mass seed n 0 0 n (n * n / 8) (by omega) (by omega)
+  simp only [nullState]
+  have hle : n * n / 8 ≤ 4 * n * n := by
+    have hle1 : n * n / 8 ≤ n * n := Nat.div_le_self _ _
+    have hle2 : 4 * n * n = 4 * (n * n) := by ring
+    omega
+  rw [h]
+  omega
 
 /-- Light cone: after `t` steps the value at any site `p` depends only on
 the initial values within lattice L1 distance `t` of `p` — the diamond
