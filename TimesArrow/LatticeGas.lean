@@ -179,19 +179,6 @@ theorem fin4_rot (k : Fin 4) : k + 2 + 2 = k := by decide +kernel +revert
 theorem flip16_bits (s : Fin 16) (k : Fin 4) : bits k (flip16 s) = bits (k + 2) s := by
   decide +kernel +revert
 
-/-- Velocity reversal is an involution on site values. -/
-theorem flip16_flip16 (s : Fin 16) : flip16 (flip16 s) = s := by
-  refine bits_ext _ _ fun k => ?_
-  rw [flip16_bits, flip16_bits, fin4_rot]
-
-/-- Collisions are their own inverse on site values. -/
-theorem collide16_collide16 (s : Fin 16) : collide16 (collide16 s) = s := by
-  decide +kernel +revert
-
-/-- Collisions commute with velocity reversal. -/
-theorem collide16_flip16 (s : Fin 16) : collide16 (flip16 s) = flip16 (collide16 s) := by
-  decide +kernel +revert
-
 /-- Collisions conserve the particle number. -/
 theorem collide16_mass16 (s : Fin 16) : mass16 (collide16 s) = mass16 s := by
   decide +kernel +revert
@@ -258,13 +245,17 @@ theorem revState_involutive (n : ℕ) : Function.Involutive (revState n) := fun 
 
 /-! ## Sums over the lattice -/
 
+/-- Translating sites is a bijection. -/
+theorem bijective_sub_vel (n : ℕ) [NeZero n] (k : Fin 4) :
+    Function.Bijective fun p => p - vel n k :=
+  ⟨fun p₁ p₂ h => by simpa using congrArg (fun q => q + vel n k) h,
+   fun q => ⟨q + vel n k, by simp⟩⟩
+
 /-- Summing over the lattice is invariant under translation of the sites. -/
 theorem sum_sub_vel (n : ℕ) [NeZero n] (k : Fin 4) {β : Type*} [AddCommMonoid β]
     (f : Site n → β) : ∑ p, f (p - vel n k) = ∑ p, f p := by
-  refine Finset.sum_bijective (fun p => p - vel n k) ⟨fun p₁ p₂ h => ?_, fun q => ?_⟩
+  refine Finset.sum_bijective (fun p => p - vel n k) (bijective_sub_vel n k)
     (fun p => ⟨fun _ => Finset.mem_univ _, fun _ => Finset.mem_univ _⟩) (fun p _ => rfl)
-  · simpa using congrArg (fun q => q + vel n k) h
-  · exact ⟨q + vel n k, by simp⟩
 
 /-- Summing along a row or column is invariant under translation. -/
 theorem sum_sub_val (n : ℕ) [NeZero n] (v : ZMod n) {β : Type*} [AddCommMonoid β]
@@ -466,17 +457,6 @@ theorem stepState_total_py (n : ℕ) [NeZero n] (s : State n) :
   refine Finset.sum_congr rfl fun x _ => stepState_col_py n s x
 
 /-! ## The checkerboard -/
-
-/-- Translating sites is a bijection. -/
-theorem bijective_sub_vel (n : ℕ) [NeZero n] (k : Fin 4) :
-    Function.Bijective fun p => p - vel n k :=
-  ⟨fun p₁ p₂ h => by simpa using congrArg (fun q => q + vel n k) h,
-   fun q => ⟨q + vel n k, by simp⟩⟩
-
-/-- An `if` independent of the summation variable can be pulled out of a sum. -/
-theorem sum_ite_const {α β : Type*} [AddCommMonoid β] (s : Finset α) (P : Prop) [Decidable P]
-    (f : α → β) : ∑ x ∈ s, (if P then f x else 0) = if P then ∑ x ∈ s, f x else 0 := by
-  by_cases h : P <;> simp [h]
 
 /-- A step moves a particle to the other sublattice, so reading the label at
 time `t + 1` at the source of an incoming bit gives the label at time `t`. -/
