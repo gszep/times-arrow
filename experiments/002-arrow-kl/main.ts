@@ -1,10 +1,11 @@
 import contract from "../../contract.json" with { type: "json" };
+import ensembleJson from "./results/artemis.json" with { type: "json" };
 import { gpu } from "../../src/gpu.ts";
 import { Walk } from "../../src/walk.ts";
-import { ARMS, LN3, exactSigmaStats, sigma, tallyDp, T15, Z } from "./score.ts";
+import { ARMS, LN3, exactSigmaStats, renderVerdict, score, sigma, tallyDp, T15, Z } from "./score.ts";
 import { runMain, runCorner, halfMask, lMask } from "./run.ts";
 import { buildHmm } from "./hmm.ts";
-import type { ArmName, CornerResult } from "./score.ts";
+import type { ArmName, CornerResult, Results } from "./score.ts";
 import type { Weights } from "../../src/walk.ts";
 import type { Hmm } from "./hmm.ts";
 import { checkWalk, walkVector } from "./check.ts";
@@ -96,6 +97,22 @@ function plot(canvas: HTMLCanvasElement, spec: Spec) {
 }
 
 const out = $("out");
+
+// The measured registered ensemble (results/artemis.json, headless on
+// Artemis), rendered with the same committed scoring functions the CLI
+// scorer uses (score, renderVerdict). Pure data — no GPU — so the verdict
+// is readable even without WebGPU.
+{
+  const r = ensembleJson as unknown as Results;
+  const s = score(r, "experiments/002-arrow-kl/results/artemis.json");
+  $("mprov").textContent =
+    `The full registered ensemble — 11 arms at n = ${r.n}, m = ${r.m}, R = 65536 paired seeds per arm ` +
+    `(16 blocks × 4096; seeds 1…65536), plus the K5 corner (n = ${r.corner.n}, m = ${r.corner.m}, T = ${r.corner.T}, R_c = ${r.corner.R}) — ` +
+    `run headless on ${r.host} (${r.adapter!.vendor} ${r.adapter!.architecture}, hardware adapter) at commit ${r.commit}, ${r.date}. ` +
+    `Verdict by the committed scorer (score.ts): the χ² bins are the dof-preserving contiguous sets ` +
+    `T = 1 [−5, 9], T = 4 [−6, 22], T = 64 [70, 186] (the frozen thresholds are χ² at dof 14/28/116; issue #7).`;
+  $("verdict").textContent = renderVerdict(s);
+}
 
 try {
   const { device, adapter } = await gpu();

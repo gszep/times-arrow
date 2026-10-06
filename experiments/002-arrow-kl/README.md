@@ -224,5 +224,115 @@ golden vectors, including the pinned 3-time corner blindness
 
 ## Result
 
-Not run. The predictions above are frozen at this commit (rule 4); this
-section will hold the labelled outcomes with the results-JSON provenance.
+The full registered ensemble — 11 arms (null, driven, reversed at
+`T ∈ {1, 4, 64}`; ramp, ramprev at `T = 16`), `R = 65536` paired seeds per
+arm (seeds 1…65536, 16 blocks × 4096), plus the K5 corner (`n = 4`, `m = 4`,
+`T_c = 32`, `R_c = 1024`) — ran headless on Artemis at commit `8acad8c`
+(NVIDIA RTX 5000 Ada, Lovelace, hardware adapter, vendor-guarded;
+`results/artemis.json`: `dirty: false`, `goldens: true`, seeds and adapter
+recorded; scored by the committed scorer into `results/artemis.score.json`,
+which the page renders through the same `score`/`renderVerdict`). One
+registered check is **refuted** — a calibration error of the registration
+itself, not of the physics — every other statistical check passed and every
+bit-exact check verified.
+
+### Refuted
+
+**K3 at `T = 1` — the registered mirror-slope criterion.** Every per-bin
+mirror band passes (11/11 at both `T = 1` and `T = 4`, registered ≥ 10/11),
+the exact-DP mirror golden holds, and the `T = 64` cross-arm mirror agrees in
+117/117 bins. But the registered slope check fails at `T = 1`: the
+through-origin fit of `ln(n(k)/n(−k))` over the 11 bins is **1.164**, outside
+`ln 3 ± 5% = [1.044, 1.154]` — the registered falsifier ("any stated bin
+test fails at its threshold") fires. The cause is the criterion's own
+calibration, not the theorem (the dFT is proved, 281f5db): the minor-side
+count `n(−5) = 9` against an expected 16.4 (a −1.8σ Poisson draw) inflates
+the unweighted slope by ≈ 0.12, and a post-hoc Monte Carlo under the exact
+law (**exploratory**: 20 000 simulated arms at `R = 65536`) puts the slope's
+sampling s.d. at 0.025 — the ±5% band is a **±2.2σ** interval with per-arm
+size **3.2%**, ~16× the α = 0.002 discipline every other registered band
+follows (3.1σ normal, `t₁₅ = 3.73`). The measured slope sits 2.6σ from ln 3:
+an ordinary draw of a mis-registered test. Per rule 5 the verdict stands as
+measured — **refuted (statistical)** — and the calibration error is this
+run's negative result. The dFT itself, its `T = 4` slope (1.081), its
+per-bin evidence (22/22) and its `T = 64` certified route are unaffected.
+
+### Verdict table (the committed scorer's output)
+
+| # | Claim | Registered criterion | Measured | Label |
+|---|---|---|---|---|
+| K3 | detailed FT | per-bin `\|ln(n(k)/n(−k)) − k ln 3\| ≤ 3√(1/n(k)+1/n(−k))` in ≥ 10/11 bins and slope `ln 3 ± 5%` at T ∈ {1,4}; T = 64: DP-mirror golden ∧ cross-arm `n_R(−j) = n_F(j)` within 3σ in ≥ 90% of 117 bins | T=1: 11/11 bins pass, slope 1.164 ∉ [1.044, 1.154] — **fails**; T=4: 11/11, slope 1.081; T=64: DP mirror exact, cross-arm 117/117 | T=1 **refuted (statistical)** — the slope band was mis-registered (true size 3.2%, §Refuted); T=4, T=64 **supported**; dFT **proved** (281f5db) |
+| M1 | model fits the library | goldens bit for bit; differential tests pass | contract gate in the sweep: all goldens reproduced bit for bit (`goldens: true`); `check:gpu` 275/275 on this Mac at 8acad8c (194/194 golden-only on Artemis, no Lean there) | structure **conjecture** (round-3 model lemmas) + **verified** (kernels, constructor, DP goldens) |
+| K1 | second law linear | mean/std in 3.1σ bands; χ² ≤ 36/57/169; ≥ 15/16 block means in band | means 2.182, 8.774, 140.585 vs 2.197, 8.789, 140.622 (bands ±0.026, ±0.052, ±0.206); stds 2.120, 4.260, 16.994 vs 2.127, 4.255, 17.020; χ² 21.7, 22.7, 111.2; 16/16 blocks at every T (48/48 total) | **supported** (statistical); library theorem **proved** (faec5f1); model instantiation conditional on the round-3 per-walker stationarity lemma (**conjecture**) |
+| K2 | arrow = state | every null path σ = 0 bit-exact; driven mean > 0 | null `max|σ| = 0` at T ∈ {1,4,64} (3 × 65536 paths); driven means 2.18, 8.77, 140.6 > 0 | null runs **verified** (bit-exact); null reversibility **proved** (on main); strict-positivity two-liner **conjecture** (round 3) |
+| K4 | integral FT | T=1: `\|⟨e^−σ⟩ − 1\| ≤ 4σ̂`; T=64: collapse < 10⁻³ | T=1: ⟨e^−σ⟩ = 0.942, band ±0.153 (σ̂ = 0.0383, registered 0.039); T=64: 1.6 × 10⁻³⁶ (registered guess ≲ 10⁻³⁰) | **supported** (statistical); IFT **proved** (281f5db); variance identity **conjecture** (round 3) |
+| K5 | coarse arrow | corner bands; half σ_cg ≤ 10⁻¹²; L pipeline null `\|⟨σ_cg⟩\| ≤ 3.73 SE`; null corner σ, σ_cg ≡ 0 | ⟨σ⟩_c 17.657 vs 17.578 ± 0.583; ⟨σ_∂⟩ 4.526 vs 4.394 ± 0.270; half-count max \|σ_cg\| = 1.4 × 10⁻¹⁴ (0 in the rational goldens); L ⟨σ_cg⟩ = −1.17 × 10⁻³, band 4.00 × 10⁻³ (t₁₅ × block SE 1.07 × 10⁻³); null corner exact | bit-level **verified**; corner bands **supported** (statistical); half-blindness **conjecture** (Lean round-3) + **verified** (exact DP, 3-time KL = 0 golden); L-positivity **verified** (exact DP ≥ 1.28 × 10⁻⁵); DPI **conjecture**; magnitude **exploratory** |
+| K6 | estimator story | `D̂_plugin − D̂_mean ∈ [−3.73σ̂_diff, (K̂−1)/(2R) + 3.73σ̂_diff]` | difference −7.2 × 10⁻³ ∈ [−0.0954, 0.0963]; σ̂_diff = 0.102 (predicted ≲ 0.09); K̂ = 120 populated bins (registered ≈ 117), bias 9.1 × 10⁻⁴; both estimators vs exact 140.622: 140.585, 140.578 | **supported** (statistical); sufficiency identity **conjecture** (round 3) |
+| C1 | Crooks/Jarzynski | ramp mean/std bands; Crooks slope 1 ± 0.1, ≥ 90% of bins, crossing s* ∈ [−1,1]; Jarzynski excluded (T_eff > T*) | ⟨σ⟩ 10.178 vs 10.193 ± 0.055, std 4.576 vs 4.549; Crooks 20 populated 0.5-nat bins, slope 0.9855, 20/20 in 3σ; crossing s* = 0; ln E[e^σ] = 20.91, T_eff = 4.54 > T* = 2.41 | **supported** (statistical); inhomogeneous path law **conjecture** (round 3) |
+
+### Bonferroni context
+
+25 registered checks at per-test α = 0.002 (global α = 0.05). Every check
+that followed the discipline passed decisively: the three χ² (21.7, 22.7,
+111.2 against 36, 57, 169 at p ≈ 10⁻³), all per-bin mirrors (22/22 within
+T ∈ {1,4}), the Crooks bins (20/20), K1's block means (48/48 across three
+arms), K4's 4σ̂ band at T=1 (−1.5σ̂). The one failure, K3's T=1 slope, is
+the one check whose registered band (±2.2σ, size 3.2% per arm) did not
+follow the discipline the registration's own accounting assigned it
+(α = 0.002); the family-wise guarantee was void for that check from the
+start, and the run caught it. Post-hoc calibration of a failed criterion is
+exploratory and labelled so above.
+
+### The χ² bins (code-review ruling)
+
+The registered text "expected count ≥ 10" cannot reproduce all three frozen
+bin counts; the review ruled the bins as the dof-preserving contiguous sets
+matching the frozen thresholds χ² at dof 14/28/116 (issue #7):
+`T = 1` [−5, 9] (15 bins, limit 36), `T = 4` [−6, 22] (29 bins, 57),
+`T = 64` [70, 186] (117 bins, 169 — K3's explicit cross-arm range). The
+committed scorer implements exactly these sets; a Monte Carlo put the T = 64
+test's size at 0.07% against the nominal 0.1%.
+
+### Lattice artefact or physics?
+
+- K1, K2, K4 (and the theorem behind K3): physics of finite Markov chains —
+  lattice-free. K2's `σ ≡ 0` nulls and the corner's bit-exact nulls are
+  properties of the weights, not the grid.
+- `T*` (measured 2.409 at R = 65536) and the ramp's `T_eff` (4.54): sample-
+  size artefacts — they move with the seed budget, not with the system. The
+  measured `T = 64` IFT collapse (1.6 × 10⁻³⁶) is the same rare-event
+  mechanism, deeper than the registered order-of-magnitude guess.
+- K5: the half-count blindness is a **torus artefact of the observable** (an
+  orientation-reversing reflection exists at every `n`, so any
+  reflection-symmetric region is blind in the continuum limit of this
+  family); the 2-time marginal blindness of any region count is physics of
+  stationarity; the L-count's surviving share is the honest instantiation;
+  ⟨σ_∂⟩ = 4 ln 3 is the affinity × boundary-current split — physics, with
+  the region shape the only lattice input.
+- C1: the schedule-reversal/weight-swap distinction is the real
+  inhomogeneous content; the measured crossing at `s* = 0` is ΔF = 0 — the
+  torus drive stores no free energy.
+- The 8-bit draw and the synchronous update are implementation facts
+  (bit-exact on every backend); the registered numbers are model numbers.
+
+### Conditional on round 3 (labels that wait on Lean)
+
+Unproved round-3 lemmas carry these measured readings: per-walker
+doubly-stochastic stationarity (K1's model instantiation, C1's stationarity);
+unconditional support symmetry for this kernel and the pathwise σ identity
+(M1's structure); the strict-positivity two-liner (K2's driven side); the
+reversed arm realizing `reversedPathPMF` (K6's dFT-tilt license — the
+T = 64 cross-arm mirror, 117/117, is its direct measurement); the variance
+identity `E[e^{−2σ}] = E[e^σ]` (K4's σ̂); the sufficiency identity (K6's
+"same quantity"); the σ_cg identity and DPI (K5's reading); the half-count
+conjugacy and 2-time blindness (K5 — the exact-DP verification and the
+3-time KL = 0 golden stand regardless); the time-inhomogeneous path law
+(C1). Everything **verified** above (goldens, bit-exact nulls, exact-DP
+facts) is unconditional; everything **supported** is statistical evidence
+conditional on the corresponding lemma.
+
+The registered `E[σ_cg] ≥ 1.28 × 10⁻⁵` bound remains untestable at any
+feasible `R_c`: the realized per-path σ_cg scatter (block SE 1.07 × 10⁻³ at
+`R_c = 1024`, i.e. ≈ 0.034 per path — smaller than the registration's
+conservative √30 ln 3 scale) still puts resolving it at `R_c ≈ 10⁸` paired
+paths (**exploratory** revision of the registered ~10⁹).

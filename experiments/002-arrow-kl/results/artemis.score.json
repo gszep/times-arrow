@@ -1,0 +1,637 @@
+{
+ "source": "experiments/002-arrow-kl/results/artemis.json",
+ "commit": "8acad8c00240aee97e0f95d98272d8fd3bae5df8",
+ "dirty": false,
+ "registered": true,
+ "note": null,
+ "goldens": true,
+ "K1": [
+  {
+   "T": 1,
+   "dMean": 2.1823888858770015,
+   "sigmaStd": 2.127453548975202,
+   "std": 2.1202944755798128,
+   "chi2": {
+    "value": 21.723988390339898,
+    "bins": 15,
+    "limit": 36,
+    "registeredBins": 15,
+    "range": [
+     -5,
+     9
+    ]
+   },
+   "perBlock": [
+    {
+     "m": 2.165306886332434,
+     "inside": true
+    },
+    {
+     "m": 2.1977610091177953,
+     "inside": true
+    },
+    {
+     "m": 2.1607472161890358,
+     "inside": true
+    },
+    {
+     "m": 2.150823228229876,
+     "inside": true
+    },
+    {
+     "m": 2.1486775011035713,
+     "inside": true
+    },
+    {
+     "m": 2.165575102223222,
+     "inside": true
+    },
+    {
+     "m": 2.159406136735096,
+     "inside": true
+    },
+    {
+     "m": 2.1859595099231184,
+     "inside": true
+    },
+    {
+     "m": 2.1915920436296688,
+     "inside": true
+    },
+    {
+     "m": 2.2540863461832994,
+     "inside": true
+    },
+    {
+     "m": 2.1862277258139065,
+     "inside": true
+    },
+    {
+     "m": 2.1910556118480926,
+     "inside": true
+    },
+    {
+     "m": 2.1768401696363227,
+     "inside": true
+    },
+    {
+     "m": 2.1626247274245523,
+     "inside": true
+    },
+    {
+     "m": 2.1832773510152372,
+     "inside": true
+    },
+    {
+     "m": 2.238261608626801,
+     "inside": true
+    }
+   ],
+   "outside": 0,
+   "pass": true,
+   "meanOk": true,
+   "stdOk": true,
+   "chi2Ok": true,
+   "blocksOk": true,
+   "refutedBy": [],
+   "verdict": "supported"
+  },
+  {
+   "T": 4,
+   "dMean": 8.773962036926612,
+   "sigmaStd": 4.254907097950404,
+   "std": 4.259868612662058,
+   "chi2": {
+    "value": 22.707657030113747,
+    "bins": 29,
+    "limit": 57,
+    "registeredBins": 29,
+    "range": [
+     -6,
+     22
+    ]
+   },
+   "perBlock": [
+    {
+     "m": 8.712724996361052,
+     "inside": true
+    },
+    {
+     "m": 8.787289014000148,
+     "inside": true
+    },
+    {
+     "m": 8.731768324607009,
+     "inside": true
+    },
+    {
+     "m": 8.78004718494887,
+     "inside": true
+    },
+    {
+     "m": 8.712188564579478,
+     "inside": true
+    },
+    {
+     "m": 8.715407155268936,
+     "inside": true
+    },
+    {
+     "m": 8.800699808539553,
+     "inside": true
+    },
+    {
+     "m": 8.781120048512022,
+     "inside": true
+    },
+    {
+     "m": 8.847369373536685,
+     "inside": true
+    },
+    {
+     "m": 8.798822297304035,
+     "inside": true
+    },
+    {
+     "m": 8.833690363106491,
+     "inside": true
+    },
+    {
+     "m": 8.731231892825432,
+     "inside": true
+    },
+    {
+     "m": 8.786484366327786,
+     "inside": true
+    },
+    {
+     "m": 8.86936307658131,
+     "inside": true
+    },
+    {
+     "m": 8.719162177739967,
+     "inside": true
+    },
+    {
+     "m": 8.776023946587047,
+     "inside": true
+    }
+   ],
+   "outside": 0,
+   "pass": true,
+   "meanOk": true,
+   "stdOk": true,
+   "chi2Ok": true,
+   "blocksOk": true,
+   "refutedBy": [],
+   "verdict": "supported"
+  },
+  {
+   "T": 64,
+   "dMean": 140.5854429740551,
+   "sigmaStd": 17.019628391801614,
+   "std": 16.9938674415517,
+   "chi2": {
+    "value": 111.16146423518688,
+    "bins": 117,
+    "limit": 169,
+    "registeredBins": 117,
+    "range": [
+     70,
+     186
+    ]
+   },
+   "perBlock": [
+    {
+     "m": 140.59152812207736,
+     "inside": true
+    },
+    {
+     "m": 140.74199723680957,
+     "inside": true
+    },
+    {
+     "m": 140.4955068331753,
+     "inside": true
+    },
+    {
+     "m": 140.53761672802892,
+     "inside": true
+    },
+    {
+     "m": 140.637661255293,
+     "inside": true
+    },
+    {
+     "m": 140.7052516597715,
+     "inside": true
+    },
+    {
+     "m": 140.50221223044494,
+     "inside": true
+    },
+    {
+     "m": 140.85545255861294,
+     "inside": true
+    },
+    {
+     "m": 140.94450023435462,
+     "inside": true
+    },
+    {
+     "m": 140.71517564773075,
+     "inside": true
+    },
+    {
+     "m": 140.67413861644013,
+     "inside": true
+    },
+    {
+     "m": 140.15192227707576,
+     "inside": true
+    },
+    {
+     "m": 140.59769708756554,
+     "inside": true
+    },
+    {
+     "m": 140.79671327853035,
+     "inside": true
+    },
+    {
+     "m": 140.3906344198771,
+     "inside": true
+    },
+    {
+     "m": 140.02907939909468,
+     "inside": true
+    }
+   ],
+   "outside": 0,
+   "pass": true,
+   "meanOk": true,
+   "stdOk": true,
+   "chi2Ok": true,
+   "blocksOk": true,
+   "refutedBy": [],
+   "verdict": "supported"
+  }
+ ],
+ "K2": {
+  "bad": [],
+  "maxAbs": [
+   0,
+   0,
+   0
+  ],
+  "drivenPos": true,
+  "pass": true,
+  "verdict": "verified"
+ },
+ "K3": {
+  "1": {
+   "m1": {
+    "bins": [
+     {
+      "k": -5,
+      "y": -6.081203681862852,
+      "pass": true
+     },
+     {
+      "k": -4,
+      "y": -4.542629667513193,
+      "pass": true
+     },
+     {
+      "k": -3,
+      "y": -3.309695108447007,
+      "pass": true
+     },
+     {
+      "k": -2,
+      "y": -2.215719159972384,
+      "pass": true
+     },
+     {
+      "k": -1,
+      "y": -1.066900110219036,
+      "pass": true
+     },
+     {
+      "k": 0,
+      "y": 0,
+      "pass": true
+     },
+     {
+      "k": 1,
+      "y": 1.066900110219036,
+      "pass": true
+     },
+     {
+      "k": 2,
+      "y": 2.215719159972384,
+      "pass": true
+     },
+     {
+      "k": 3,
+      "y": 3.3096951084470065,
+      "pass": true
+     },
+     {
+      "k": 4,
+      "y": 4.542629667513193,
+      "pass": true
+     },
+     {
+      "k": 5,
+      "y": 6.081203681862851,
+      "pass": true
+     }
+    ],
+    "passing": 11,
+    "binsOk": true,
+    "slope": 1.1637083788158518,
+    "slopeOk": false
+   },
+   "m4": null,
+   "dpMirror": true,
+   "cross": null,
+   "pass": false,
+   "verdict": "refuted"
+  },
+  "4": {
+   "m1": null,
+   "m4": {
+    "bins": [
+     {
+      "k": -5,
+      "y": -5.327487743847817,
+      "pass": true
+     },
+     {
+      "k": -4,
+      "y": -4.289462680537582,
+      "pass": true
+     },
+     {
+      "k": -3,
+      "y": -3.4475691649673057,
+      "pass": true
+     },
+     {
+      "k": -2,
+      "y": -2.145931282948669,
+      "pass": true
+     },
+     {
+      "k": -1,
+      "y": -1.04625975229607,
+      "pass": true
+     },
+     {
+      "k": 0,
+      "y": 0,
+      "pass": true
+     },
+     {
+      "k": 1,
+      "y": 1.04625975229607,
+      "pass": true
+     },
+     {
+      "k": 2,
+      "y": 2.145931282948669,
+      "pass": true
+     },
+     {
+      "k": 3,
+      "y": 3.4475691649673057,
+      "pass": true
+     },
+     {
+      "k": 4,
+      "y": 4.289462680537582,
+      "pass": true
+     },
+     {
+      "k": 5,
+      "y": 5.327487743847817,
+      "pass": true
+     }
+    ],
+    "passing": 11,
+    "binsOk": true,
+    "slope": 1.081383986445177,
+    "slopeOk": true
+   },
+   "dpMirror": true,
+   "cross": null,
+   "pass": true,
+   "verdict": "supported"
+  },
+  "64": {
+   "m1": null,
+   "m4": null,
+   "dpMirror": true,
+   "cross": {
+    "bins": 117,
+    "passing": 117,
+    "frac": 1
+   },
+   "pass": true,
+   "verdict": "supported"
+  }
+ },
+ "K4": {
+  "1": {
+   "T": 1,
+   "ift": 0.9423477644964682,
+   "stdHat": 0.038257792897634986,
+   "band": 0.15303117159053994,
+   "pass": true,
+   "verdict": "supported"
+  },
+  "64": {
+   "T": 64,
+   "ift": 1.5680466131211254e-36,
+   "stdHat": 1.6997670690038595e+41,
+   "band": 0.001,
+   "pass": true,
+   "verdict": "supported"
+  }
+ },
+ "K5": {
+  "meanSigma": 17.65718852236309,
+  "sigmaExact": 17.577796618689753,
+  "sigmaBand": 0.582930522066654,
+  "sigmaOk": true,
+  "meanSd": 4.526411372940208,
+  "sdExact": 4.394449154672438,
+  "sdBand": 0.26997718778564156,
+  "sdOk": true,
+  "halfBad": [],
+  "halfMax": 1.4210854715202004e-14,
+  "lMean": -0.0011672767339443602,
+  "lSe": 0.0010717922949897694,
+  "lBand": 0.00399778526031184,
+  "lOk": true,
+  "nullSigmaOk": true,
+  "nullScgOk": true,
+  "pass": true,
+  "physicsOk": true,
+  "bitLevel": "verified",
+  "verdict": "supported"
+ },
+ "K6": {
+  "dMean": 140.5854429740551,
+  "dPlugin": 140.57820279416106,
+  "kPopulated": 120,
+  "bias": 0.00090789794921875,
+  "sigmaDiff": 0.10228157022476614,
+  "band": 0.09537756423459443,
+  "diff": -0.007240179894040466,
+  "ok": true,
+  "exact": 140.62237294951802,
+  "verdict": "supported"
+ },
+ "C1": {
+  "exactMean": 10.193327410517194,
+  "exactStd": 4.54906283829021,
+  "meanArm": 10.177756947572343,
+  "stdArm": 4.57586102608781,
+  "meanOk": true,
+  "stdOk": true,
+  "bins": [
+   {
+    "b": -10,
+    "s": -4.75,
+    "y": -4.76572886211068,
+    "pass": true
+   },
+   {
+    "b": -9,
+    "s": -4.25,
+    "y": -4.06474409244581,
+    "pass": true
+   },
+   {
+    "b": -8,
+    "s": -3.75,
+    "y": -3.5667118201397288,
+    "pass": true
+   },
+   {
+    "b": -7,
+    "s": -3.25,
+    "y": -3.2676659890376327,
+    "pass": true
+   },
+   {
+    "b": -6,
+    "s": -2.75,
+    "y": -2.4515702295204087,
+    "pass": true
+   },
+   {
+    "b": -5,
+    "s": -2.25,
+    "y": -2.3902906734131513,
+    "pass": true
+   },
+   {
+    "b": -4,
+    "s": -1.75,
+    "y": -1.6055086342942109,
+    "pass": true
+   },
+   {
+    "b": -3,
+    "s": -1.25,
+    "y": -1.2232768028409045,
+    "pass": true
+   },
+   {
+    "b": -2,
+    "s": -0.75,
+    "y": -0.8667159462443051,
+    "pass": true
+   },
+   {
+    "b": -1,
+    "s": -0.25,
+    "y": -0.09774228477293734,
+    "pass": true
+   },
+   {
+    "b": 0,
+    "s": 0.25,
+    "y": 0.33647223662121284,
+    "pass": true
+   },
+   {
+    "b": 1,
+    "s": 0.75,
+    "y": 0.7342086673577193,
+    "pass": true
+   },
+   {
+    "b": 2,
+    "s": 1.25,
+    "y": 1.3073671025302198,
+    "pass": true
+   },
+   {
+    "b": 3,
+    "s": 1.75,
+    "y": 1.7047480922384253,
+    "pass": true
+   },
+   {
+    "b": 4,
+    "s": 2.25,
+    "y": 2.3074910717629002,
+    "pass": true
+   },
+   {
+    "b": 5,
+    "s": 2.75,
+    "y": 2.8451736195191875,
+    "pass": true
+   },
+   {
+    "b": 6,
+    "s": 3.25,
+    "y": 3.2369963659813954,
+    "pass": true
+   },
+   {
+    "b": 7,
+    "s": 3.75,
+    "y": 3.359812165499301,
+    "pass": true
+   },
+   {
+    "b": 8,
+    "s": 4.25,
+    "y": 4.310404258647905,
+    "pass": true
+   },
+   {
+    "b": 9,
+    "s": 4.75,
+    "y": 4.862627325291482,
+    "pass": true
+   }
+  ],
+  "slope": 0.9855353127065736,
+  "frac": 1,
+  "crooksOk": true,
+  "crossing": 0,
+  "crossingOk": true,
+  "lnEexp": 20.91120728873323,
+  "tEff": 4.543037542823904,
+  "tStar": 2.4094208396532095,
+  "pass": true,
+  "verdict": "supported"
+ }
+}
