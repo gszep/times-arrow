@@ -1,7 +1,8 @@
 # 002 implementation and validation
 
-The pre-registration in `README.md` is frozen. No registered ensemble has
-been run. Smoke data validates plumbing; statistical verdicts are `n/a`.
+The pre-registration in `README.md` is frozen. The registered ensemble ran at
+1275643 (`results/artemis.json`, scored in the README's result section); the
+smoke data only validates plumbing.
 
 ## Contract
 
