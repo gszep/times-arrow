@@ -1,6 +1,6 @@
 import { checkContract, philoxStream } from "../../src/check.ts";
 import { gpu } from "../../src/gpu.ts";
-import { Hpp } from "../../src/hpp.ts";
+import { Hpp, nullState, packedState } from "../../src/hpp.ts";
 import { bench } from "./bench.ts";
 
 const out = document.getElementById("out")!;
@@ -17,6 +17,10 @@ try {
     check: () => checkContract(device),
     bench: (n: number, steps: number) => bench(device, n, steps),
     rand: (triples: number[][]) => philoxStream(device, triples),
+    init: async (mode: "packed" | "null", seed: number, n: number) => {
+      const s = mode === "packed" ? await packedState(device, seed, n) : await nullState(device, seed, n);
+      return Array.from(s, (w) => w.toString(16)).join("");
+    },
     hpp: async (seed: number, n: number, t: number) => {
       const h = new Hpp(device, n);
       h.init(seed);

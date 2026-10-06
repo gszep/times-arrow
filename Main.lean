@@ -6,9 +6,9 @@ import TimesArrow
 evaluate the reference implementation for randomised differential tests:
 `rand <seed> <step> <site>` prints four words, `hpp <seed> <n> <t>` prints
 the lattice as one hex digit per site, `hppinv <seed> <n> <t>` prints the
-state after undoing `t` steps with the inverse map, and `hppecho <seed>
-<n> <t>` prints the full Loschmidt-echo result, which must equal the
-initial state.
+state after undoing `t` steps with the inverse map, `hppecho <seed> <n>
+<t>` prints the full Loschmidt-echo result, which must equal the initial
+state, and `hppinit <packed|null> <seed> <n>` prints a 001 initial state.
 -/
 
 open Lean TimesArrow Philox LatticeGas
@@ -54,6 +54,16 @@ def claims : MetaM Json := do
       ("axioms", toJson axioms), ("status", toJson status)])
   return toJson ((out.qsort fun a b => a.1.lt b.1).map (·.2))
 
+/-- The materialised 001 initial state of a constructor at size `n`, one
+word per site: the packed block or the uniform null. -/
+def initState (mode : String) (seed : UInt32) : ℕ → Array UInt32
+  | 0 => #[]
+  | n + 1 =>
+    match mode with
+    | "packed" => toArray (n + 1) (packedState seed (n + 1))
+    | "null" => toArray (n + 1) (nullState seed (n + 1))
+    | _ => #[]
+
 def contract : MetaM Json := do
   let stream := Id.run do
     let mut out := #[]
@@ -75,6 +85,10 @@ def contract : MetaM Json := do
   let echoGold := triples.map fun (seed, n, t) =>
     Json.mkObj [("seed", toJson seed), ("n", toJson n), ("t", toJson t),
       ("state", toJson (hexState (rev n (t.repeat (step n) (rev n (run seed.toUInt32 n t))))))]
+  let initGold := [("packed", 1, 32), ("null", 7, 32), ("packed", 1, 64), ("null", 7, 64)].map
+    fun (mode, seed, n) =>
+      Json.mkObj [("mode", toJson mode), ("seed", toJson seed), ("n", toJson n),
+        ("count", toJson (n * n / 8)), ("state", toJson (hexState (initState mode seed n)))]
   return Json.mkObj [
     ("allowedAxioms", toJson allowedAxioms),
     ("claims", ← claims),
@@ -87,7 +101,8 @@ def contract : MetaM Json := do
       ("collide", toJson ((List.range 16).map fun s => collide s.toUInt32)),
       ("golden", toJson hpp),
       ("inverse", toJson invGold),
-      ("echo", toJson echoGold)])]
+      ("echo", toJson echoGold),
+      ("init", toJson initGold)])]
 
 def main : List String → IO Unit
   | ["contract"] => do
@@ -104,5 +119,9 @@ def main : List String → IO Unit
   | ["hppecho", seed, n, t] =>
     IO.println (hexState (rev n.toNat!
       (t.toNat!.repeat (step n.toNat!) (rev n.toNat! (run seed.toNat!.toUInt32 n.toNat! t.toNat!)))))
+  | ["hppinit", mode, seed, n] =>
+    if mode != "packed" && mode != "null" then
+      throw (IO.userError "mode must be packed or null")
+    else IO.println (hexState (initState mode seed.toNat!.toUInt32 n.toNat!))
   | _ => throw (IO.userError
-      "usage: timesarrow contract | rand SEED STEP SITE | hpp SEED N T | hppinv SEED N T | hppecho SEED N T")
+      "usage: timesarrow contract | rand SEED STEP SITE | hpp SEED N T | hppinv SEED N T | hppecho SEED N T | hppinit MODE SEED N")

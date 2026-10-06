@@ -32,6 +32,15 @@ const failures = await headless("experiments/000-plumbing/", async (evaluate) =>
       const pass = (await evaluate(`probe.hpp(${seed}, ${n}, ${t})`)) === ref("hpp", seed, n, t);
       results.push({ name: `random HPP seed ${seed}, n ${n}, t ${t}`, pass, detail: "" });
     }
+    for (const n of [32, 64]) {
+      const seed = u32();
+      for (const mode of ["packed", "null"] as const) {
+        check(
+          `random ${mode} initial state seed ${seed}, n ${n}`,
+          (await evaluate(`probe.init(${JSON.stringify(mode)}, ${seed}, ${n})`)) === ref("hppinit", mode, seed, n),
+        );
+      }
+    }
   }
   return results.filter((r) => !r.pass).length;
 });

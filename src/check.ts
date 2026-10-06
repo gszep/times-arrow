@@ -67,7 +67,6 @@ export async function philoxStream(device: GPUDevice, triples: number[][]): Prom
 }
 
 const popcount = (s: number) => ((s & 1) + ((s >>> 1) & 1) + ((s >>> 2) & 1) + ((s >>> 3) & 1)) as number;
-const massOf = (s: Uint32Array) => s.reduce((m, w) => m + popcount(w), 0);
 const hamming = (a: Uint32Array, b: Uint32Array) => {
   let d = 0;
   for (let i = 0; i < a.length; i++) d += popcount(a[i] ^ b[i]);
@@ -203,29 +202,16 @@ async function checkInverse(device: GPUDevice): Promise<Result[]> {
     });
   }
 
-  // The exact-N initial-state constructors (self-checks until the contract
-  // carries golden states for them).
-  for (const n of [32, 64]) {
-    const count = (n * n) / 8;
-    const packed = await packedState(device, 1, n);
-    const empty = await nullState(device, 1, n);
-    const side = n / 4;
-    const x0 = n / 2 - side / 2;
-    let outside = 0;
-    for (let y = 0; y < n; y++)
-      for (let x = 0; x < n; x++) {
-        const inBlock = x >= x0 && x < x0 + side && y >= x0 && y < x0 + side;
-        if (!inBlock) outside += popcount(packed[y * n + x]);
-      }
+  // The exact-N initial-state constructors against the contract's pinned
+  // golden states (`hpp.init`, Lean's selection-sampling constructors).
+  for (const v of contract.hpp.init) {
+    const words = v.mode === "packed" ? await packedState(device, v.seed, v.n) : await nullState(device, v.seed, v.n);
+    const got = Array.from(words, (w) => w.toString(16)).join("");
+    const diff = [...got].filter((c, i) => c !== v.state[i]).length;
     results.push({
-      name: `Packed constructor n ${n}`,
-      pass: massOf(packed) === count && outside === 0,
-      detail: `${massOf(packed)} particles, ${outside} outside the block`,
-    });
-    results.push({
-      name: `Null constructor n ${n}`,
-      pass: massOf(empty) === count,
-      detail: `${massOf(empty)} particles, expected ${count}`,
+      name: `Initial state ${v.mode} seed ${v.seed}, n ${v.n}`,
+      pass: diff === 0,
+      detail: `${diff} sites differ`,
     });
   }
 

@@ -133,7 +133,8 @@ export type Region = { x0: number; y0: number; side: number };
  * `rand(seed, 0, j).x`, with region slot `j = 4 · raster site + velocity bit`
  * selected iff `w · (slots − j) < (count − picked) · 2²⁴` for `w = word >>> 8`
  * (exact integer arithmetic, so every backend draws the same subset). This
- * construction is provisional until the same one is pinned in Lean. */
+ * is the rule pinned in `TimesArrow/Selection.lean`; the contract carries
+ * golden states under `hpp.init`. */
 export async function subsetState(
   device: GPUDevice,
   seed: number,
