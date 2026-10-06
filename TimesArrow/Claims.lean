@@ -1,5 +1,6 @@
 import TimesArrow.Philox
 import TimesArrow.LatticeGas
+import TimesArrow.Reversible
 
 /-!
 # Claims
@@ -36,5 +37,26 @@ theorem collide_flip :
 theorem collide_mass :
     ∀ s : Fin 16, mass (collide s.val.toUInt32) = mass s.val.toUInt32 := by
   decide +kernel
+
+/-- One HPP step is a bijection. Its inverse is the step conjugated by
+`revState`: reverse every velocity and collide (an involution), step, and do
+both again. Plain velocity reversal does not invert the step — with
+step = stream ∘ collide, flip ∘ step ∘ flip = stream⁻¹ ∘ collide, which
+differs from step⁻¹ = collide ∘ stream⁻¹ because collisions and streaming
+do not commute. -/
+theorem step_inverse (n : ℕ) [NeZero n] :
+    Function.Bijective (stepState n) ∧ ∀ s : State n,
+      stepState n (revState n (stepState n (revState n s))) = s ∧
+        revState n (stepState n (revState n (stepState n s))) = s := by
+  have h := Function.involutive_conj_inverse (stepState n) (revState n)
+    (revState_involutive n) (stepState_rev n)
+  exact ⟨h.1, fun s => ⟨stepState_rev n s, h.2 s⟩⟩
+
+/-- The Loschmidt echo: evolve `t` steps, reverse every velocity and collide,
+evolve `t` steps, and do it again: every state returns to itself. -/
+theorem loschmidt_echo (n : ℕ) [NeZero n] (t : ℕ) (s : State n) :
+    revState n ((stepState n)^[t] (revState n ((stepState n)^[t] s))) = s :=
+  Function.involutive_conj_echo (stepState n) (revState n) (revState_involutive n)
+    (stepState_rev n) t s
 
 end TimesArrow.LatticeGas

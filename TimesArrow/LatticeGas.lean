@@ -125,4 +125,102 @@ def init (seed : UInt32) (n : Nat) : Array UInt32 :=
 def run (seed : UInt32) (n t : Nat) : Array UInt32 :=
   t.repeat (step n) (init seed n)
 
+/-! ## Site algebra -/
+
+/-- `assemble` rebuilds exactly the given bits. -/
+theorem bits_assemble (b : Fin 4 → Bool) (k : Fin 4) : bits k (assemble b) = b k := by
+  decide +kernel +revert
+
+/-- Bits determine the site value. -/
+theorem assemble_bits (s : Fin 16) : assemble (fun k => bits k s) = s := by
+  decide +kernel +revert
+
+/-- Two site values with the same occupation bits are equal. -/
+theorem bits_ext (s t : Fin 16) (h : ∀ k, bits k s = bits k t) : s = t := by
+  rw [← assemble_bits s, ← assemble_bits t]; exact congrArg assemble (funext h)
+
+/-- Adding 2 twice, mod 4, is the identity. -/
+theorem fin4_rot (k : Fin 4) : k + 2 + 2 = k := by decide +kernel +revert
+
+/-- Velocity reversal swaps bit `k` with the opposite direction. -/
+theorem flip16_bits (s : Fin 16) (k : Fin 4) : bits k (flip16 s) = bits (k + 2) s := by
+  decide +kernel +revert
+
+/-- Velocity reversal is an involution on site values. -/
+theorem flip16_flip16 (s : Fin 16) : flip16 (flip16 s) = s := by
+  refine bits_ext _ _ fun k => ?_
+  rw [flip16_bits, flip16_bits, fin4_rot]
+
+/-- Collisions are their own inverse on site values. -/
+theorem collide16_collide16 (s : Fin 16) : collide16 (collide16 s) = s := by
+  decide +kernel +revert
+
+/-- Collisions commute with velocity reversal. -/
+theorem collide16_flip16 (s : Fin 16) : collide16 (flip16 s) = flip16 (collide16 s) := by
+  decide +kernel +revert
+
+/-- Collisions conserve the particle number. -/
+theorem collide16_mass16 (s : Fin 16) : mass16 (collide16 s) = mass16 s := by
+  decide +kernel +revert
+
+/-- Collisions conserve both momentum components. -/
+theorem collide16_px16 (s : Fin 16) : px16 (collide16 s) = px16 s := by decide +kernel +revert
+
+theorem collide16_py16 (s : Fin 16) : py16 (collide16 s) = py16 s := by decide +kernel +revert
+
+/-- The reversal conjugator is an involution on site values. -/
+theorem rev16_rev16 (s : Fin 16) : rev16 (rev16 s) = s := by decide +kernel +revert
+
+/-- Colliding the reversal conjugator away leaves velocity reversal. -/
+theorem collide16_rev16 (s : Fin 16) : collide16 (rev16 s) = flip16 s := by decide +kernel +revert
+
+/-- Every velocity is a unit step along one axis. -/
+theorem velInt_natAbs (k : Fin 4) : (velInt k).1.natAbs + (velInt k).2.natAbs = 1 := by
+  decide +kernel +revert
+
+/-- Direction `k + 2` is the direction opposite to `k`. -/
+theorem velInt_neg (k : Fin 4) : velInt (k + 2) = -velInt k := by decide +kernel +revert
+
+/-- Direction `k + 2` is the direction opposite to `k`. -/
+theorem vel_neg (n : ℕ) [NeZero n] (k : Fin 4) : vel n (k + 2) = -vel n k := by
+  have h1 : ((-velInt k).1 : ℤ) = -((velInt k).1 : ℤ) := rfl
+  have h2 : ((-velInt k).2 : ℤ) = -((velInt k).2 : ℤ) := rfl
+  simp only [vel, velInt_neg, h1, h2, Int.cast_neg]
+  rfl
+
+/-! ## The model step -/
+
+/-- Streaming reads bit `k` of the source site `p − vel k`. -/
+theorem streamState_bits (n : ℕ) [NeZero n] (s : State n) (p : Site n) (k : Fin 4) :
+    bits k (streamState n s p) = bits k (s (p - vel n k)) :=
+  bits_assemble _ k
+
+/-- Conjugating streaming by reversal inverts it:
+`stream⁻¹ = flipState ∘ streamState ∘ flipState`. -/
+theorem streamRev_bits (n : ℕ) [NeZero n] (s : State n) (p : Site n) (k : Fin 4) :
+    bits k (flipState n (streamState n (flipState n s)) p) = bits k (s (p + vel n k)) := by
+  simp only [flipState, streamState_bits, flip16_bits]
+  rw [fin4_rot, vel_neg, sub_neg_eq_add]
+
+/-- Stepping a reversed state is streaming a flipped state. -/
+theorem stepState_revState (n : ℕ) [NeZero n] (s : State n) :
+    stepState n (revState n s) = streamState n (flipState n s) := by
+  funext p
+  simp only [stepState, collideState, revState, streamState, flipState, collide16_rev16]
+
+/-- The step conjugated by the reversal is the identity:
+`step⁻¹ = revState ∘ stepState ∘ revState`. -/
+theorem stepState_rev (n : ℕ) [NeZero n] (s : State n) :
+    stepState n (revState n (stepState n (revState n s))) = s := by
+  have h1 := stepState_revState n s
+  have h2 := stepState_revState n (stepState n (revState n s))
+  rw [h2, h1]
+  funext p
+  refine bits_ext _ _ fun k => ?_
+  rw [streamState_bits, streamRev_bits n s (p - vel n k) k, sub_add_cancel]
+
+/-- The reversal conjugator is an involution on states. -/
+theorem revState_involutive (n : ℕ) : Function.Involutive (revState n) := fun s => by
+  funext p; simp only [revState, rev16_rev16]
+
 end TimesArrow.LatticeGas

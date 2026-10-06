@@ -200,6 +200,20 @@
    "doc": "Collisions conserve the particle number.",
    "axioms": ["propext", "Quot.sound"]},
   {"status": "proved",
+   "statement":
+   "loschmidt_echo (n : ℕ) [NeZero n] (t : ℕ) (s : State n) : revState n ((stepState n)^[t] (revState n ((stepState n)^[t] s))) = s",
+   "name": "TimesArrow.LatticeGas.loschmidt_echo",
+   "doc":
+   "The Loschmidt echo: evolve `t` steps, reverse every velocity and collide,\nevolve `t` steps, and do it again: every state returns to itself.",
+   "axioms": ["propext", "Classical.choice", "Quot.sound"]},
+  {"status": "proved",
+   "statement":
+   "step_inverse (n : ℕ) [NeZero n] : Function.Bijective (stepState n) ∧ ∀ s : State n, stepState n (revState n (stepState n (revState n s))) = s ∧ revState n (stepState n (revState n (stepState n s))) = s",
+   "name": "TimesArrow.LatticeGas.step_inverse",
+   "doc":
+   "One HPP step is a bijection. Its inverse is the step conjugated by\n`revState`: reverse every velocity and collide (an involution), step, and do\nboth again. Plain velocity reversal does not invert the step — with\nstep = stream ∘ collide, flip ∘ step ∘ flip = stream⁻¹ ∘ collide, which\ndiffers from step⁻¹ = collide ∘ stream⁻¹ because collisions and streaming\ndo not commute.",
+   "axioms": ["propext", "Classical.choice", "Quot.sound"]},
+  {"status": "proved",
    "statement": "philox_kat : ∀ v ∈ kat, philox v.1 v.2.1 v.2.2.1 = v.2.2.2",
    "name": "TimesArrow.Philox.philox_kat",
    "doc": "Philox matches the Random123 known-answer vectors.",

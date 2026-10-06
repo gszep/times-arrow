@@ -27,4 +27,14 @@ theorem collide_mass :
     ∀ s : Fin 16, mass (collide s.val.toUInt32) = mass s.val.toUInt32 := by
   sorry
 
+theorem step_inverse (n : ℕ) [NeZero n] :
+    Function.Bijective (stepState n) ∧ ∀ s : State n,
+      stepState n (revState n (stepState n (revState n s))) = s ∧
+        revState n (stepState n (revState n (stepState n s))) = s := by
+  sorry
+
+theorem loschmidt_echo (n : ℕ) [NeZero n] (t : ℕ) (s : State n) :
+    revState n ((stepState n)^[t] (revState n ((stepState n)^[t] s))) = s := by
+  sorry
+
 end TimesArrow.LatticeGas
