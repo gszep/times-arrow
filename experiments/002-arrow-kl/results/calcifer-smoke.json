@@ -1,8 +1,8 @@
 {
- "commit": "09d37bb05a945115f6c1f09456c8ec9b6248ec2b",
- "dirty": true,
+ "commit": "9827aaf8ced79036032bbfdcc7df8732a5fa75bd",
+ "dirty": false,
  "host": "calcifer",
- "date": "2026-10-06T18:39:52.573Z",
+ "date": "2026-10-06T18:44:56.401Z",
  "smoke": true,
  "n": 8,
  "m": 16,
