@@ -111,4 +111,113 @@ theorem isReversible_iff_entropyProduction_eq_zero (κ : α → PMF α) (π : PM
       Fin.prod_univ_zero, Fin.prod_univ_zero, mul_one, mul_one] at hpw
     exact hpw
 
-end TimesArrow.Markov
+/-! ### Stationary chains
+
+For a stationary chain with a strictly positive kernel, the entropy
+production of `T` steps grows linearly: it is `T` times the per-step
+entropy production `∑ i j, π i * κ i j * log (π i * κ i j / π j * κ j i)`,
+the expectation of the log flux-ratio under the stationary flux. -/
+
+variable (κ : α → PMF α) (π : PMF α)
+
+omit [MeasurableSpace α] [MeasurableSingletonClass α] in
+/-- Every `PMF` gives positive mass to some point. -/
+theorem exists_apply_ne_zero (p : PMF α) : ∃ a, p a ≠ 0 := by
+  by_contra hcon
+  push Not at hcon
+  have h0 : ∑' a, p a = 0 := by
+    rw [tsum_congr fun a => hcon a]
+    exact tsum_zero
+  exact zero_ne_one (h0.symm.trans (PMF.tsum_coe p))
+
+omit [MeasurableSpace α] [MeasurableSingletonClass α] in
+/-- A stationary distribution of a strictly positive chain has full
+support. -/
+theorem apply_ne_zero_of_isStationary (hstat : IsStationary κ π)
+    (hposκ : ∀ i j, κ i j ≠ 0) (i : α) : π i ≠ 0 := by
+  obtain ⟨j, hj⟩ := exists_apply_ne_zero π
+  have h1 : π i = ∑' j', π j' * κ j' i := by
+    have h := PMF.bind_apply π κ i
+    rwa [hstat] at h
+  have h2 : π j * κ j i ≤ ∑' j', π j' * κ j' i :=
+    ENNReal.le_tsum (f := fun j' => π j' * κ j' i) j
+  rw [← h1] at h2
+  intro h0
+  rw [h0] at h2
+  rcases mul_eq_zero.mp (le_zero_iff.mp h2) with h | h
+  · exact hj h
+  · exact hposκ j i h
+
+omit [Fintype α] [MeasurableSpace α] [MeasurableSingletonClass α] in
+/-- Every trajectory of a strictly positive chain started from a
+distribution with full support has positive probability. -/
+theorem pathPMF_ne_zero (hp : ∀ i, p i ≠ 0) (hposκ : ∀ i j, κ i j ≠ 0)
+    (T : ℕ) (ω : Fin (T + 1) → α) : pathPMF p κ T ω ≠ 0 := by
+  rw [pathPMF_apply p κ T ω]
+  exact mul_ne_zero (hp (ω 0)) (Finset.prod_ne_zero_iff.mpr fun t _ => hposκ _ _)
+
+omit [MeasurableSpace α] [MeasurableSingletonClass α] in
+/-- The final state of a trajectory of a stationary chain has law `π`. -/
+theorem toReal_sum_pathPMF_last (hstat : IsStationary κ π) (T : ℕ) (g : α → ℝ) :
+    ∑ ω, (pathPMF π κ T ω).toReal * g (ω (Fin.last T))
+      = ∑ i, (π i).toReal * g i := by
+  induction T generalizing g with
+  | zero =>
+      have hE : ∀ ω : Fin 1 → α, (pathPMF π κ 0 ω).toReal * g (ω (Fin.last 0))
+          = (π (ω 0)).toReal * g (ω 0) := fun ω => by
+        rw [pathPMF_apply π κ 0 ω, Fin.prod_univ_zero, mul_one]
+        rfl
+      have hbase : ∑ ω : Fin 1 → α, (π (ω 0)).toReal * g (ω 0)
+          = ∑ a : α, (π a).toReal * g a :=
+        Equiv.sum_comp (⟨fun ω => ω 0, fun a => fun _ => a, fun ω => funext fun t => by
+          have ht : t = 0 := by omega
+          subst ht
+          rfl, fun _ => rfl⟩ : (Fin 1 → α) ≃ α) (fun a => (π a).toReal * g a)
+      rw [Finset.sum_congr rfl (fun ω _ => hE ω), hbase]
+  | succ T ih =>
+      have hreindex : ∑ v : Fin (T + 2) → α, (pathPMF π κ (T + 1) v).toReal
+            * g (v (Fin.last (T + 1)))
+          = ∑ q : (Fin (T + 1) → α) × α, (pathPMF π κ (T + 1)
+              (Fin.snoc q.1 q.2 : Fin (T + 2) → α)).toReal
+            * g ((Fin.snoc q.1 q.2 : Fin (T + 2) → α) (Fin.last (T + 1))) :=
+        Fintype.sum_equiv (⟨fun v => (Fin.init v, v (Fin.last (T + 1))),
+          fun q => Fin.snoc q.1 q.2, fun v => Fin.snoc_init_self v,
+          fun q => by simp [Fin.snoc_last, Fin.init_snoc]⟩ :
+            (Fin (T + 2) → α) ≃ ((Fin (T + 1) → α) × α)) _ _
+          (fun v => show (pathPMF π κ (T + 1) v).toReal * g (v (Fin.last (T + 1)))
+              = (pathPMF π κ (T + 1)
+                  (Fin.snoc (Fin.init v) (v (Fin.last (T + 1))))).toReal
+                * g ((Fin.snoc (Fin.init v) (v (Fin.last (T + 1)))
+                  : Fin (T + 2) → α) (Fin.last (T + 1))) from by
+            rw [Fin.snoc_init_self v])
+      rw [hreindex, Fintype.sum_prod_type]
+      have hpeel : ∀ (u : Fin (T + 1) → α) (x : α),
+          (pathPMF π κ (T + 1) (Fin.snoc u x)).toReal
+            * g ((Fin.snoc u x : Fin (T + 2) → α) (Fin.last (T + 1)))
+            = (pathPMF π κ T u).toReal * ((κ (u (Fin.last T)) x).toReal * g x) := by
+        intro u x
+        rw [pathPMF_snoc π κ T u x, toReal_mul, Fin.snoc_last]
+        ring
+      simp only [hpeel, ← Finset.mul_sum]
+      rw [ih (fun i => ∑ x : α, (κ i x).toReal * g x)]
+      have hA : ∀ i : α, (π i).toReal * (∑ x : α, (κ i x).toReal * g x)
+          = ∑ x : α, ((π i * κ i x).toReal * g x) := by
+        intro i
+        rw [Finset.mul_sum]
+        refine Finset.sum_congr rfl fun x _ => ?_
+        rw [show (π i).toReal * ((κ i x).toReal * g x)
+            = ((π i).toReal * (κ i x).toReal) * g x from by ring, ← toReal_mul]
+      have hfuse : ∀ x : α, ∑ i : α, ((π i * κ i x).toReal * g x)
+          = (π x).toReal * g x := by
+        intro x
+        rw [← Finset.sum_mul]
+        have hne : ∀ i : α, π i * κ i x ≠ ∞ := fun i =>
+          ENNReal.mul_ne_top (PMF.apply_ne_top π i) (PMF.apply_ne_top (κ i) x)
+        have hsum : ∑ i, (π i * κ i x).toReal = (π x).toReal := by
+          have hb : (π.bind κ) x = ∑ a, π a * κ a x := by
+            rw [PMF.bind_apply π κ x, tsum_fintype _]
+          rw [← toReal_sum (fun i _ => hne i), ← hb, hstat]
+        rw [hsum]
+      rw [Finset.sum_congr rfl (fun i _ => hA i), Finset.sum_comm,
+        Finset.sum_congr rfl (fun x _ => hfuse x)]
+
