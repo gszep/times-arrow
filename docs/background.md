@@ -36,10 +36,15 @@ The core framing: relativity gives the cone, thermodynamics picks the half.
 - HPP. Hardy, Pomeau & de Pazzis, PRL **31**, 276 (1973); J. Math. Phys. **14**,
   1746 (1973); Hardy, de Pazzis & Pomeau, PRA **13**, 1949 (1976). Square
   lattice, four velocities, head-on pairs rotate 90°, collide-then-stream,
-  periodic. Conserved: particle number (≡ energy, all speeds equal) and
-  momentum. Every collision is a zero-momentum head-on pair, so both momentum
-  components are conserved; there is no separate conservation per row or
-  column.
+  periodic. Conserved: particle number (≡ energy, all speeds equal), both
+  momentum components, per-row x-momentum and per-column y-momentum. Two-line
+  argument: collide preserves `n_E − n_W` and `n_N − n_S` at every site (the
+  only moved states, `0101 ↔ 1010`, have both zero), and streaming carries
+  E/W movers along their row while N/S movers cross rows carrying
+  `n_E − n_W = 0` (mirror for columns), so `Σ_x (n_E − n_W)` per row and
+  `Σ_y (n_N − n_S)` per column are invariant (Lean proof pending).
+  Momentum therefore never diffuses between rows (or columns), which kills
+  shear transport independently of the tensor anisotropy below.
 - Spurious invariant: the **checkerboard parity**. A particle's site parity
   flips every step, so `(x+y+t) mod 2` labels each particle for all time; the
   even and odd populations never collide with one another. This is the HPP
