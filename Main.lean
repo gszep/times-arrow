@@ -11,7 +11,7 @@ state after undoing `t` steps with the inverse map, `hppecho <seed> <n>
 state, and `hppinit <packed|null> <seed> <n>` prints a 001 initial state.
 -/
 
-open Lean TimesArrow Philox LatticeGas
+open Lean TimesArrow Philox LatticeGas TimesArrow.Walker
 
 /-- Axioms a proved claim may use. -/
 def allowedAxioms : List Name := [``propext, ``Classical.choice, ``Quot.sound]
@@ -22,6 +22,205 @@ def block (b : Block) : Json := toJson [b.x0, b.x1, b.x2, b.x3]
 
 def hexState (a : Array UInt32) : String :=
   String.ofList (a.toList.map fun s => Nat.digitChar s.toNat)
+
+/-! ## The walker model of 002 -/
+
+/-- The schedule of an arm name: hop `s ∈ {1..T}` uses `ws s`. -/
+def armSched (arm : String) : Option (ℕ → Dir → ℕ) :=
+  match arm with
+  | "driven" => some (fun _ => drivenW)
+  | "reversed" => some (fun _ => reversedW)
+  | "null" => some (fun _ => nullW)
+  | "ramp" => some rampW
+  | "ramprev" => some rampRevW
+  | _ => none
+
+/-- The schedule of an arm name, as an `IO` action that fails on unknown
+arms. -/
+def armSchedIO (arm : String) : IO (ℕ → Dir → ℕ) :=
+  match armSched arm with
+  | some f => pure f
+  | none => throw (IO.userError "arm must be driven, reversed, null, ramp or ramprev")
+
+/-- Render a float as a decimal string with up to 17 significant digits —
+the f64 round-trip bound; Lean's own float printing rounds to 6. -/
+def floatDec (f : Float) : String := Id.run do
+  if f.isNaN then return "NaN"
+  if f == 0 then return "0"
+  let neg := f < 0
+  let mut x : Float := if neg then -f else f
+  let mut e : Int := 0
+  while x >= 100000000000000000 do
+    x := x / 10
+    e := e + 1
+  while x < 10000000000000000 do
+    x := x * 10
+    e := e - 1
+  let m := x.floor.toUInt64.toNat
+  let digs := toString m
+  let digs := if digs.length > 17 then (digs.take 17).toString else digs
+  let digs := if digs.length < 17 then
+      digs ++ String.ofList ((List.range (17 - digs.length)).map fun _ => '0')
+    else digs
+  let s := s!"{(digs.take 1).toString}.{(digs.drop 1).toString}e{e + 16}"
+  return if neg then "-" ++ s else s
+
+/-- A float marked to be printed as a raw, full-precision JSON number by
+`unmarkFloats` (Lean's `ToJson Float` keeps only 6 significant digits). -/
+def rawFloat (f : Float) : Json := Json.str s!"#f:{floatDec f}"
+
+/-- Strip the raw-float markers together with their quotes, turning every
+marked string into a bare JSON number. -/
+def unmarkFloats (s : String) : String :=
+  match s.splitOn "\"#f:" with
+  | [] => s
+  | p0 :: rest =>
+    p0 ++ (rest.foldl (fun acc p =>
+      match p.splitOn "\"" with
+      | f :: tl => acc ++ f ++ "\"".intercalate tl
+      | [] => acc) "")
+
+/-- The arm's per-path σ in f64: `(n_E − n_W)·ln (q_E/q_W)` for constant
+weights, the per-hop sum for schedules. -/
+def sigmaFloat (ws : ℕ → Dir → ℕ) (seed : UInt32) (M T : ℕ) : Float :=
+  if T = 0 then 0 else
+    (Array.range T |>.foldl (fun acc s =>
+      let tl := stepTally ws seed M (s + 1)
+      let w := ws (s + 1)
+      acc + ((tl.1 : Int) - tl.2).toFloat *
+        Float.log ((w 0).toFloat / (w 1).toFloat)) 0)
+
+/-- One trajectory golden: the packed final positions as one hex digit each,
+`x` then `y`, plus the hop tallies and σ of the path. -/
+def walkGolden (seed : UInt32) (arm : String) (n m t : ℕ) : Option Json := do
+  let some ws := armSched arm | none
+  let sh := n.log2
+  guard (2 ^ sh == n)
+  let pos := positions sh m ws seed t
+  let state := String.ofList ((List.finRange m).flatMap fun i =>
+    let p := pos i
+    [Nat.digitChar p.1.val, Nat.digitChar p.2.val])
+  let tl := pathTally ws seed m t
+  return Json.mkObj [
+    ("seed", toJson seed), ("arm", toJson arm),
+    ("n", toJson n), ("m", toJson m), ("t", toJson t),
+    ("state", toJson state),
+    ("nE", toJson tl.1), ("nW", toJson tl.2),
+    ("sigma", rawFloat (sigmaFloat ws seed m t))]
+
+/-- The exact tally distribution of an arm at `T`, as string numerators
+over the shared denominator `256^(M·T)`; bin `k` is the probability of
+`n_E − n_W = k`. -/
+def dpExactJson (w : Dir → ℕ) (m t : ℕ) : Json :=
+  let e := m * t
+  let num := tallyNumerators w e
+  Json.mkObj [
+    ("e", toJson e),
+    ("den", toJson (toString ((2 : ℕ) ^ (8 * e)))),
+    ("bins", toJson (num.mapIdx fun i v =>
+      Json.mkObj [("k", toJson ((i : Int) - e)),
+        ("num", toJson (toString v))]))]
+
+/-- The same distribution in f64 (for horizons whose numerators exceed
+f64 range). -/
+def dpFloatJson (w : Dir → ℕ) (m t : ℕ) : Json :=
+  Json.mkObj [
+    ("e", toJson (m * t)),
+    ("bins", toJson ((tallyProbs w (m * t)).map rawFloat))]
+
+/-- A schedule's exact-DP tally distribution in f64. -/
+def dpSchedJson (ws : ℕ → Dir → ℕ) (m t : ℕ) : Json :=
+  Json.mkObj [
+    ("e", toJson (m * t)),
+    ("bins", toJson ((schedProbs ws m t).map rawFloat))]
+
+/-- The K5 corner goldens: the KL divergences of the `k`-time count
+marginals between the driven and reversed arms, in f64, plus the exact
+rational 3-time tables (they agree cell for cell — `kl3 = 0` exactly). -/
+def cornerJson (_ : Unit) : Json :=
+  let inHalf : ℕ → Bool := fun s => s % 4 < 2
+  let inL : ℕ → Bool := fun s => s == 0 || s == 1 || s == 4
+  let region (inA : ℕ → Bool) (sites : Json) : Json :=
+    let kls := Array.range 4 |>.map fun j =>
+      let k := j + 2
+      let pF := countLaw 4 (emitLaw drivenW inA k) k
+      let pR := countLaw 4 (emitLaw reversedW inA k) k
+      Json.mkObj [("k", toJson k), ("kl", rawFloat (klFloat pF pR))]
+    let pF3 := countLaw 4 (emitLaw drivenW inA 3) 3
+    let pR3 := countLaw 4 (emitLaw reversedW inA 3) 3
+    let tab (p : Array ℚ) : Json :=
+      toJson (p.map fun r => s!"{r.num}/{r.den}")
+    Json.mkObj [
+      ("sites", sites),
+      ("kl", toJson kls),
+      ("k3driven", tab pF3), ("k3reversed", tab pR3)]
+  Json.mkObj [
+    ("n", toJson (4 : ℕ)), ("m", toJson (4 : ℕ)), ("Tc", toJson (32 : ℕ)),
+    ("half", region inHalf (toJson
+      ((List.range 2).flatMap fun x => (List.range 4).map fun y => toJson [x, y]))),
+    ("L", region inL (toJson [toJson [0, 0], toJson [1, 0], toJson [0, 1]])),
+    ("index", toJson "count sequence c = ∑_t c_t·5^t, c_t = walkers in the region at time t; times 0..k-1")]
+
+/-- The `walk` section of the contract: the arms, the draw recipe, the
+trajectory goldens, the exact-DP σ histograms and the K5 corner goldens. -/
+def walkContract (_ : Unit) : Json :=
+  let goldens : List Json :=
+    ((List.range 2).flatMap fun s =>
+      ["driven", "reversed", "null"].flatMap fun a =>
+        [1, 4].map fun t =>
+          (walkGolden (s + 1).toUInt32 a 8 16 t).get!)
+    ++ [(walkGolden 1 "driven" 8 16 64).get!,
+        (walkGolden 1 "ramp" 8 16 16).get!,
+        (walkGolden 1 "ramprev" 8 16 16).get!,
+        (walkGolden 1 "driven" 4 4 1).get!,
+        (walkGolden 1 "driven" 4 4 32).get!,
+        (walkGolden 1 "reversed" 4 4 32).get!]
+  Json.mkObj [
+    ("lightCone", toJson (1 : ℕ)),
+    ("arms", Json.mkObj [
+      ("driven", Json.mkObj [
+        ("q", toJson ((List.finRange 5).map fun d =>
+          toJson (drivenW d))),
+        ("a", rawFloat (Float.log (48 / (16 : Float))))]),
+      ("reversed", Json.mkObj [
+        ("q", toJson ((List.finRange 5).map fun d =>
+          toJson (reversedW d))),
+        ("a", rawFloat (Float.log (16 / (48 : Float))))]),
+      ("null", Json.mkObj [
+        ("q", toJson ((List.finRange 5).map fun d =>
+          toJson (nullW d))),
+        ("a", rawFloat 0)]),
+      ("ramp", Json.mkObj [
+        ("schedule", toJson ((List.range 16).map fun t =>
+          toJson ((List.finRange 5).map fun d =>
+            toJson (rampW (t + 1) d))))]),
+      ("ramprev", Json.mkObj [
+        ("schedule", toJson ((List.range 16).map fun t =>
+          toJson ((List.finRange 5).map fun d =>
+            toJson (rampRevW (t + 1) d))))])]),
+    ("draw", Json.mkObj [
+      ("word", toJson "x0 of the Philox block"),
+      ("counter", toJson "[walker, step, 0, 0]"),
+      ("key", toJson "[seed, 0]"),
+      ("init", toJson "x = w % n, y = (w >> log2 n) % n, counter step 0"),
+      ("hop", toJson ("counter step t = 1..T; direction = (w >> 24) against " ++
+        "the cumulative thresholds [qE, qE+qW, qE+qW+qN, qE+qW+qN+qS]")),
+      ("sigma", toJson ("sigma = sum over hops of the E/W tally times " ++
+        "ln(qE/qW): (nE - nW)*ln(qE/qW) for constant arms"))]),
+    ("golden", toJson goldens),
+    ("dp", Json.mkObj [
+      ("driven", Json.mkObj [
+        ("1", dpExactJson drivenW 16 1), ("2", dpExactJson drivenW 16 2),
+        ("4", dpExactJson drivenW 16 4),
+        ("64f", dpFloatJson drivenW 16 64)]),
+      ("reversed", Json.mkObj [
+        ("1", dpExactJson reversedW 16 1), ("2", dpExactJson reversedW 16 2),
+        ("4", dpExactJson reversedW 16 4)]),
+      ("null", Json.mkObj [
+        ("1", dpExactJson nullW 16 1), ("4", dpExactJson nullW 16 4)]),
+      ("ramp", dpSchedJson rampW 16 16),
+      ("ramprev", dpSchedJson rampRevW 16 16)]),
+    ("corner", cornerJson ())]
 
 /-- The source text of a theorem's statement, from its name to `:=`. -/
 def statement (mod n : Name) : MetaM String := do
@@ -102,14 +301,15 @@ def contract : MetaM Json := do
       ("golden", toJson hpp),
       ("inverse", toJson invGold),
       ("echo", toJson echoGold),
-      ("init", toJson initGold)])]
+      ("init", toJson initGold)]),
+    ("walk", walkContract ())]
 
 def main : List String → IO Unit
   | ["contract"] => do
     initSearchPath (← findSysroot)
     let env ← importModules #[{ module := `TimesArrow }] {}
     let (j, _) ← (contract.run' {} {}).toIO { fileName := "", fileMap := default } { env }
-    IO.println j.pretty
+    IO.println (unmarkFloats j.pretty)
   | ["rand", seed, step, site] => do
     let b := rand seed.toNat!.toUInt32 step.toNat!.toUInt32 site.toNat!.toUInt32
     IO.println s!"{b.x0} {b.x1} {b.x2} {b.x3}"
@@ -123,5 +323,22 @@ def main : List String → IO Unit
     if mode != "packed" && mode != "null" then
       throw (IO.userError "mode must be packed or null")
     else IO.println (hexState (initState mode seed.toNat!.toUInt32 n.toNat!))
+  | ["walk", seed, arm, n, m, t] => do
+    let ws ← armSchedIO arm
+    let nn := n.toNat!
+    if 2 ^ nn.log2 != nn then throw (IO.userError "n must be a power of two")
+    let pos := positions nn.log2 m.toNat! ws seed.toNat!.toUInt32 t.toNat!
+    (List.finRange m.toNat!).forM fun i =>
+      let p := pos i
+      IO.println s!"{p.1.val} {p.2.val}"
+  | ["walktally", seed, arm, m, t] => do
+    let ws ← armSchedIO arm
+    let M := m.toNat!
+    let T := t.toNat!
+    Array.range T |>.forM fun s =>
+      let tl := stepTally ws seed.toNat!.toUInt32 M (s + 1)
+      IO.println s!"{tl.1} {tl.2}"
+    let tl := pathTally ws seed.toNat!.toUInt32 M T
+    IO.println s!"{tl.1} {tl.2}"
   | _ => throw (IO.userError
-      "usage: timesarrow contract | rand SEED STEP SITE | hpp SEED N T | hppinv SEED N T | hppecho SEED N T | hppinit MODE SEED N")
+      "usage: timesarrow contract | rand SEED STEP SITE | hpp SEED N T | hppinv SEED N T | hppecho SEED N T | hppinit MODE SEED N | walk SEED ARM N M T | walktally SEED ARM M T")
