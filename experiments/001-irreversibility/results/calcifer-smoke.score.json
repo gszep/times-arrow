@@ -1,0 +1,233 @@
+{
+ "source": "experiments/001-irreversibility/results/calcifer-smoke.json",
+ "commit": "0d2c2ba644b6af0381b5fdb634b775d843520afa",
+ "dirty": false,
+ "registered": false,
+ "runs": {
+  "packed": 2,
+  "null": 2
+ },
+ "claims": {
+  "L1": {
+   "verdict": "verified",
+   "runs": [
+    {
+     "seed": 1,
+     "hamming": 0,
+     "aligned": 8,
+     "mismatched": 0
+    },
+    {
+     "seed": 2,
+     "hamming": 0,
+     "aligned": 8,
+     "mismatched": 0
+    }
+   ]
+  },
+  "L2": {
+   "verdict": "verified",
+   "drift": 0
+  },
+  "L3": {
+   "verdict": "verified",
+   "coneViolations": [],
+   "worstSlack": 0
+  },
+  "E1": {
+   "verdict": "n/a",
+   "note": "n/a: not the registered configuration (16 packed + 16 null seeds, n = 1024, tMax = 32768, tE = 16384)",
+   "s0": {
+    "mean": 1529.5259931403543,
+    "deviationPct": -99.1549580148396,
+    "ok": false
+   },
+   "seeds": [
+    {
+     "seed": 1,
+     "tStar": null,
+     "longestExcursion": 0,
+     "finalInBand": false,
+     "pass": false
+    },
+    {
+     "seed": 2,
+     "tStar": null,
+     "longestExcursion": 0,
+     "finalInBand": false,
+     "pass": false
+    }
+   ],
+   "failures": [
+    1,
+    2
+   ],
+   "meanRise": {
+    "from": 1529.5259931403543,
+    "to": 1888.1225448582345,
+    "decreases": 4
+   },
+   "refuted": true,
+   "reason": "seed-mean S_16(0) = 1.530e+3 is off the registered 1.81e+5 by > 1%"
+  },
+  "E2": {
+   "verdict": "n/a",
+   "note": "n/a: not the registered configuration (16 packed + 16 null seeds, n = 1024, tMax = 32768, tE = 16384)",
+   "perSeed": [
+    {
+     "seed": 1,
+     "rise": {
+      "4": 546.6820875014178,
+      "8": 685.4640563000621,
+      "16": 359.59161930058235,
+      "32": -0.3686902525514597,
+      "64": 0
+     },
+     "monotone": false,
+     "ratio": 0
+    },
+    {
+     "seed": 2,
+     "rise": {
+      "4": 533.3782091933213,
+      "8": 700.1950172393842,
+      "16": 357.601484135178,
+      "32": -0.8463677634863416,
+      "64": 0
+     },
+     "monotone": false,
+     "ratio": 0
+    }
+   ],
+   "meanRatio": 0,
+   "sdRatio": 0,
+   "inversions": [
+    1,
+    2
+   ],
+   "edges": [
+    {
+     "from": 4,
+     "to": 8,
+     "wins": 2
+    },
+    {
+     "from": 8,
+     "to": 16,
+     "wins": 0
+    },
+    {
+     "from": 16,
+     "to": 32,
+     "wins": 0
+    },
+    {
+     "from": 32,
+     "to": 64,
+     "wins": 2
+    }
+   ],
+   "refuted": true,
+   "reason": "seed-mean ratio rise(64)/rise(4) = 0.000 leaves [1.2, 1.5]"
+  },
+  "R1": {
+   "exact": {
+    "verdict": "verified",
+    "hamming": [
+     0,
+     0
+    ]
+   },
+   "control": {
+    "verdict": "supported",
+    "hamming": [
+     808,
+     832
+    ]
+   }
+  },
+  "S1": {
+   "a": {
+    "verdict": "verified",
+    "coneViolations": [],
+    "worstSlack": 0
+   },
+   "b": {
+    "failing": [
+     1,
+     2
+    ],
+    "perRun": [
+     {
+      "seed": 1,
+      "Hhalf": 13
+     },
+     {
+      "seed": 2,
+      "Hhalf": 17
+     }
+    ]
+   },
+   "c": {
+    "failing": [
+     1,
+     2
+    ],
+    "perRun": [
+     {
+      "seed": 1,
+      "decorr": 0.00848388671875
+     },
+     {
+      "seed": 2,
+      "decorr": 0.00579833984375
+     }
+    ]
+   },
+   "d": {
+    "failing": [
+     1,
+     2
+    ],
+    "perRun": [
+     {
+      "seed": 1,
+      "outOfBand": [],
+      "U": 0.8161035449041325,
+      "pristineU": 1
+     },
+     {
+      "seed": 2,
+      "outOfBand": [],
+      "U": 0.8574547286932009,
+      "pristineU": 1
+     }
+    ]
+   },
+   "bcd": {
+    "verdict": "n/a",
+    "note": "n/a: not the registered configuration (16 packed + 16 null seeds, n = 1024, tMax = 32768, tE = 16384)",
+    "failing": [
+     1,
+     2
+    ],
+    "reason": "(b), (c) or (d) fails in 2 of 2 runs (≥ 2 refutes): seeds 1, 2"
+   },
+   "beta": {
+    "verdict": "exploratory",
+    "mean": 0.058697567077246215,
+    "perRun": [
+     {
+      "seed": 1,
+      "beta": 0.07142643370635193
+     },
+     {
+      "seed": 2,
+      "beta": 0.0459687004481405
+     }
+    ],
+    "reference": 0.032
+   }
+  }
+ }
+}
