@@ -679,6 +679,314 @@ theorem pathEntropyProduction_eq_netHops (n : ℕ) [NeZero n] (h3 : 3 ≤ n)
   exact hdist.symm
 
 
+/-! ## The per-step entropy production of the driven model
+
+The expectation factorizes over walkers, so the product chain's per-step
+entropy production is `M` times the one-walker rate — the input behind
+`EP = T · 2 ln 3` for the registered 16 walkers. -/
+
+set_option maxHeartbeats 1000000 in
+/-- **One component's mean under the product chain.** Averaging a functional
+of one walker's hop over the joint step of `M` independent walkers from a
+uniform configuration gives the one-walker average times `N ^ (M-1)`: every
+other walker contributes an independent row sum. -/
+theorem prod_factor {X : Type*} [Fintype X] [DecidableEq X] {M : ℕ} (m₀ : Fin M)
+    (φ : X → X → ℝ) (hrow : ∀ s : X, ∑ s' : X, φ s s' = 1) (g : X → X → ℝ) :
+    ∑ i : Fin M → X, ∑ j : Fin M → X, (∏ m, φ (i m) (j m)) * g (i m₀) (j m₀)
+      = (∑ s : X, ∑ s' : X, φ s s' * g s s')
+        * (Fintype.card X) ^ (M - 1) := by
+  classical
+  have hq : ∀ q : Fin M → X × X,
+      (∏ m, φ (q m).1 (q m).2 * (if m = m₀ then g (q m).1 (q m).2 else 1))
+        = (∏ m, φ (q m).1 (q m).2) * g ((q m₀).1) ((q m₀).2) := by
+    intro q
+    have hif : ∏ m, (if m = m₀ then g ((q m).1) ((q m).2) else 1)
+        = g ((q m₀).1) ((q m₀).2) :=
+      (Finset.prod_eq_single (s := Finset.univ) (a := m₀)
+        (f := fun m => if m = m₀ then g ((q m).1) ((q m).2) else 1)
+        (fun m _ hm => if_neg hm)
+        (fun hcon => absurd (Finset.mem_univ m₀) hcon)).trans (if_pos rfl)
+    rw [Finset.prod_mul_distrib, hif]
+  have hsplit := Finset.sum_prod_piFinset (Finset.univ : Finset (X × X))
+    (fun (m : Fin M) (p : X × X) => φ p.1 p.2 * (if m = m₀ then g p.1 p.2 else 1))
+  rw [Fintype.piFinset_univ] at hsplit
+  have hre : ∑ p : (Fin M → X) × (Fin M → X),
+      (∏ m, φ (p.1 m) (p.2 m)) * g (p.1 m₀) (p.2 m₀)
+      = ∑ q : Fin M → X × X,
+          ∏ m, φ (q m).1 (q m).2 * (if m = m₀ then g (q m).1 (q m).2 else 1) :=
+    Fintype.sum_equiv
+      (⟨fun p m => (p.1 m, p.2 m), fun q => (fun m => (q m).1, fun m => (q m).2),
+        fun p => rfl, fun q => rfl⟩ :
+        ((Fin M → X) × (Fin M → X)) ≃ (Fin M → X × X)) _ _
+      fun p => (hq (fun m => (p.1 m, p.2 m))).symm
+  have hrowsum : ∀ m : Fin M,
+      ∑ p : X × X, φ p.1 p.2 * (if m = m₀ then g p.1 p.2 else 1)
+        = if m = m₀ then ∑ s : X, ∑ s' : X, φ s s' * g s s' else Fintype.card X := by
+    intro m
+    by_cases hm : m = m₀
+    · rw [if_pos hm, Fintype.sum_prod_type]
+      exact Finset.sum_congr rfl fun s _ => Finset.sum_congr rfl fun s' _ => by simp [hm]
+    · rw [if_neg hm, Fintype.sum_prod_type]
+      have h1 : ∀ s : X,
+          ∑ s' : X, φ (s, s').1 (s, s').2 * (if m = m₀ then g (s, s').1 (s, s').2 else 1)
+            = 1 := by
+        intro s
+        calc ∑ s' : X,
+              φ (s, s').1 (s, s').2 * (if m = m₀ then g (s, s').1 (s, s').2 else 1)
+            = ∑ s' : X, φ s s' := Finset.sum_congr rfl fun s' _ => by simp [hm]
+          _ = 1 := hrow s
+      rw [Finset.sum_congr rfl fun s _ => h1 s, Finset.sum_const, Finset.card_univ,
+        nsmul_eq_mul, mul_one]
+  calc ∑ i : Fin M → X, ∑ j : Fin M → X, (∏ m, φ (i m) (j m)) * g (i m₀) (j m₀)
+      = ∑ p : (Fin M → X) × (Fin M → X),
+          (∏ m, φ (p.1 m) (p.2 m)) * g (p.1 m₀) (p.2 m₀) :=
+        (Fintype.sum_prod_type
+          (fun p : (Fin M → X) × (Fin M → X) =>
+            (∏ m, φ (p.1 m) (p.2 m)) * g (p.1 m₀) (p.2 m₀))).symm
+    _ = ∑ q : Fin M → X × X,
+          ∏ m, φ (q m).1 (q m).2 * (if m = m₀ then g (q m).1 (q m).2 else 1) := hre
+    _ = ∏ m,
+          ∑ p : X × X, φ p.1 p.2 * (if m = m₀ then g p.1 p.2 else 1) := hsplit
+    _ = (∑ p : X × X, φ p.1 p.2 * (if m₀ = m₀ then g p.1 p.2 else 1))
+          * ∏ m ∈ Finset.univ.erase m₀,
+              ∑ p : X × X, φ p.1 p.2 * (if m = m₀ then g p.1 p.2 else 1) := by
+        rw [Finset.mul_prod_erase Finset.univ
+          (fun m => ∑ p : X × X, φ p.1 p.2 * (if m = m₀ then g p.1 p.2 else 1))
+          (Finset.mem_univ m₀)]
+    _ = (∑ s : X, ∑ s' : X, φ s s' * g s s')
+          * (Fintype.card X) ^ (M - 1) := by
+        have hA : ∑ p : X × X, φ p.1 p.2 * (if m₀ = m₀ then g p.1 p.2 else 1)
+            = ∑ s : X, ∑ s' : X, φ s s' * g s s' := by
+          rw [hrowsum m₀, if_pos rfl]
+        have hB : ∏ m ∈ Finset.univ.erase m₀,
+            ∑ p : X × X, φ p.1 p.2 * (if m = m₀ then g p.1 p.2 else 1)
+          = (Fintype.card X) ^ (M - 1) := by
+          rw [Finset.prod_congr rfl fun m hm => (hrowsum m).trans
+            (if_neg (Finset.mem_erase.mp hm).1), Finset.prod_const,
+            Finset.card_erase_of_mem (Finset.mem_univ m₀), Finset.card_univ,
+            Fintype.card_fin]
+        rw [hA, hB]
+
+/-- **The score sum.** Averaging the E/W score of one hop of the driven
+one-walker chain over all target sites gives `1/8` per site: east carries
+`+48/256`, west `-16/256`, the rest carry nothing. -/
+theorem score_pair_sum (n : ℕ) [NeZero n] (h3 : 3 ≤ n) :
+    ∑ s : Site n, ∑ s' : Site n,
+        (walkerK n drivenW drivenW_sum s s').toReal * (netHop n s s' : ℝ)
+      = (Fintype.card (Site n)) * (1 / 8) := by
+  classical
+  have hpair : ∀ s s' : Site n,
+      (walkerK n drivenW drivenW_sum s s').toReal * (netHop n s s' : ℝ)
+        = ∑ d : Dir, (if s' = s + vel n d then ((drivenW d : ℝ) / 256)
+            * (hopDirScore d : ℝ) else 0) := by
+    intro s s'
+    by_cases h0 : walkerK n drivenW drivenW_sum s s' = 0
+    · have hm0 : hopMass n drivenW s s' = 0 := by
+        rw [walkerK_apply, div_eq_zero_iff] at h0
+        rcases h0 with h1 | h1
+        · exact Nat.cast_eq_zero.mp h1
+        · exact absurd h1 (by simp)
+      have hno : ∀ d : Dir, s' ≠ s + vel n d := fun d h =>
+        ((hopMass_eq_zero_iff n drivenW drivenW_pos s s').mp hm0) d h.symm
+      rw [h0, ENNReal.toReal_zero, zero_mul]
+      simp [hno]
+    · obtain ⟨d, hd⟩ := exists_hop_of_pos n drivenW drivenW_pos
+        (hopMass_ne_zero_of_walkerK n drivenW drivenW_sum h0)
+      subst hd
+      have hφ : (walkerK n drivenW drivenW_sum s (hop n s d)).toReal
+          = (drivenW d : ℝ) / 256 := walkerK_hop_apply_toReal n h3 drivenW drivenW_sum s d
+      rw [hφ, netHop_hop n h3 s d, Finset.sum_eq_single d]
+      · rw [if_pos (show hop n s d = s + vel n d from rfl)]
+      · intro d' _ hne
+        refine if_neg fun h => ?_
+        have h2 : vel n d = vel n d' := add_left_cancel h
+        exact hne (vel_inj n h3 h2).symm
+      · intro hcon
+        exact absurd (Finset.mem_univ d) hcon
+  have hdsum : ∑ d : Dir, ((drivenW d : ℝ) / 256) * (hopDirScore d : ℝ) = 1 / 8 := by
+    rw [Fin.sum_univ_five]
+    norm_num [drivenW, opp, hopDirScore]
+  calc ∑ s : Site n, ∑ s' : Site n,
+        (walkerK n drivenW drivenW_sum s s').toReal * (netHop n s s' : ℝ)
+      = ∑ s : Site n, ∑ s' : Site n, ∑ d : Dir,
+          (if s' = s + vel n d then ((drivenW d : ℝ) / 256)
+            * (hopDirScore d : ℝ) else 0) :=
+        Finset.sum_congr rfl fun s _ => Finset.sum_congr rfl fun s' _ => hpair s s'
+    _ = ∑ s : Site n, ∑ d : Dir,
+          ((drivenW d : ℝ) / 256) * (hopDirScore d : ℝ) := by
+        refine Finset.sum_congr rfl fun s _ => ?_
+        rw [Finset.sum_comm]
+        refine Finset.sum_congr rfl fun d _ => ?_
+        rw [Finset.sum_eq_single (s + vel n d)]
+        · rw [if_pos rfl]
+        · intro s' _ hne
+          exact if_neg hne
+        · intro hcon
+          exact absurd (Finset.mem_univ _) hcon
+    _ = ∑ d : Dir,
+          (Fintype.card (Site n)) * (((drivenW d : ℝ) / 256) * (hopDirScore d : ℝ)) := by
+        rw [Finset.sum_comm]
+        exact Finset.sum_congr rfl fun d _ => by
+          rw [Finset.sum_const, Finset.card_univ, nsmul_eq_mul]
+    _ = (Fintype.card (Site n)) * (1 / 8) := by
+        rw [← Finset.mul_sum, hdsum]
+
+/-- **One walker's mean score under the product chain.** The mean E/W score
+of walker `m₀`'s hop over one joint step from a uniform configuration is the
+one-walker mean, `1/8`. -/
+theorem one_step_score_mean (n : ℕ) [NeZero n] (h3 : 3 ≤ n) (M : ℕ) (m₀ : Fin M) :
+    ∑ i : Fin M → Site n, ∑ j : Fin M → Site n,
+      ((uniformConfig n M) i).toReal
+        * (((prodK n M drivenW drivenW_sum) i j).toReal
+          * (netHop n (i m₀) (j m₀) : ℝ))
+      = 1 / 8 := by
+  have hcard : ((Fintype.card (Fin M → Site n) : ℕ) : ℝ)
+      = ((Fintype.card (Site n) : ℕ) : ℝ) ^ M := by
+    rw [Fintype.card_pi, Finset.prod_const, Finset.card_univ, Fintype.card_fin,
+      Nat.cast_pow]
+  have hfac : ∀ i : Fin M → Site n,
+      ((uniformConfig n M) i).toReal
+        = (((Fintype.card (Site n) : ℕ) : ℝ) ^ M)⁻¹ := by
+    intro i
+    rw [uniformConfig_apply, ENNReal.toReal_inv, ENNReal.toReal_natCast, hcard]
+  have hMpos : 0 < M := Fin.pos_iff_nonempty.mpr ⟨m₀⟩
+  have key := prod_factor (X := Site n) m₀
+    (fun s s' : Site n => (walkerK n drivenW drivenW_sum s s').toReal)
+    (fun s => walkerK_row_sum_toReal n drivenW drivenW_sum s)
+    (fun s s' : Site n => (netHop n s s' : ℝ))
+  have hsumand : ∀ (i : Fin M → Site n) (j : Fin M → Site n),
+      (((uniformConfig n M) i).toReal)
+          * (((prodK n M drivenW drivenW_sum) i j).toReal
+            * (netHop n (i m₀) (j m₀) : ℝ))
+        = (((Fintype.card (Site n) : ℕ) : ℝ) ^ M)⁻¹
+          * ((∏ m, (walkerK n drivenW drivenW_sum (i m) (j m)).toReal)
+            * (netHop n (i m₀) (j m₀) : ℝ)) := by
+    intro i j
+    rw [hfac i, prodK_apply_toReal]
+  calc ∑ i : Fin M → Site n, ∑ j : Fin M → Site n,
+      ((uniformConfig n M) i).toReal
+        * (((prodK n M drivenW drivenW_sum) i j).toReal
+          * (netHop n (i m₀) (j m₀) : ℝ))
+      = (((Fintype.card (Site n) : ℕ) : ℝ) ^ M)⁻¹ * ∑ i : Fin M → Site n,
+          ∑ j : Fin M → Site n,
+          (∏ m, (walkerK n drivenW drivenW_sum (i m) (j m)).toReal)
+            * (netHop n (i m₀) (j m₀) : ℝ) := by
+        simp only [hsumand, ← Finset.mul_sum]
+    _ = (((Fintype.card (Site n) : ℕ) : ℝ) ^ M)⁻¹
+          * (((Fintype.card (Site n) : ℕ) : ℝ) * (1 / 8))
+          * (((Fintype.card (Site n) : ℕ) : ℝ) ^ (M - 1)) := by
+        rw [key, score_pair_sum n h3]
+        ring
+    _ = (((Fintype.card (Site n) : ℕ) : ℝ) ^ M)⁻¹
+          * (((Fintype.card (Site n) : ℕ) : ℝ) ^ (M - 1))
+          * (((Fintype.card (Site n) : ℕ) : ℝ) * (1 / 8)) := by
+        ring
+    _ = 1 / 8 := by
+        have hN : (0 : ℝ) < ((Fintype.card (Site n) : ℕ) : ℝ) := by
+          exact_mod_cast Fintype.card_pos
+        have hX : ((Fintype.card (Site n) : ℕ) : ℝ) ^ (M - 1) ≠ 0 :=
+          pow_ne_zero _ (ne_of_gt hN)
+        have hM1 : (((Fintype.card (Site n) : ℕ) : ℝ) ^ M)
+            = (((Fintype.card (Site n) : ℕ) : ℝ) ^ (M - 1))
+              * ((Fintype.card (Site n) : ℕ) : ℝ) := by
+          conv_lhs =>
+            rw [show M = (M - 1) + 1 from (Nat.succ_pred_eq_of_pos hMpos).symm]
+          rw [pow_succ]
+        have hc2 : (((Fintype.card (Site n) : ℕ) : ℝ) ^ M)⁻¹
+            * (((Fintype.card (Site n) : ℕ) : ℝ) ^ (M - 1))
+            * ((Fintype.card (Site n) : ℕ) : ℝ) = 1 := by
+          rw [hM1, mul_assoc,
+            inv_mul_cancel₀ (mul_ne_zero hX (ne_of_gt hN))]
+        calc (((Fintype.card (Site n) : ℕ) : ℝ) ^ M)⁻¹
+              * (((Fintype.card (Site n) : ℕ) : ℝ) ^ (M - 1))
+              * (((Fintype.card (Site n) : ℕ) : ℝ) * (1 / 8))
+            = (((Fintype.card (Site n) : ℕ) : ℝ) ^ M)⁻¹
+                * (((Fintype.card (Site n) : ℕ) : ℝ) ^ (M - 1))
+                * ((Fintype.card (Site n) : ℕ) : ℝ) * (1 / 8) := by ring
+          _ = 1 * (1 / 8) := by rw [hc2]
+          _ = 1 / 8 := by rw [one_mul]
+
+/-- **The per-step entropy production of the driven product chain** is `M`
+times the one-walker rate `1/8 · ln 3`: extensivity turns one step of the
+chain into the mean path entropy production, the pathwise tally turns that
+into the mean hop tally, and the expectation factorizes over walkers. -/
+theorem stepEntropyProduction_prodK (n : ℕ) [NeZero n] (h3 : 3 ≤ n) (M : ℕ) :
+    TimesArrow.Markov.stepEntropyProduction (uniformConfig n M)
+        (prodK n M drivenW drivenW_sum) = (M : ℝ) * (1 / 8) * Real.log 3 := by
+  have hstat := prodK_stationary n M drivenW drivenW_sum
+  have hsym := prodK_support n M drivenW drivenW_sum drivenW_pos
+  have h1 := TimesArrow.Markov.toReal_entropyProduction_eq_natCast_mul_stepEntropyProduction
+    (prodK n M drivenW drivenW_sum) (uniformConfig n M) hstat hsym 1
+  rw [Nat.cast_one, one_mul] at h1
+  have hac : ∀ ω : Fin 2 → (Fin M → Site n),
+      TimesArrow.Markov.pathPMF (uniformConfig n M) (prodK n M drivenW drivenW_sum) 1
+          (TimesArrow.Markov.reversePath ω) = 0
+        → TimesArrow.Markov.pathPMF (uniformConfig n M) (prodK n M drivenW drivenW_sum) 1 ω
+          = 0 :=
+    fun ω h0 => by_contra fun hω =>
+      (TimesArrow.Markov.pathPMF_reversePath_ne_zero (prodK n M drivenW drivenW_sum)
+        (uniformConfig n M) hstat hsym 1 ω hω) h0
+  have hmean := TimesArrow.Markov.toReal_entropyProduction (uniformConfig n M)
+    (prodK n M drivenW drivenW_sum) 1 hac
+  have hper : ∀ ω : Fin 2 → (Fin M → Site n),
+      ((TimesArrow.Markov.pathPMF (uniformConfig n M) (prodK n M drivenW drivenW_sum) 1 ω).toReal
+          * (netHops n M 1 ω : ℝ)) * Real.log 3
+        = (TimesArrow.Markov.pathPMF (uniformConfig n M) (prodK n M drivenW drivenW_sum) 1 ω).toReal
+          * TimesArrow.Markov.pathEntropyProduction (uniformConfig n M)
+              (prodK n M drivenW drivenW_sum) 1 ω := by
+    intro ω
+    by_cases hω : TimesArrow.Markov.pathPMF (uniformConfig n M)
+        (prodK n M drivenW drivenW_sum) 1 ω = 0
+    · rw [hω, ENNReal.toReal_zero]
+      simp
+    · rw [pathEntropyProduction_eq_netHops n h3 M 1 ω hω]
+      ring
+  have hE : ∑ ω : Fin 2 → (Fin M → Site n),
+      (TimesArrow.Markov.pathPMF (uniformConfig n M) (prodK n M drivenW drivenW_sum) 1 ω).toReal
+        * (netHops n M 1 ω : ℝ)
+      = (M : ℝ) * (1 / 8) := by
+    have h1t : ∀ ω : Fin 2 → (Fin M → Site n),
+        (netHops n M 1 ω : ℝ) = ∑ t : Fin 1,
+            ∑ m : Fin M, (netHop n (ω t.castSucc m) (ω t.succ m) : ℝ) := by
+      intro ω
+      rw [netHops]
+      push_cast
+      rfl
+    have htrans := TimesArrow.Markov.toReal_sum_pathPMF_transition
+      (prodK n M drivenW drivenW_sum) (uniformConfig n M)
+      (prodK_stationary n M drivenW drivenW_sum) 1
+      (fun (a b : Fin M → Site n) => ∑ m : Fin M, (netHop n (a m) (b m) : ℝ))
+    rw [Nat.cast_one, one_mul] at htrans
+    calc ∑ ω : Fin 2 → (Fin M → Site n),
+          (TimesArrow.Markov.pathPMF (uniformConfig n M) (prodK n M drivenW drivenW_sum) 1 ω).toReal
+            * (netHops n M 1 ω : ℝ)
+        = ∑ ω : Fin 2 → (Fin M → Site n),
+            (TimesArrow.Markov.pathPMF (uniformConfig n M) (prodK n M drivenW drivenW_sum) 1 ω).toReal
+              * ∑ t : Fin 1,
+                  ∑ m : Fin M, (netHop n (ω t.castSucc m) (ω t.succ m) : ℝ) :=
+          Finset.sum_congr rfl fun ω _ => by rw [h1t ω]
+      _ = ∑ i : Fin M → Site n, ((uniformConfig n M) i).toReal
+            * ∑ j : Fin M → Site n,
+                ((prodK n M drivenW drivenW_sum) i j).toReal
+                  * ∑ m : Fin M, (netHop n (i m) (j m) : ℝ) := htrans
+      _ = (M : ℝ) * (1 / 8) := by
+          simp only [Finset.mul_sum]
+          have c1 : ∀ (i : Fin M → Site n),
+              (∑ j : Fin M → Site n, ∑ m : Fin M,
+                  ((uniformConfig n M) i).toReal
+                    * (((prodK n M drivenW drivenW_sum) i j).toReal
+                      * (netHop n (i m) (j m) : ℝ)))
+            = ∑ m : Fin M, ∑ j : Fin M → Site n,
+                  ((uniformConfig n M) i).toReal
+                    * (((prodK n M drivenW drivenW_sum) i j).toReal
+                      * (netHop n (i m) (j m) : ℝ)) :=
+            fun i => Finset.sum_comm
+          rw [Finset.sum_congr rfl fun i _ => c1 i, Finset.sum_comm,
+            Finset.sum_congr rfl fun m _ => one_step_score_mean n h3 M m,
+            Finset.sum_const, Finset.card_fin, nsmul_eq_mul]
+  rw [← h1, hmean, Finset.sum_congr rfl fun ω _ => (hper ω).symm, ← Finset.sum_mul,
+    hE]
+
 /-! ## The executable
 
 Bit-exact Philox trajectories. The counter is `(walker, step, 0, 0)` with

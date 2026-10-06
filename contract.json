@@ -6008,6 +6008,20 @@
    "axioms": ["propext", "Quot.sound"]},
   {"status": "proved",
    "statement":
+   "driven_step_entropy_production_pos : 0 < TimesArrow.Markov.stepEntropyProduction (uniformConfig 8 16) (prodK 8 16 drivenW drivenW_sum)",
+   "name": "TimesArrow.Walker.driven_step_entropy_production_pos",
+   "doc":
+   "**The driven model's per-step rate is strictly positive** (K2): the\ndriven product chain dissipates — `2 ln 3 > 0`.",
+   "axioms": ["propext", "Classical.choice", "Quot.sound"]},
+  {"status": "proved",
+   "statement":
+   "model_entropy_production (T : ℕ) : (TimesArrow.Markov.entropyProduction (uniformConfig 8 16) (prodK 8 16 drivenW drivenW_sum) T).toReal = (T : ℝ) * 2 * Real.log 3",
+   "name": "TimesArrow.Walker.model_entropy_production",
+   "doc":
+   "**The driven model produces entropy linearly** (K1): for the registered\n16 walkers on the 8×8 torus, `EP = T · 2 ln 3` — the extensivity theorem of\nthe library instantiated at the registered model.",
+   "axioms": ["propext", "Classical.choice", "Quot.sound"]},
+  {"status": "proved",
+   "statement":
    "null_kernel_symmetric (n : ℕ) [NeZero n] (i j : Site n) : walkerK n nullW nullW_sum i j = walkerK n nullW nullW_sum j i",
    "name": "TimesArrow.Walker.null_kernel_symmetric",
    "doc": "The registered null one-walker kernel is symmetric.",

@@ -60,4 +60,29 @@ theorem path_sigma_eq_hop_tally (n : ℕ) [NeZero n] (h3 : 3 ≤ n) (M T : ℕ)
       = (netHops n M T ω : ℝ) * Real.log 3 :=
   pathEntropyProduction_eq_netHops n h3 M T ω hω
 
+/-- **The driven model produces entropy linearly** (K1): for the registered
+16 walkers on the 8×8 torus, `EP = T · 2 ln 3` — the extensivity theorem of
+the library instantiated at the registered model. -/
+theorem model_entropy_production (T : ℕ) :
+    (TimesArrow.Markov.entropyProduction (uniformConfig 8 16)
+        (prodK 8 16 drivenW drivenW_sum) T).toReal
+      = (T : ℝ) * 2 * Real.log 3 := by
+  have h := TimesArrow.Markov.toReal_entropyProduction_eq_natCast_mul_stepEntropyProduction
+    (prodK 8 16 drivenW drivenW_sum) (uniformConfig 8 16)
+    (prodK_stationary 8 16 drivenW drivenW_sum)
+    (prodK_support 8 16 drivenW drivenW_sum drivenW_pos) T
+  rw [stepEntropyProduction_prodK 8 (by decide) 16] at h
+  rw [h]
+  norm_num
+  ring
+
+/-- **The driven model's per-step rate is strictly positive** (K2): the
+driven product chain dissipates — `2 ln 3 > 0`. -/
+theorem driven_step_entropy_production_pos :
+    0 < TimesArrow.Markov.stepEntropyProduction (uniformConfig 8 16)
+        (prodK 8 16 drivenW drivenW_sum) := by
+  rw [stepEntropyProduction_prodK 8 (by decide) 16,
+    show (((16 : ℕ) : ℝ) * (1 / 8) * Real.log 3) = 2 * Real.log 3 from by norm_num]
+  exact mul_pos (by norm_num) (Real.log_pos (by norm_num))
+
 end TimesArrow.Walker

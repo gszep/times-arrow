@@ -46,6 +46,17 @@ theorem path_sigma_eq_hop_tally (n : ℕ) [NeZero n] (h3 : 3 ≤ n) (M T : ℕ)
       = (netHops n M T ω : ℝ) * Real.log 3 := by
   sorry
 
+theorem model_entropy_production (T : ℕ) :
+    (TimesArrow.Markov.entropyProduction (uniformConfig 8 16)
+        (prodK 8 16 drivenW drivenW_sum) T).toReal
+      = (T : ℝ) * 2 * Real.log 3 := by
+  sorry
+
+theorem driven_step_entropy_production_pos :
+    0 < TimesArrow.Markov.stepEntropyProduction (uniformConfig 8 16)
+        (prodK 8 16 drivenW drivenW_sum) := by
+  sorry
+
 end TimesArrow.Walker
 
 namespace TimesArrow.Markov
