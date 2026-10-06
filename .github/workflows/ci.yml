@@ -52,7 +52,7 @@ jobs:
             --rwx "$probe/.lake" -- /bin/sh -c "echo allowed > '$probe/.lake/allowed'"
           test -s "$probe/.lake/allowed"
           rm -f "$probe/forbidden"
-          if landrun --best-effort --ro / --rw /dev --ldd --add-exec \
+          if landrun --best-effort --unrestricted-filesystem --ro / --rw /dev --ldd --add-exec \
               --rwx "$probe/.lake" -- /bin/sh -c "echo escaped > '$probe/forbidden'"; then
             echo "::error::landrun allowed a write outside the allowed set; the sandbox is not engaged"
             exit 1
