@@ -4,7 +4,7 @@ export default defineConfig({
   base: "/times-arrow/",
   build: {
     rollupOptions: {
-      input: ["index.html", "experiments/000-plumbing/index.html"],
+      input: ["index.html", "experiments/000-plumbing/index.html", "experiments/001-irreversibility/index.html"],
     },
   },
 });

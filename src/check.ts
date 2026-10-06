@@ -1,6 +1,6 @@
 import contract from "../contract.json" with { type: "json" };
 import { read, storage } from "./gpu.ts";
-import { Hpp } from "./hpp.ts";
+import { Hpp, nullState, packedState } from "./hpp.ts";
 import { philoxWgsl } from "./philox.ts";
 
 export type Result = { name: string; pass: boolean; detail: string };
@@ -66,6 +66,211 @@ export async function philoxStream(device: GPUDevice, triples: number[][]): Prom
   return triples.map((_, i) => out.slice(8 * i, 8 * i + 8));
 }
 
+const popcount = (s: number) => ((s & 1) + ((s >>> 1) & 1) + ((s >>> 2) & 1) + ((s >>> 3) & 1)) as number;
+const massOf = (s: Uint32Array) => s.reduce((m, w) => m + popcount(w), 0);
+const hamming = (a: Uint32Array, b: Uint32Array) => {
+  let d = 0;
+  for (let i = 0; i < a.length; i++) d += popcount(a[i] ^ b[i]);
+  return d;
+};
+
+/** Inverse, echo and negative-control checks. The exact inverse
+ * (`collide ∘ stream⁻¹`) is always verified against the forward step; the
+ * conjugated forms are the proved statements of `step_inverse` and
+ * `loschmidt_echo`, run op for op. */
+async function checkInverse(device: GPUDevice): Promise<Result[]> {
+  const results: Result[] = [];
+  const u32 = () => Math.floor(Math.random() * 2 ** 32);
+
+  // Round trips over the contract's golden trajectories, the (seed, n) with a
+  // t = 0 golden also checked against that vector.
+  for (const g of contract.hpp.golden) {
+    const hpp = new Hpp(device, g.n);
+    hpp.init(g.seed);
+    const start = await hpp.words();
+    hpp.step(g.t);
+    hpp.inv(g.t);
+    const back = await hpp.words();
+    hpp.destroy();
+    const diff = hamming(start, back);
+    results.push({
+      name: `HPP echo seed ${g.seed}, n ${g.n}, t ${g.t}`,
+      pass: diff === 0,
+      detail: `${diff} slots differ`,
+    });
+  }
+
+  // Random states: step then inverse, inverse then step.
+  for (let i = 0; i < 3; i++) {
+    const seed = u32();
+    const n = [16, 32, 64][i];
+    const t = 1 + Math.floor(Math.random() * 99);
+    for (const order of ["step-inv", "inv-step"] as const) {
+      const hpp = new Hpp(device, n);
+      hpp.init(seed);
+      const start = await hpp.words();
+      if (order === "step-inv") {
+        hpp.step(t);
+        hpp.inv(t);
+      } else {
+        hpp.inv(t);
+        hpp.step(t);
+      }
+      const back = await hpp.words();
+      hpp.destroy();
+      const diff = hamming(start, back);
+      results.push({
+        name: `HPP ${order} seed ${seed}, n ${n}, t ${t}`,
+        pass: diff === 0,
+        detail: `${diff} slots differ`,
+      });
+    }
+  }
+
+  // The two conjuncts of `step_inverse` and the `loschmidt_echo` protocol,
+  // op for op: S(R(S(R(s)))) = s, R(S(R(S(s)))) = s, and R S^t R S^t = id.
+  {
+    const seed = u32();
+    const n = 32;
+    const t = 1 + Math.floor(Math.random() * 99);
+    for (const ops of [
+      ["rev", "step", "rev", "step"],
+      ["step", "rev", "step", "rev"],
+    ] as const) {
+      const hpp = new Hpp(device, n);
+      hpp.init(seed);
+      const start = await hpp.words();
+      for (const op of ops) (op === "step" ? hpp.step(1) : hpp.rev());
+      const back = await hpp.words();
+      hpp.destroy();
+      const diff = hamming(start, back);
+      results.push({
+        name: `HPP conjugation ${ops.join("∘")} seed ${seed}`,
+        pass: diff === 0,
+        detail: `${diff} slots differ`,
+      });
+    }
+    const hpp = new Hpp(device, n);
+    hpp.init(seed);
+    const start = await hpp.words();
+    hpp.step(t);
+    hpp.rev();
+    hpp.step(t);
+    hpp.rev();
+    const back = await hpp.words();
+    hpp.destroy();
+    const diff = hamming(start, back);
+    results.push({
+      name: `Loschmidt echo (conjugated) seed ${seed}, t ${t}`,
+      pass: diff === 0,
+      detail: `${diff} slots differ`,
+    });
+  }
+
+  // The naive flip-only reversal, run literally: k steps, flip, k flip-conjugated
+  // steps. It must equal flip ∘ step^(2k) of the initial state and not recover it.
+  {
+    const seed = u32();
+    const n = 32;
+    const k = 3;
+    const naive = new Hpp(device, n);
+    naive.init(seed);
+    const start = await naive.words();
+    naive.step(k);
+    naive.flip();
+    for (let j = 0; j < k; j++) {
+      naive.flip();
+      naive.step(1);
+      naive.flip();
+    }
+    const literal = await naive.words();
+    naive.destroy();
+    const derived = new Hpp(device, n);
+    derived.init(seed);
+    derived.step(2 * k);
+    derived.flip();
+    const collapsed = await derived.words();
+    derived.destroy();
+    results.push({
+      name: `Flip-only reversal equals flip∘step^${2 * k} seed ${seed}`,
+      pass: hamming(literal, collapsed) === 0,
+      detail: `${hamming(literal, collapsed)} slots differ`,
+    });
+    results.push({
+      name: `Flip-only reversal does not recover seed ${seed}`,
+      pass: hamming(literal, start) >= 1,
+      detail: `${hamming(literal, start)} slots differ from the initial state`,
+    });
+  }
+
+  // The exact-N initial-state constructors (self-checks until the contract
+  // carries golden states for them).
+  for (const n of [32, 64]) {
+    const count = (n * n) / 8;
+    const packed = await packedState(device, 1, n);
+    const empty = await nullState(device, 1, n);
+    const side = n / 4;
+    const x0 = n / 2 - side / 2;
+    let outside = 0;
+    for (let y = 0; y < n; y++)
+      for (let x = 0; x < n; x++) {
+        const inBlock = x >= x0 && x < x0 + side && y >= x0 && y < x0 + side;
+        if (!inBlock) outside += popcount(packed[y * n + x]);
+      }
+    results.push({
+      name: `Packed constructor n ${n}`,
+      pass: massOf(packed) === count && outside === 0,
+      detail: `${massOf(packed)} particles, ${outside} outside the block`,
+    });
+    results.push({
+      name: `Null constructor n ${n}`,
+      pass: massOf(empty) === count,
+      detail: `${massOf(empty)} particles, expected ${count}`,
+    });
+  }
+
+  return results;
+}
+
+/** The golden vectors the Lean lane exports for the inverse and the echo,
+ * checked whenever present, under `hpp`: `inverse: [{seed, n, t, state}]` —
+ * `inv`ᵗ applied to the t-step forward state (which equals the initial
+ * state); `echo: [{seed, n, t, state}]` — the conjugated protocol
+ * `rev ∘ stepᵗ ∘ rev` applied to the same forward state. */
+async function checkContractVectors(device: GPUDevice): Promise<Result[]> {
+  const hpp = contract.hpp as unknown as Record<string, unknown>;
+  const results: Result[] = [];
+  type Vec = { seed: number; n: number; t: number; state: string };
+  const check = async (key: string, states: (g: Vec, h: Hpp) => Promise<string>) => {
+    const vectors = hpp[key] as Vec[] | undefined;
+    if (!vectors) {
+      results.push({ name: `Contract ${key} vectors`, pass: true, detail: "not present, skipped" });
+      return;
+    }
+    for (const g of vectors) {
+      const h = new Hpp(device, g.n);
+      h.init(g.seed);
+      const got = await states(g, h);
+      h.destroy();
+      const diff = [...got].filter((c, i) => c !== g.state[i]).length;
+      results.push({ name: `Contract ${key} seed ${g.seed}, n ${g.n}, t ${g.t}`, pass: diff === 0, detail: `${diff} sites differ` });
+    }
+  };
+  await check("inverse", async (g, h) => {
+    h.step(g.t);
+    h.inv(g.t);
+    return h.state();
+  });
+  await check("echo", async (g, h) => {
+    h.step(g.t);
+    h.rev();
+    h.step(g.t);
+    h.rev();
+    return h.state();
+  });
+  return results;
+}
+
 /** Every golden vector in the contract, run on `device`. */
 export async function checkContract(device: GPUDevice): Promise<Result[]> {
   const { kat, stream } = contract.philox;
@@ -86,5 +291,7 @@ export async function checkContract(device: GPUDevice): Promise<Result[]> {
     const diff = [...s].filter((c, i) => c !== g.state[i]).length;
     results.push({ name: `HPP seed ${g.seed}, n ${g.n}, t ${g.t}`, pass: diff === 0, detail: `${diff} sites differ` });
   }
+  results.push(...(await checkInverse(device)));
+  results.push(...(await checkContractVectors(device)));
   return results;
 }

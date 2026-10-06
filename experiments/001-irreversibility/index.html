@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>001 · irreversibility</title>
+    <link rel="stylesheet" href="../../src/page.css" />
+    <style>
+      canvas {
+        width: 100%;
+        image-rendering: pixelated;
+      }
+      button {
+        margin: 0.2rem;
+        padding: 0.4rem 0.8rem;
+        font-size: 1rem;
+      }
+      section {
+        margin-top: 1.5rem;
+      }
+      .on {
+        background: #047857;
+        color: #fff;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>001 · irreversibility</h1>
+    <p>
+      <b>Hypothesis.</b> The HPP gas is a reversible bijection with a strict light cone, so any arrow its
+      states show must come from the initial condition and the partition, not the law: entropy rises from a
+      packed block into the equilibrium band, the exact echo returns the state bit for bit, and one flipped
+      bit destroys the reversal while the naive flip-only reversal fails to retrace.
+      Pre-registration: <a href="https://github.com/gszep/times-arrow/blob/main/experiments/001-irreversibility/README.md">README</a>.
+    </p>
+    <p id="params"></p>
+    <p>
+      <button id="reset">reset</button>
+      <button id="play">⏸</button>
+      <button id="forward">⏩ forward</button>
+      <button id="reverse">⏪ reverse</button>
+      <button id="flipbit">flip one bit</button>
+      <label><input type="checkbox" id="paired" /> flip the bit before reversing (paired, same seed)</label>
+    </p>
+    <canvas id="lattice"></canvas>
+    <p id="live"></p>
+    <section>
+      <h2>Block entropy S<sub>b</sub>(t)</h2>
+      <p>
+        <button id="runForward">run forward grid</button>
+        <button id="runBand">null band (16 seeds)</button>
+        <button id="runEcho">run echo + damage</button>
+      </p>
+      <canvas id="splot" height="300"></canvas>
+      <p id="snotes"></p>
+    </section>
+    <section>
+      <h2>Damage H(r) and the light cone</h2>
+      <canvas id="hplot" height="220"></canvas>
+      <canvas id="cplot" height="220"></canvas>
+      <p id="eresults"></p>
+    </section>
+    <details>
+      <summary>Claims, assumptions, falsifiers</summary>
+      <div id="claims"></div>
+    </details>
+    <p id="out"></p>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
