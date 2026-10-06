@@ -4,10 +4,12 @@ import TimesArrow.LatticeGas
 /-!
 # Claims
 
-Every theorem with a docstring in a `TimesArrow` module is a claim, exported
-to the contract with the axioms it uses. Each statement is also written, with
-`sorry`, in `Challenge.lean`, and Comparator checks in CI that these proofs
-prove exactly those statements.
+Every theorem with a docstring in `TimesArrow.Claims` (or a module under
+`TimesArrow.Claims.*`) is a claim, exported to the contract with the axioms
+it uses. Each statement is also written, with `sorry`, in `Challenge.lean`,
+and Comparator checks in CI that these proofs prove exactly those
+statements. Library lemmas elsewhere may carry docstrings; they are not
+claims.
 -/
 
 namespace TimesArrow.Philox

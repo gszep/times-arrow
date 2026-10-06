@@ -29,8 +29,8 @@ def statement (mod n : Name) : MetaM String := do
   let words := ((text.splitOn ":=").head!.split Char.isWhitespace).toList.map (·.toString)
   return " ".intercalate (words.filter (!·.isEmpty))
 
-/-- Every theorem with a docstring in a `TimesArrow` module, with the axioms
-it depends on. -/
+/-- Every theorem with a docstring in the `TimesArrow.Claims` module or one
+of its children, with the axioms it depends on. -/
 def claims : MetaM Json := do
   let env ← getEnv
   let mut out := #[]
@@ -38,7 +38,7 @@ def claims : MetaM Json := do
     let .thmInfo _ := ci | continue
     let some idx := env.getModuleIdxFor? n | continue
     let mod := env.header.moduleNames[idx.toNat]!
-    unless (`TimesArrow).isPrefixOf mod do continue
+    unless (`TimesArrow.Claims).isPrefixOf mod do continue
     let some doc ← findDocString? env n | continue
     let axioms := (← collectAxioms n).qsort Name.lt
     let status :=

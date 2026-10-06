@@ -128,9 +128,9 @@ CI (`.github/workflows/ci.yml`):
 - The live site is <https://gszep.github.io/times-arrow/>, which redirects to `https://gszep.com/times-arrow/`. Plain http has no WebGPU.
 
 Claims:
-- A claim is a theorem with a docstring in a `TimesArrow` module (for now, `TimesArrow/Claims.lean`).
+- A claim is a theorem with a docstring in `TimesArrow.Claims` or a module under `TimesArrow.Claims.*`. Docstring theorems anywhere else are library lemmas, not claims.
 - The same statement, proved by `sorry`, goes in `Challenge.lean`. If you add one without the other, Comparator fails in CI.
-- Definitions stay in modules that contain no claims, because `Challenge.lean` imports the definitions.
+- Definitions stay in modules that contain no claims, because `Challenge.lean` imports the definitions (a claim may use any imported lemma).
 - Prove finite checks with `decide +kernel`, which adds no axioms. Never use `native_decide`: it adds `Lean.ofReduceBool`, which is not on the allow-list.
 
 Gotchas that each cost a debugging round:
