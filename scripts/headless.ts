@@ -20,9 +20,16 @@ export type Evaluate = (expression: string) => Promise<any>;
 /**
  * Serve the repo with Vite, open `page` in a throwaway headless Chrome, wait
  * for `window.probe`, and pass an evaluator to `fn`. Aborts on a software
- * adapter. Everything is shut down afterwards.
+ * adapter, and on any vendor other than `expectedVendor` when one is given
+ * (third argument, defaulting to `TIMES_ARROW_VENDOR`; unset only disables
+ * the vendor check for callers that do not expect a specific GPU — the 001
+ * sweep always passes one). Everything is shut down afterwards.
  */
-export async function headless<T>(page: string, fn: (evaluate: Evaluate) => Promise<T>): Promise<T> {
+export async function headless<T>(
+  page: string,
+  fn: (evaluate: Evaluate) => Promise<T>,
+  expectedVendor = process.env.TIMES_ARROW_VENDOR,
+): Promise<T> {
   const server = await createServer({ logLevel: "error" });
   await server.listen();
   const profile = mkdtempSync(join(tmpdir(), "times-arrow-chrome-"));
@@ -85,6 +92,8 @@ export async function headless<T>(page: string, fn: (evaluate: Evaluate) => Prom
     if (error) throw new Error(error);
     const adapter = await evaluate("probe.adapter");
     if (adapter.fallback) throw new Error(`software adapter: ${JSON.stringify(adapter)}`);
+    if (expectedVendor && adapter.vendor.toLowerCase() !== expectedVendor.toLowerCase())
+      throw new Error(`adapter vendor "${adapter.vendor}" is not the expected "${expectedVendor}": ${JSON.stringify(adapter)}`);
     const result = await fn(evaluate);
     ws.close();
     return result;

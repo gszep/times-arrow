@@ -1,6 +1,7 @@
 import contract from "../../contract.json" with { type: "json" };
 import { gpu } from "../../src/gpu.ts";
 import { Hpp, nullState, packedState } from "../../src/hpp.ts";
+import { nullBand } from "./score.ts";
 import { run } from "./run.ts";
 import type { RunConfig, RunResult } from "./run.ts";
 
@@ -235,14 +236,14 @@ try {
       });
     const spec: Spec = { series, logX: true, yLabel: "nats", xLabel: "t" };
     if (bandRuns) {
-      const ts = bandRuns[0].forward.map((s) => s.t);
-      const band = ts.map((t) => {
-        const at = bandRuns!.map((r) => r.forward.find((s) => s.t === t)!.S[b] as number);
-        const mu = at.reduce((x, y) => x + y, 0) / at.length;
-        const varr = at.reduce((x, y) => x + (y - mu) ** 2, 0) / (at.length - 1);
-        return { t, mu, s: 3 * Math.sqrt(varr) };
-      });
-      spec.band = { points: band.map((p) => [p.t, p.mu] as [number, number]), half: band.map((p) => p.s), color: "#047857" };
+      // The registered null band μ̂ ± 3σ̂, from the same scoring code the
+      // committed scorer uses.
+      const band = nullBand(bandRuns, b);
+      spec.band = {
+        points: band.map((e) => [e.t, e.mu] as [number, number]),
+        half: band.map((e) => e.half),
+        color: "#047857",
+      };
     }
     if (n === registered.n) {
       spec.marks = [
@@ -342,6 +343,13 @@ try {
       adapter,
       config,
       run: (cfg: RunConfig) => run(device, adapter, cfg),
+      // The exact-N initial-state constructors, one hex digit per site, in
+      // the contract's format — the sweep guard compares them with the
+      // pinned golden vectors before the full ensemble runs.
+      construct: async (mode: "packed" | "null", seed: number, n: number) => {
+        const s = mode === "packed" ? await packedState(device, seed, n) : await nullState(device, seed, n);
+        return Array.from(s, (w) => w.toString(16)).join("");
+      },
       // The reverse-step reference probes, for differential tests against the
       // Lean executable's `hppinv` / `hppecho`.
       hppinv: async (seed: number, n: number, t: number) => {

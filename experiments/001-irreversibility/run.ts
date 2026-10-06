@@ -5,6 +5,7 @@
 import type { Adapter } from "../../src/gpu.ts";
 import { read } from "../../src/gpu.ts";
 import { Hpp, nullState, packedState } from "../../src/hpp.ts";
+import { undoFraction } from "./score.ts";
 
 export type RunConfig = {
   n: number;
@@ -40,7 +41,7 @@ export type RunResult = {
 
 /** The pre-registered sampling grid: `t = 0`, then powers of two up to 1024,
  * then every 128 steps, to `tMax` (which is always sampled). */
-function sampleTimes(tMax: number): number[] {
+export function sampleTimes(tMax: number): number[] {
   const ts = new Set<number>([0, tMax]);
   for (let t = 1; t <= Math.min(1024, tMax); t *= 2) ts.add(t);
   for (let t = 1152; t <= tMax; t += 128) ts.add(t);
@@ -259,15 +260,17 @@ fn diff(@builtin(global_invocation_id) g: vec3u, @builtin(local_invocation_id) l
 class Rig {
   private device: GPUDevice;
   private n: number;
+  private watch: DeviceWatch;
   private out: GPUBuffer;
   private layout: GPUBindGroupLayout;
   private pipelines: Record<string, GPUComputePipeline>;
   private single: number;
   private pair: number;
 
-  constructor(device: GPUDevice, n: number) {
+  constructor(device: GPUDevice, n: number, watch: DeviceWatch) {
     this.device = device;
     this.n = n;
+    this.watch = watch;
     const grid = (n / 4) ** 2;
     this.single = 1 + 2 * n + grid;
     this.pair = 5 + 2 * grid;
@@ -323,7 +326,7 @@ class Rig {
   /** Mass, per-row/per-column momentum and block counts of `a`. */
   async sample(a: GPUBuffer) {
     this.submit(["mass", "momentum", "blocks"], a, a, 1);
-    const words = (await read(this.device, this.out))[0];
+    const words = (await this.watch.race(read(this.device, this.out)))[0];
     return {
       mass: words[0],
       momentum: new Int32Array(words.slice(1, 1 + 2 * this.n).buffer),
@@ -334,7 +337,7 @@ class Rig {
   /** The same for the pair `a`, `b`, plus the damage of `b` against `a`. */
   async pairSample(a: GPUBuffer, b: GPUBuffer) {
     this.submit(["pairMass", "pairBlocks", "diff"], a, b, 5);
-    const words = (await read(this.device, this.out))[0];
+    const words = (await this.watch.race(read(this.device, this.out)))[0];
     const grid = (this.n / 4) ** 2;
     return {
       H: words[0],
@@ -350,7 +353,7 @@ class Rig {
   /** The damage of `b` against `a`, nothing else. */
   async damage(a: GPUBuffer, b: GPUBuffer) {
     this.submit(["diff"], a, b, 3);
-    const words = (await read(this.device, this.out))[0];
+    const words = (await this.watch.race(read(this.device, this.out)))[0];
     return { H: words[0], sites: words[1], maxDist: words[2] };
   }
 
@@ -358,6 +361,31 @@ class Rig {
     this.out.destroy();
   }
 }
+
+/** Watches `device.lost` for the lifetime of one run: every run subscribes
+ * when it starts, every readback is raced against it (a lost device can leave
+ * a pending readback hanging), and the check throws the moment the promise
+ * has resolved. `device.lost` settles at most once and never rejects, so
+ * leftover subscriptions from finished runs are inert. */
+export function watchDevice(device: GPUDevice) {
+  let info: GPUDeviceLostInfo | null = null;
+  const lost = device.lost.then((i) => {
+    info = i;
+  });
+  const err = () => new Error(`device lost: ${info?.reason ?? "unknown"}, ${info?.message ?? ""}`);
+  const check = () => {
+    if (info) throw err();
+  };
+  const race = async <T>(readback: Promise<T>): Promise<T> => {
+    const first = await Promise.race([readback.then((r) => ({ r })), lost.then(() => ({ err: err() }))]);
+    if ("err" in first) throw first.err;
+    check();
+    return first.r;
+  };
+  return { check, race };
+}
+
+export type DeviceWatch = ReturnType<typeof watchDevice>;
 
 const blank = (device: GPUDevice, bytes: number) =>
   device.createBuffer({
@@ -386,8 +414,12 @@ export async function run(device: GPUDevice, adapter: Adapter, cfg: RunConfig): 
     if (b < 4 || b % 4 !== 0 || b > n || n % b !== 0) throw new Error(`b = ${b} must divide n = ${n}`);
   const count = (n * n) / 8;
   const bytes = 4 * n * n;
+  // Aborts the run the moment the device is lost (the constructor readback and
+  // every later one is checked; the Rig races each of its readbacks).
+  const watch = watchDevice(device);
 
   const initial = mode === "packed" ? await packedState(device, seed, n) : await nullState(device, seed, n);
+  watch.check();
   let mass = 0;
   for (const s of initial) mass += popcount(s);
   if (mass !== count) throw new Error(`constructor drew ${mass} particles, expected ${count}`);
@@ -400,7 +432,7 @@ export async function run(device: GPUDevice, adapter: Adapter, cfg: RunConfig): 
           throw new Error(`particle outside the block at (${x}, ${y})`);
   }
 
-  const rig = new Rig(device, n);
+  const rig = new Rig(device, n, watch);
   const h = new Hpp(device, n);
   h.load(initial);
   const saveInit = blank(device, bytes);
@@ -477,13 +509,7 @@ export async function run(device: GPUDevice, adapter: Adapter, cfg: RunConfig): 
     naiveHamming = (await rig.damage(naive.buffer, saveInit)).H;
 
     const pb = cfg.b.includes(16) ? 16 : cfg.b[cfg.b.length - 1];
-    const s0 = forward[0].S[pb];
-    const ste = forward.find((s) => s.t === tE)!.S[pb];
-    const fin = echo[echo.length - 1];
-    undo = {
-      pristine: (ste - fin.Sp[pb]) / (ste - s0),
-      damaged: (ste - fin.Sd[pb]) / (ste - s0),
-    };
+    undo = undoFraction(forward, echo, pb, tE);
     pristine.destroy();
     damaged.destroy();
     naive.destroy();
@@ -491,8 +517,7 @@ export async function run(device: GPUDevice, adapter: Adapter, cfg: RunConfig): 
   }
 
   await device.queue.onSubmittedWorkDone();
-  const lost = await Promise.race([device.lost, null]);
-  if (lost) throw new Error(`device lost: ${lost.message}`);
+  watch.check();
 
   h.destroy();
   rig.destroy();
