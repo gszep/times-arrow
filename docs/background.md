@@ -249,6 +249,56 @@ The core framing: relativity gives the cone, thermodynamics picks the half.
   chosen subsystem, not for the whole universe. Castro-Ruiz & Oreshkov,
   arXiv:2110.13199.
 
+## Entanglement Hamiltonians and modular flow (Q6, 007)
+
+- Modular flow is geometric for wedges in any Poincaré-covariant QFT
+  (Bisognano–Wichmann, above) and for their conformal images: double cones of
+  the free massless scalar, Hislop & Longo, Commun. Math. Phys. **84**, 71
+  (1982), general free massless fields, Hislop, Ann. Phys. **185**, 193
+  (1988), conformal nets, Brunetti, Guida & Longo, Commun. Math. Phys. **156**,
+  201 (1993). Bounded (finite-lifetime) trajectories see a diamond temperature:
+  Martinetti & Rovelli, Class. Quantum Grav. **20**, 4919 (2003),
+  arXiv:gr-qc/0212074.
+- The modular data of one wedge reconstruct the translations and the Poincaré
+  group: Borchers, Commun. Math. Phys. **132**, 189 (1990) and **179**, 703
+  (1996). The Lorentz group is the modular flow of one special partition, not
+  a group of partition changes (006's finding).
+- Geometric modular action plus the KMS condition force the Unruh/Hawking
+  temperature: Sewell, Phys. Lett. A **79**, 23 (1980).
+- Non-geometric modular flow: disjoint intervals of the 2D massless Dirac
+  field flow non-locally, with "teleportation" between components — Casini &
+  Huerta, Class. Quantum Grav. **26**, 185005 (2009); free-field entanglement
+  review, J. Phys. A **42**, 504007 (2009). The ball of a CFT is the conformal
+  image of a thermal state on the hyperbolic cylinder: Casini, Huerta & Myers,
+  JHEP 1105, 036 (2011), arXiv:1102.0440.
+- Thermal time and the Tolman effect: "temperature as the speed of time".
+  Rovelli & Smerlak, Class. Quantum Grav. **28**, 075007 (2011).
+- Entanglement Hamiltonians of free lattice models from correlation matrices,
+  bosons and fermions (review). Eisler & Peschel, J. Phys. A **42**, 504003
+  (2009).
+- Lattice Bisognano–Wichmann: the BW ansatz on 1D and 2D lattices, working
+  best near criticality — Giudici, Mendes-Santos, Calabrese & Dalmonte, PRB
+  **98**, 134403 (2018), arXiv:1807.01322; exact vs lattice-BW modular
+  Hamiltonians in critical chains — close reduced density matrices can hide
+  very different modular Hamiltonians — Zhang, Calabrese, Dalmonte &
+  Rajabpour, SciPost Phys. Core **2**, 007 (2020), arXiv:2003.00315; critical
+  chains vs CFT — Mendes-Santos, Giudici, Dalmonte & Rajabpour, PRB **100**,
+  155122 (2019), arXiv:1906.00471; non-critical chains, triangular profiles —
+  Eisler, Di Giulio, Tonni & Peschel, J. Stat. Mech. (2020) 103102,
+  arXiv:2007.01804; massless harmonic chains recover the CFT interval
+  entanglement Hamiltonian in the continuum limit — Di Giulio & Tonni,
+  J. Stat. Mech. (2020) 033102, arXiv:1911.07188; semi-infinite
+  nonrelativistic free fermions: BW exact up to a nonuniversal prefactor —
+  Eisler, J. Stat. Mech. (2025) 013101, arXiv:2410.16433.
+- Entanglement-Hamiltonian spectroscopy and tomography in quantum simulators:
+  Dalmonte, Vermersch & Zoller, Nat. Phys. **14**, 827 (2018), arXiv:1707.04455;
+  Kokail et al., Nat. Phys. **17**, 936 (2021), arXiv:2009.09000.
+- Open (checked 2026-10-07): no exact 2D lattice half-plane entanglement
+  Hamiltonian is published. 1D says the BW shape survives the lattice with
+  boundary-layer deviations and prefactor non-universality; whether the 2D
+  EH converges to the discretised boost, mass-blind as in the continuum, is
+  007's pre-registerable question (issue #11).
+
 ## Clocks
 
 - The thermodynamic cost of timekeeping bounds clock accuracy. Erker et al.,
