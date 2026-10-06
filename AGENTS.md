@@ -76,6 +76,24 @@ results that had to be retracted:
 - **GPU hygiene.** Wait for pending GPU work to finish before swapping
   buffers or resetting. Batch all readbacks into one mapped buffer per frame.
 
+## Agents and GitHub
+
+An orchestrator agent delegates to subagents and reports to the collaborator
+(playbook: `docs/orchestrator.md`). Work streams are issues on the
+`times-arrow` project board (`gh project view 2 --owner gszep`).
+
+- **Issues:**
+  - One issue labelled `experiment` per `NNN-slug`, with a checklist of its stages.
+  - `lean` marks library streams, `negative-result` marks refuted predictions or failed approaches, `needs-collaborator` marks a physics judgement or go-ahead, and `orchestration` covers how agents work.
+- **Promote** to an issue comment only what someone who wasn't here would need next week: decisions, results with their checks (commit, CI run, results JSON), negative results and blockers. Everything else stays in your scratch directory under the approved temp dir, never in Git.
+- **Evidence is links and counts.** An edited checkbox or status is not evidence. Close an issue with a comment that names the commits, the checks and what is still open.
+- **Sign-off:** agent-written issue, PR and comment text ends with `— <role> · <provider/model> · <agent or session id>`.
+- **No pinging the human:** never assign, request review from or @mention the collaborator. The orchestrator reports.
+- **Worktrees:** subagents work in their own worktree.
+  - Reuse the downloaded Lean packages with `mkdir -p .lake && ln -s /Users/gszep/Documents/repos/times-arrow/.lake/packages .lake/packages`, and never run `lake update` there.
+  - Run `npm ci` for your own `node_modules`.
+- **Credentials:** never run `gh auth login/logout/switch`, and never read credentials.
+
 ## Conventions
 
 - Units `c = ħ = k_B = 1`. Spacetime is 2+1 dimensional with signature
@@ -274,7 +292,7 @@ compiles, matches Lean exactly, or proved.
 ## Layout
 
 ```
-docs/                     background.md, questions.md
+docs/                     background.md, questions.md, orchestrator.md (orchestrator playbook)
 TimesArrow/               Lean library: definitions (Philox, LatticeGas) and Claims.lean
 Challenge.lean            claim statements with `sorry`, for Comparator
 Main.lean                 `timesarrow` exe: `contract`, plus `rand`/`hpp` for differential tests
