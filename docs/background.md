@@ -152,9 +152,13 @@ The core framing: relativity gives the cone, thermodynamics picks the half.
 - physlib (formerly PhysLean/HepLean), `leanprover-community/physlib`: the
   Lorentz group, special relativity, statistical mechanics and
   thermodynamics. It has an AI contribution policy (`AI-POLICY.md`).
-- Mathlib: KL divergence (`InformationTheory/KullbackLeibler`) and
-  `Kernel.Invariant`. As far as we found, it has no finite Markov chains
-  with detailed balance and no fluctuation theorems.
+- Mathlib: KL divergence (`InformationTheory/KullbackLeibler`, with Gibbs'
+  inequality and a chain rule), `Kernel.Invariant` and `Kernel.IsReversible`
+  (detailed balance between sets, with `IsReversible.invariant`), and
+  `Matrix.rowStochastic` (over ordered rings only, so not directly over
+  ℝ≥0∞). As far as we found, it has no finite-state Markov chain library,
+  no PMF-level KL computation and no fluctuation theorems;
+  `TimesArrow/Markov/` starts one.
 - Comparator (Lean FRO): a sandboxed judge that re-checks proofs against a
   permitted-axiom list.
 - Hesper (`Verilean/hesper`): a Lean DSL that generates WGSL and CUDA
