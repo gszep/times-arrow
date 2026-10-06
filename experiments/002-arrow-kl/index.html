@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>002 · the arrow of time as D_KL</title>
+    <link rel="stylesheet" href="../../src/page.css" />
+    <style>
+      canvas {
+        width: 100%;
+      }
+      #torus {
+        image-rendering: pixelated;
+        max-width: 22rem;
+      }
+      button {
+        margin: 0.2rem;
+        padding: 0.4rem 0.8rem;
+        font-size: 1rem;
+      }
+      section {
+        margin-top: 1.5rem;
+      }
+      input[type="range"] {
+        width: 100%;
+      }
+      #verdict {
+        font-size: 0.72rem;
+        white-space: pre-wrap;
+      }
+      .on {
+        background: #047857;
+        color: #fff;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>002 · the arrow of time as D<sub>KL</sub></h1>
+    <p>
+      <b>Hypothesis.</b> The arrow of time is measurable as `D_KL(P_F ‖ P_R)`: sixteen independent
+      walkers on an 8×8 torus with an east-biased drive `a = ln 3` produce entropy at exactly
+      `2T ln 3` nats, satisfy the detailed and integral fluctuation theorems exactly, lose the
+      whole arrow to a reflection-symmetric coarse-graining and keep a strictly-positive but
+      undetectably small share for the minimal asymmetric region. The registered falsifiers live
+      in the claims panel.
+      Pre-registration: <a href="https://github.com/gszep/times-arrow/blob/main/experiments/002-arrow-kl/README.md">README</a>.
+    </p>
+    <p id="params"></p>
+    <p>
+      <button id="reset">reset</button>
+      <button id="play">▶</button>
+      <label>drive d <span id="dlabel"></span> (a = ln((32+d)/(32−d)); registered 16 = ln 3)</label>
+      <input type="range" id="drive" min="-31" max="31" step="1" />
+      <button id="reverse">⇄ reverse (d ↦ −d)</button>
+      <label><input type="checkbox" id="record" checked /> record completed paths (σ histogram)</label>
+    </p>
+    <canvas id="torus" width="256" height="256"></canvas>
+    <p id="live"></p>
+    <section>
+      <h2>Live σ histogram against the exact prediction</h2>
+      <canvas id="hplot" height="260"></canvas>
+      <canvas id="mplot" height="220"></canvas>
+      <p id="estimates"></p>
+    </section>
+    <section>
+      <h2>The K5 corner (4×4, M = 4): coarse-graining loses the arrow</h2>
+      <p>
+        <button id="runCorner">run the corner (driven + null)</button>
+        <span id="cornerStatus"></span>
+      </p>
+      <p id="cornerOut"></p>
+    </section>
+    <details>
+      <summary>Claims, assumptions, falsifiers</summary>
+      <div id="claims"></div>
+    </details>
+    <p id="out"></p>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

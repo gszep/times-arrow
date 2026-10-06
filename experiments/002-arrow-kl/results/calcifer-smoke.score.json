@@ -1,0 +1,394 @@
+{
+ "source": "experiments/002-arrow-kl/results/calcifer-smoke.json",
+ "commit": "09d37bb05a945115f6c1f09456c8ec9b6248ec2b",
+ "dirty": true,
+ "registered": false,
+ "note": "n/a: not the registered configuration (11 arms at n = 8, m = 16, R = 65536; corner n = 4, m = 4, T = 32, R = 1024)",
+ "goldens": null,
+ "K1": [
+  {
+   "T": 1,
+   "dMean": 2.134998490673377,
+   "sigmaStd": 2.127453548975202,
+   "std": 2.0245498337399215,
+   "chi2": {
+    "value": 9.303963168042438,
+    "bins": 15,
+    "limit": 36,
+    "registeredBins": 15,
+    "range": [
+     -5,
+     9
+    ]
+   },
+   "perBlock": [
+    {
+     "m": 2.3688827474406113,
+     "inside": true
+    },
+    {
+     "m": 2.0598980412527053,
+     "inside": true
+    },
+    {
+     "m": 2.2658878453779763,
+     "inside": true
+    },
+    {
+     "m": 1.9225715051691918,
+     "inside": true
+    },
+    {
+     "m": 1.6479184330021641,
+     "inside": true
+    },
+    {
+     "m": 2.471877649503247,
+     "inside": true
+    },
+    {
+     "m": 2.6435358196076386,
+     "inside": true
+    },
+    {
+     "m": 2.300219479398854,
+     "inside": true
+    },
+    {
+     "m": 2.300219479398854,
+     "inside": true
+    },
+    {
+     "m": 2.025566407231827,
+     "inside": true
+    },
+    {
+     "m": 2.334551113419733,
+     "inside": true
+    },
+    {
+     "m": 1.7509133350647996,
+     "inside": true
+    },
+    {
+     "m": 1.9225715051691918,
+     "inside": true
+    },
+    {
+     "m": 2.4032143814614897,
+     "inside": true
+    },
+    {
+     "m": 1.8195766031065568,
+     "inside": true
+    },
+    {
+     "m": 1.9225715051691916,
+     "inside": true
+    }
+   ],
+   "outside": 0,
+   "pass": true,
+   "meanOk": true,
+   "stdOk": true,
+   "chi2Ok": true,
+   "blocksOk": true,
+   "refutedBy": [],
+   "verdict": "n/a"
+  },
+  {
+   "T": 4,
+   "dMean": 8.8425414875025,
+   "sigmaStd": 4.254907097950404,
+   "std": 4.100211518016924,
+   "chi2": {
+    "value": 24.834932336676033,
+    "bins": 29,
+    "limit": 57,
+    "registeredBins": 29,
+    "range": [
+     -6,
+     22
+    ]
+   },
+   "perBlock": [
+    {
+     "m": 9.16654628357454,
+     "inside": true
+    },
+    {
+     "m": 8.651571773261365,
+     "inside": true
+    },
+    {
+     "m": 10.230826938221773,
+     "inside": true
+    },
+    {
+     "m": 8.136597262948186,
+     "inside": true
+    },
+    {
+     "m": 7.861944190781159,
+     "inside": true
+    },
+    {
+     "m": 8.617240139240485,
+     "inside": true
+    },
+    {
+     "m": 8.994888113470147,
+     "inside": true
+    },
+    {
+     "m": 8.445581969136093,
+     "inside": true
+    },
+    {
+     "m": 9.303872819658055,
+     "inside": true
+    },
+    {
+     "m": 9.235209551616295,
+     "inside": true
+    },
+    {
+     "m": 8.72023504130312,
+     "inside": true
+    },
+    {
+     "m": 8.376918701094334,
+     "inside": true
+    },
+    {
+     "m": 8.582908505219606,
+     "inside": true
+    },
+    {
+     "m": 10.23082693822177,
+     "inside": true
+    },
+    {
+     "m": 8.51424523717785,
+     "inside": true
+    },
+    {
+     "m": 8.411250335115213,
+     "inside": true
+    }
+   ],
+   "outside": 0,
+   "pass": true,
+   "meanOk": true,
+   "stdOk": true,
+   "chi2Ok": true,
+   "blocksOk": true,
+   "refutedBy": [],
+   "verdict": "n/a"
+  }
+ ],
+ "K2": {
+  "bad": [],
+  "maxAbs": [
+   0,
+   0
+  ],
+  "drivenPos": true,
+  "pass": true,
+  "verdict": "verified"
+ },
+ "K3": {
+  "1": {
+   "m1": {
+    "bins": [
+     {
+      "k": -5,
+      "y": null,
+      "pass": false
+     },
+     {
+      "k": -4,
+      "y": null,
+      "pass": false
+     },
+     {
+      "k": -3,
+      "y": -3.8066624897703196,
+      "pass": true
+     },
+     {
+      "k": -2,
+      "y": -2.665490586683414,
+      "pass": true
+     },
+     {
+      "k": -1,
+      "y": -1.0887599922250981,
+      "pass": true
+     },
+     {
+      "k": 0,
+      "y": 0,
+      "pass": true
+     },
+     {
+      "k": 1,
+      "y": 1.0887599922250981,
+      "pass": true
+     },
+     {
+      "k": 2,
+      "y": 2.665490586683414,
+      "pass": true
+     },
+     {
+      "k": 3,
+      "y": 3.8066624897703196,
+      "pass": true
+     },
+     {
+      "k": 4,
+      "y": null,
+      "pass": false
+     },
+     {
+      "k": 5,
+      "y": null,
+      "pass": false
+     }
+    ],
+    "passing": 7,
+    "binsOk": false,
+    "slope": 1.274266331064492,
+    "slopeOk": false
+   },
+   "m4": null,
+   "dpMirror": true,
+   "cross": null,
+   "pass": false,
+   "verdict": "n/a"
+  },
+  "4": {
+   "m1": null,
+   "m4": {
+    "bins": [
+     {
+      "k": -5,
+      "y": null,
+      "pass": false
+     },
+     {
+      "k": -4,
+      "y": null,
+      "pass": false
+     },
+     {
+      "k": -3,
+      "y": null,
+      "pass": false
+     },
+     {
+      "k": -2,
+      "y": null,
+      "pass": false
+     },
+     {
+      "k": -1,
+      "y": -2.3025850929940455,
+      "pass": true
+     },
+     {
+      "k": 0,
+      "y": 0,
+      "pass": true
+     },
+     {
+      "k": 1,
+      "y": 2.302585092994046,
+      "pass": true
+     },
+     {
+      "k": 2,
+      "y": null,
+      "pass": false
+     },
+     {
+      "k": 3,
+      "y": null,
+      "pass": false
+     },
+     {
+      "k": 4,
+      "y": null,
+      "pass": false
+     },
+     {
+      "k": 5,
+      "y": null,
+      "pass": false
+     }
+    ],
+    "passing": 3,
+    "binsOk": false,
+    "slope": 2.302585092994046,
+    "slopeOk": false
+   },
+   "dpMirror": true,
+   "cross": null,
+   "pass": false,
+   "verdict": "n/a"
+  }
+ },
+ "K4": {
+  "1": {
+   "T": 1,
+   "ift": 0.6748596107681756,
+   "stdHat": 0.37378902114889956,
+   "band": 1.4951560845955982,
+   "pass": true,
+   "verdict": "n/a"
+  }
+ },
+ "K5": {
+  "meanSigma": 19.843684464067728,
+  "sigmaExact": 17.577796618689753,
+  "sigmaBand": 4.663444176533232,
+  "sigmaOk": true,
+  "meanSd": 5.0124185670482495,
+  "sdExact": 4.394449154672438,
+  "sdBand": 2.1598175022851325,
+  "sdOk": true,
+  "halfBad": [],
+  "halfMax": 7.105427357601002e-15,
+  "lMean": 0.014053986047955158,
+  "lSe": 0.009992399431867284,
+  "lBand": 0.03727164988086497,
+  "lOk": true,
+  "nullSigmaOk": true,
+  "nullScgOk": true,
+  "pass": true,
+  "physicsOk": true,
+  "bitLevel": "verified",
+  "verdict": "n/a"
+ },
+ "K6": null,
+ "C1": {
+  "exactMean": 10.193327410517194,
+  "exactStd": 4.54906283829021,
+  "meanArm": 10.36442845067593,
+  "stdArm": 4.640250980503288,
+  "meanOk": true,
+  "stdOk": true,
+  "bins": [],
+  "slope": null,
+  "frac": 0,
+  "crooksOk": false,
+  "crossing": null,
+  "crossingOk": false,
+  "lnEexp": 20.91120728873323,
+  "tEff": 4.543037542823904,
+  "tStar": 1.3552992223049305,
+  "pass": false,
+  "verdict": "n/a"
+ }
+}
