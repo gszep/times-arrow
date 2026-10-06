@@ -108,6 +108,10 @@ def diamond (n : ℕ) (p : Site n) (t : ℕ) : Set (Site n) :=
   {q | ∃ u v : ℤ, u.natAbs + v.natAbs ≤ t ∧
     (u : ZMod n) = q.1 - p.1 ∧ (v : ZMod n) = q.2 - p.2}
 
+/-- The one-particle test state for the momentum refutations: a single
+east-going particle at the origin of the 4×4 lattice. -/
+def east4 : State 4 := fun p => if p = (0, 0) then 1 else 0
+
 /-! ## The executable -/
 
 /-- Read a state from an array of site values, keeping the low four bits. -/
@@ -332,5 +336,111 @@ theorem lightcone_outside (n : ℕ) [NeZero n] (t : ℕ) (r p : Site n) (s₁ s�
   · subst hqr
     exact absurd (diamond_symm n hq) hp
   · exact h q hqr
+
+/-! ## Momentum -/
+
+/-- East and west velocities have no y component. -/
+theorem vel_snd_02 (n : ℕ) [NeZero n] : (vel n 0).2 = 0 ∧ (vel n 2).2 = 0 :=
+  ⟨by simp [vel, velInt], by simp [vel, velInt]⟩
+
+/-- North and south velocities have no x component. -/
+theorem vel_fst_13 (n : ℕ) [NeZero n] : (vel n 1).1 = 0 ∧ (vel n 3).1 = 0 :=
+  ⟨by simp [vel, velInt], by simp [vel, velInt]⟩
+
+/-- The source of the east bit is the west neighbour, in the same row. -/
+theorem sub_vel_0 (n : ℕ) [NeZero n] (x y : ZMod n) :
+    (x, y) - vel n 0 = (x - (vel n 0).1, y) := by
+  refine Prod.ext rfl ?_
+  show y - (vel n 0).2 = y
+  rw [(vel_snd_02 n).1, sub_zero]
+
+/-- The source of the west bit is the east neighbour, in the same row. -/
+theorem sub_vel_2 (n : ℕ) [NeZero n] (x y : ZMod n) :
+    (x, y) - vel n 2 = (x - (vel n 2).1, y) := by
+  refine Prod.ext rfl ?_
+  show y - (vel n 2).2 = y
+  rw [(vel_snd_02 n).2, sub_zero]
+
+/-- The source of the north bit is the south neighbour, in the same column. -/
+theorem sub_vel_1 (n : ℕ) [NeZero n] (x y : ZMod n) :
+    (x, y) - vel n 1 = (x, y - (vel n 1).2) := by
+  refine Prod.ext ?_ rfl
+  show x - (vel n 1).1 = x
+  rw [(vel_fst_13 n).1, sub_zero]
+
+/-- The source of the south bit is the north neighbour, in the same column. -/
+theorem sub_vel_3 (n : ℕ) [NeZero n] (x y : ZMod n) :
+    (x, y) - vel n 3 = (x, y - (vel n 3).2) := by
+  refine Prod.ext ?_ rfl
+  show x - (vel n 3).1 = x
+  rw [(vel_fst_13 n).2, sub_zero]
+
+/-- The x-momentum of an assembled value is its east bit minus its west bit. -/
+theorem px16_assemble (b : Fin 4 → Bool) :
+    px16 (assemble b) = (b 0).toNat - (b 2).toNat := by simp [px16, bits_assemble]
+
+/-- The y-momentum of an assembled value is its north bit minus its south bit. -/
+theorem py16_assemble (b : Fin 4 → Bool) :
+    py16 (assemble b) = (b 1).toNat - (b 3).toNat := by simp [py16, bits_assemble]
+
+/-- Streaming carries each row's x-momentum unchanged along the row. -/
+theorem streamState_row_px (n : ℕ) [NeZero n] (s : State n) (y : ZMod n) :
+    ∑ x, px16 (streamState n s (x, y)) = ∑ x, px16 (s (x, y)) := by
+  have expand : ∀ x : ZMod n, px16 (streamState n s (x, y))
+      = (bits 0 (s (x - (vel n 0).1, y))).toNat - (bits 2 (s (x - (vel n 2).1, y))).toNat := by
+    intro x
+    have e0 : (x, y) - vel n 0 = (x - (vel n 0).1, y) := sub_vel_0 n x y
+    have e2 : (x, y) - vel n 2 = (x - (vel n 2).1, y) := sub_vel_2 n x y
+    simp only [streamState, px16_assemble, e0, e2]
+  simp only [expand]
+  rw [Finset.sum_sub_distrib,
+    sum_sub_val n (vel n 0).1 fun q => ((bits 0 (s (q, y))).toNat : ℤ),
+    sum_sub_val n (vel n 2).1 fun q => ((bits 2 (s (q, y))).toNat : ℤ), ← Finset.sum_sub_distrib]
+  exact Finset.sum_congr rfl fun x _ => rfl
+theorem streamState_col_py (n : ℕ) [NeZero n] (s : State n) (x : ZMod n) :
+    ∑ y, py16 (streamState n s (x, y)) = ∑ y, py16 (s (x, y)) := by
+  have expand : ∀ y : ZMod n, py16 (streamState n s (x, y))
+      = (bits 1 (s (x, y - (vel n 1).2))).toNat - (bits 3 (s (x, y - (vel n 3).2))).toNat := by
+    intro y
+    have e1 : (x, y) - vel n 1 = (x, y - (vel n 1).2) := sub_vel_1 n x y
+    have e3 : (x, y) - vel n 3 = (x, y - (vel n 3).2) := sub_vel_3 n x y
+    simp only [streamState, py16_assemble, e1, e3]
+  simp only [expand]
+  rw [Finset.sum_sub_distrib,
+    sum_sub_val n (vel n 1).2 fun q => ((bits 1 (s (x, q))).toNat : ℤ),
+    sum_sub_val n (vel n 3).2 fun q => ((bits 3 (s (x, q))).toNat : ℤ), ← Finset.sum_sub_distrib]
+  exact Finset.sum_congr rfl fun y _ => rfl
+
+/-- One step conserves each row's x-momentum. -/
+theorem stepState_row_px (n : ℕ) [NeZero n] (s : State n) (y : ZMod n) :
+    ∑ x, px16 (stepState n s (x, y)) = ∑ x, px16 (s (x, y)) := by
+  have h : ∑ x, px16 (stepState n s (x, y)) = ∑ x, px16 (collideState n s (x, y)) :=
+    streamState_row_px n (collideState n s) y
+  rw [h]
+  exact Finset.sum_congr rfl fun x _ => collide16_px16 (s (x, y))
+
+/-- One step conserves each column's y-momentum. -/
+theorem stepState_col_py (n : ℕ) [NeZero n] (s : State n) (x : ZMod n) :
+    ∑ y, py16 (stepState n s (x, y)) = ∑ y, py16 (s (x, y)) := by
+  have h : ∑ y, py16 (stepState n s (x, y)) = ∑ y, py16 (collideState n s (x, y)) :=
+    streamState_col_py n (collideState n s) x
+  rw [h]
+  exact Finset.sum_congr rfl fun y _ => collide16_py16 (s (x, y))
+
+/-- One step conserves the total x-momentum. -/
+theorem stepState_total_px (n : ℕ) [NeZero n] (s : State n) :
+    ∑ p, px16 (stepState n s p) = ∑ p, px16 (s p) := by
+  rw [Fintype.sum_prod_type (fun p => px16 (stepState n s p)),
+      Fintype.sum_prod_type (fun p => px16 (s p)),
+      Finset.sum_comm (f := fun a b => px16 (stepState n s (a, b))),
+      Finset.sum_comm (f := fun a b => px16 (s (a, b)))]
+  exact Finset.sum_congr rfl fun y _ => stepState_row_px n s y
+
+/-- One step conserves the total y-momentum. -/
+theorem stepState_total_py (n : ℕ) [NeZero n] (s : State n) :
+    ∑ p, py16 (stepState n s p) = ∑ p, py16 (s p) := by
+  rw [Fintype.sum_prod_type (fun p => py16 (stepState n s p)),
+    Fintype.sum_prod_type (fun p => py16 (s p))]
+  refine Finset.sum_congr rfl fun x _ => stepState_col_py n s x
 
 end TimesArrow.LatticeGas

@@ -41,6 +41,17 @@ theorem lightcone_point (n : ℕ) [NeZero n] (t : ℕ) (r p : Site n) (s₁ s₂
     (stepState n)^[t] s₁ p = (stepState n)^[t] s₂ p := by
   sorry
 
+theorem momentum_conserved (n : ℕ) [NeZero n] (s : State n) :
+    (∀ y : ZMod n, ∑ x, px16 (stepState n s (x, y)) = ∑ x, px16 (s (x, y))) ∧
+    (∀ x : ZMod n, ∑ y, py16 (stepState n s (x, y)) = ∑ y, py16 (s (x, y))) ∧
+    (∑ p, px16 (stepState n s p) = ∑ p, px16 (s p)) ∧
+    (∑ p, py16 (stepState n s p) = ∑ p, py16 (s p)) := by
+  sorry
+
+theorem column_momentum_refuted :
+    ∑ y, px16 (stepState 4 east4 (0, y)) ≠ ∑ y, px16 (east4 (0, y)) := by
+  sorry
+
 theorem step_inverse (n : ℕ) [NeZero n] :
     Function.Bijective (stepState n) ∧ ∀ s : State n,
       stepState n (revState n (stepState n (revState n s))) = s ∧

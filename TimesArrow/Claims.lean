@@ -61,6 +61,24 @@ theorem lightcone_point (n : ℕ) [NeZero n] (t : ℕ) (r p : Site n) (s₁ s₂
     (stepState n)^[t] s₁ p = (stepState n)^[t] s₂ p :=
   lightcone_outside n t r p s₁ s₂ h hp
 
+/-- HPP conserves momentum in the direction it can be carried: the
+x-momentum of each row (#east − #west summed along the row) and the
+y-momentum of each column are invariant, and so are both components of the
+total momentum. -/
+theorem momentum_conserved (n : ℕ) [NeZero n] (s : State n) :
+    (∀ y : ZMod n, ∑ x, px16 (stepState n s (x, y)) = ∑ x, px16 (s (x, y))) ∧
+    (∀ x : ZMod n, ∑ y, py16 (stepState n s (x, y)) = ∑ y, py16 (s (x, y))) ∧
+    (∑ p, px16 (stepState n s p) = ∑ p, px16 (s p)) ∧
+    (∑ p, py16 (stepState n s p) = ∑ p, py16 (s p)) :=
+  ⟨stepState_row_px n s, stepState_col_py n s, stepState_total_px n s, stepState_total_py n s⟩
+
+/-- Refuted: x-momentum is not conserved per column. A single east-going
+particle on the 4×4 lattice carries its x-momentum from column 0 into
+column 1 in one step. Per-row y-momentum fails the same way. -/
+theorem column_momentum_refuted :
+    ∑ y, px16 (stepState 4 east4 (0, y)) ≠ ∑ y, px16 (east4 (0, y)) := by
+  decide +kernel
+
 /-- One HPP step is a bijection. Its inverse is the step conjugated by
 `revState`: reverse every velocity and collide (an involution), step, and do
 both again. Plain velocity reversal does not invert the step — with
