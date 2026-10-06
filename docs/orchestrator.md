@@ -19,10 +19,21 @@ heartbeat names this file; edit the routine here, not in the heartbeat prompt.
   - the files the lane owns;
   - a time budget;
   - the escalation rule;
-  - a short final report format.
+  - a short final report format;
+  - for implementation lanes: the deliverable other lanes depend on
+    (executable plus goldens) first, pushed to `main` within the first
+    hour; proofs after. Integration across two branches goes to an
+    escalation model.
 - **Review** by a different model family from the implementer, in `plan` (read-only) mode. The verdict is `approve` or `reject`, with P1/P2/P3 findings and the head SHA.
   - Required for every pre-registration, and for simulation code before its result is reported.
   - Comparator replaces review for proofs.
+  - A pre-registration review states each criterion's size under the null
+    that the prediction is exactly right (a quick Monte Carlo under the
+    exact law) and rejects any criterion whose size exceeds the registered
+    per-test α.
+  - Reviewer prompts ask which state each estimate is evaluated in and
+    whether its assumptions hold for the specific initial condition — not
+    only whether the algebra is right.
 
 ## Steering
 
@@ -30,6 +41,8 @@ heartbeat names this file; edit the routine here, not in the heartbeat prompt.
 - **Diminishing returns:** stop a lane after two check-ins with no new commit, claim or finding.
 - **Propagate:** when one lane finds something that changes another lane's work, send it with `send_agent_prompt` at once.
 - **Pre-registration before simulation:** a simulation lane starts only after the experiment's pre-registration is committed.
+- **The orchestrator's conjectures** go through the same verification as any other claim; a contested diagnosis gets its own diagnosis lane.
+- **Absence claims** from a literature lane ("no X is conserved") go to the Lean lane before anything depends on them.
 
 ## Heartbeat routine
 

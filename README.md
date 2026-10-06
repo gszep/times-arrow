@@ -61,19 +61,19 @@ literature: [`docs/background.md`](docs/background.md).
 
 ## Experiments
 
-000 chooses the tech stack through cheap, measured trials. 001 is the
-end-to-end test of the harness.
+000–002 are concluded; 003–007 are open explorations, each tracked as an
+issue on the [project board](https://github.com/gszep/times-arrow/projects).
 
 | # | Question | Model | Status |
 |---|---|---|---|
-| 000 | Which plumbing? | RNG bit-exactness across Lean, WGSL, CUDA and JAX; lattice-step throughput; f64 eigensolvers; contract export; Lean-generated WGSL | [done](experiments/000-plumbing/README.md) |
-| 001 | How does irreversibility emerge from reversible, causal microdynamics? | 2D reversible lattice gas: integer arithmetic (bit-exact against Lean), a strict light cone of one cell per step, a Loschmidt echo, coarse-grainings as partitions | planned |
-| 002 | Is the arrow of time measurable as `D_KL(P_F ‖ P_R)`? | Driven Markov jump process on a 2D torus; live Crooks/Jarzynski checks | planned |
-| 003 | Can light cones emerge from locality alone? (Q3) | Lattice Klein–Gordon field and a nonlinear lattice | planned |
-| 004 | Is stochastic entropy production Lorentz invariant? (Q1) | 2D relativistic Langevin dynamics, viewed from boosted frames | planned |
-| 005 | Is proper time counted by irreversible ticks? (Q7) | Moving dissipative ring-clock | planned |
-| 006 | What is invariant under a change of partition? (Q5) | Reversible system with many system/environment splits | planned |
-| 007 | Is a frame change the same as a partition change? (Q6) | Half-plane entanglement Hamiltonian of a lattice free field | planned |
+| 000 | Which plumbing? | RNG bit-exactness across Lean, WGSL, CUDA and JAX; lattice-step throughput; f64 eigensolvers; contract export; Lean-generated WGSL | [done](experiments/000-plumbing/README.md) — one WGSL path everywhere (no tier 1); JAX only for f64 dense linear algebra |
+| 001 | How does irreversibility emerge from reversible, causal microdynamics? | 2D reversible lattice gas: integer arithmetic (bit-exact against Lean), a strict light cone of one cell per step, a Loschmidt echo, coarse-grainings as partitions | [concluded](experiments/001-irreversibility/README.md) — **E1 and S1(b)–(d) refuted**: the packed gas settles into an undamped period-512 limit cycle and never enters the null band, and one flipped bit does not destroy the reversal; L1–L3, E2 and R1 verified/supported |
+| 002 | Is the arrow of time measurable as `D_KL(P_F ‖ P_R)`? | Driven Markov jump process on a 2D torus; live Crooks/Jarzynski checks | [concluded](experiments/002-arrow-kl/README.md) — **K3's T=1 slope criterion refuted (statistical)**, a mis-registered band of true size 3.2%; every other registered check passed and the kernels are bit-level verified; the dFT is proved |
+| 003 | Can light cones emerge from locality alone? (Q3) | Lattice Klein–Gordon field and a nonlinear lattice | exploration — [issue #9](https://github.com/gszep/times-arrow/issues/9) |
+| 004 | Is stochastic entropy production Lorentz invariant? (Q1) | 2D relativistic Langevin dynamics, viewed from boosted frames | exploration — [issue #6](https://github.com/gszep/times-arrow/issues/6) |
+| 005 | Is proper time counted by irreversible ticks? (Q7) | Moving dissipative ring-clock | exploration — [issue #10](https://github.com/gszep/times-arrow/issues/10) |
+| 006 | What is invariant under a change of partition? (Q5) | Reversible system with many system/environment splits | exploration — [issue #8](https://github.com/gszep/times-arrow/issues/8) |
+| 007 | Is a frame change the same as a partition change? (Q6) | Half-plane entanglement Hamiltonian of a lattice free field | exploration — [issue #11](https://github.com/gszep/times-arrow/issues/11) |
 
 ## License
 
