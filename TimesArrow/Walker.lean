@@ -291,6 +291,231 @@ theorem walkerK_symm (n : ℕ) [NeZero n] (w : Dir → ℕ) (hw : ∑ d, w d = 2
     walkerK n w hw i j = walkerK n w hw j i := by
   rw [walkerK_apply, walkerK_apply, hopMass_symm n w hwsymm i j]
 
+/-- The uniform distribution on walker configurations. -/
+noncomputable def uniformConfig (n : ℕ) [NeZero n] (M : ℕ) : PMF (Fin M → Site n) :=
+  PMF.uniformOfFintype (Fin M → Site n)
+
+theorem uniformConfig_apply (n : ℕ) [NeZero n] (M : ℕ) (i : Fin M → Site n) :
+    uniformConfig n M i = ((Fintype.card (Fin M → Site n) : ℝ≥0∞)⁻¹) :=
+  PMF.uniformOfFintype_apply i
+
+theorem uniformConfig_const (n : ℕ) [NeZero n] (M : ℕ) (i j : Fin M → Site n) :
+    uniformConfig n M i = uniformConfig n M j := by
+  rw [uniformConfig_apply, uniformConfig_apply]
+
+theorem walkerK_row_sum (n : ℕ) [NeZero n] (w : Dir → ℕ) (hw : ∑ d, w d = 256)
+    (i : Site n) : ∑ j, walkerK n w hw i j = 1 := by
+  have h := (walkerK n w hw i).tsum_coe
+  rwa [tsum_fintype] at h
+
+theorem walkerK_row_sum_toReal (n : ℕ) [NeZero n] (w : Dir → ℕ) (hw : ∑ d, w d = 256)
+    (i : Site n) : ∑ j, (walkerK n w hw i j).toReal = 1 := by
+  rw [← toReal_sum (fun j _ => PMF.apply_ne_top _ _), walkerK_row_sum n w hw i,
+    ENNReal.toReal_one]
+
+/-! ## Tori of girth at least three
+
+The registered sizes (`n = 4`, `n = 8`) are powers of two at least four, and
+for such `n` the five hop displacements are pairwise distinct: east and west
+move to different sites, so a hop between two sites has exactly one
+direction, and the hop tally is well defined. -/
+
+/-- The integer hop displacements are pairwise distinct. -/
+theorem velInt_inj : Function.Injective velInt := by decide +kernel
+
+theorem velInt_fst_bounds (d : Dir) :
+    (velInt d).1 = -1 ∨ (velInt d).1 = 0 ∨ (velInt d).1 = 1 := by
+  fin_cases d <;> decide
+
+theorem velInt_snd_bounds (d : Dir) :
+    (velInt d).2 = -1 ∨ (velInt d).2 = 0 ∨ (velInt d).2 = 1 := by
+  fin_cases d <;> decide
+
+/-- Integer displacements with components in `{-1, 0, 1}` stay distinct in
+`ZMod n` whenever `3 ≤ n`. -/
+theorem zmod_eq_of_three_le (n : ℕ) [NeZero n] (h3 : 3 ≤ n) {a b : ℤ}
+    (ha : a = -1 ∨ a = 0 ∨ a = 1) (hb : b = -1 ∨ b = 0 ∨ b = 1)
+    (h : (a : ZMod n) = (b : ZMod n)) : a = b := by
+  by_contra hne
+  rw [ZMod.intCast_eq_intCast_iff, Int.modEq_iff_dvd, Int.ofNat_dvd_left] at h
+  have hpos : (b - a).natAbs ≠ 0 :=
+    fun h0 => hne (by have := Int.natAbs_eq_zero.mp h0; omega)
+  have hle : (b - a).natAbs ≤ 2 := by
+    rcases ha with rfl | rfl | rfl <;> rcases hb with rfl | rfl | rfl <;> decide
+  have hbot : n ≤ (b - a).natAbs := Nat.le_of_dvd (Nat.pos_of_ne_zero hpos) h
+  omega
+
+/-- **Distinct displacements.** On a torus with `3 ≤ n` the five hop
+offsets are pairwise distinct sites. -/
+theorem vel_inj (n : ℕ) [NeZero n] (h3 : 3 ≤ n) : Function.Injective (vel n) := by
+  intro a b h
+  have h1 : (((velInt a).1 : ZMod n)) = (((velInt b).1 : ZMod n)) := congrArg Prod.fst h
+  have h2 : (((velInt a).2 : ZMod n)) = (((velInt b).2 : ZMod n)) := congrArg Prod.snd h
+  have e1 : (velInt a).1 = (velInt b).1 :=
+    zmod_eq_of_three_le n h3 (velInt_fst_bounds a) (velInt_fst_bounds b) h1
+  have e2 : (velInt a).2 = (velInt b).2 :=
+    zmod_eq_of_three_le n h3 (velInt_snd_bounds a) (velInt_snd_bounds b) h2
+  fin_cases a <;> fin_cases b <;> simp_all [velInt]
+
+/-- Hops out of one site have distinct targets, so a transition picks out
+exactly one direction. -/
+theorem hop_inj (n : ℕ) [NeZero n] (h3 : 3 ≤ n) (s : Site n) :
+    Function.Injective (hop n s) := by
+  intro a b h
+  exact vel_inj n h3 (add_left_cancel (by simpa only [hop] using h))
+
+/-- The hop mass between adjacent sites is the weight of the (unique)
+direction that connects them. -/
+theorem hopMass_eq (n : ℕ) [NeZero n] (h3 : 3 ≤ n) (w : Dir → ℕ) (i j : Site n)
+    (d : Dir) (hd : hop n i d = j) : hopMass n w i j = w d := by
+  simp only [hopMass]
+  rw [Finset.sum_eq_single d]
+  · rw [if_pos hd]
+  · intro d' _ hne
+    exact if_neg fun h => hne (hop_inj n h3 i (h.trans hd.symm))
+  · intro hd
+    exact absurd (Finset.mem_univ d) hd
+
+/-- With positive weights a hop-connected pair has positive hop mass, and
+the connecting direction exists. -/
+theorem exists_hop_of_pos (n : ℕ) [NeZero n] (w : Dir → ℕ) (hwpos : ∀ d, 0 < w d)
+    {i j : Site n} (h : hopMass n w i j ≠ 0) : ∃ d, hop n i d = j := by
+  by_contra hcon
+  push_neg at hcon
+  exact h ((hopMass_eq_zero_iff n w hwpos i j).mpr hcon)
+
+/-- The one-walker kernel between adjacent sites, by direction. -/
+theorem walkerK_hop_apply (n : ℕ) [NeZero n] (h3 : 3 ≤ n) (w : Dir → ℕ)
+    (hw : ∑ d, w d = 256) (s : Site n) (d : Dir) :
+    walkerK n w hw s (hop n s d) = (w d : ℝ≥0∞) / 256 := by
+  rw [walkerK_apply, hopMass_eq n h3 w s (hop n s d) d rfl]
+
+theorem walkerK_hop_apply_toReal (n : ℕ) [NeZero n] (h3 : 3 ≤ n) (w : Dir → ℕ)
+    (hw : ∑ d, w d = 256) (s : Site n) (d : Dir) :
+    (walkerK n w hw s (hop n s d)).toReal = (w d : ℝ) / 256 := by
+  have h256 : ((256 : ℝ≥0∞)).toReal = 256 := by norm_num
+  rw [walkerK_hop_apply n h3 w hw s d, ENNReal.toReal_div, ENNReal.toReal_natCast, h256]
+
+/-- The reverse hop's kernel value, by direction. -/
+theorem walkerK_rev_hop_apply_toReal (n : ℕ) [NeZero n] (h3 : 3 ≤ n) (w : Dir → ℕ)
+    (hw : ∑ d, w d = 256) (s : Site n) (d : Dir) :
+    (walkerK n w hw (hop n s d) s).toReal = (w (opp d) : ℝ) / 256 := by
+  have hrev : hop n (hop n s d) (opp d) = s := (hop_opp_iff n s (hop n s d) d).mp rfl
+  have hkey : walkerK n w hw (hop n s d) s
+      = walkerK n w hw (hop n s d) (hop n (hop n s d) (opp d)) := by rw [hrev]
+  rw [hkey, walkerK_hop_apply_toReal n h3 w hw (hop n s d) (opp d)]
+
+/-- The one-step log-ratio between a hop and its reverse, by direction. -/
+theorem walkerK_hop_logRatio (n : ℕ) [NeZero n] (h3 : 3 ≤ n) (w : Dir → ℕ)
+    (hw : ∑ d, w d = 256) (s : Site n) (d : Dir) :
+    Real.log ((walkerK n w hw s (hop n s d)).toReal
+        / (walkerK n w hw (hop n s d) s).toReal)
+      = Real.log ((w d : ℝ) / (w (opp d) : ℝ)) := by
+  rw [walkerK_hop_apply_toReal n h3 w hw s d, walkerK_rev_hop_apply_toReal n h3 w hw s d]
+  exact congrArg Real.log (by field_simp)
+
+/-! ## The product chain
+
+`M` independent walkers take one step synchronously: the joint kernel is the
+product of the one-walker kernels, and every walker-kernel fact lifts. -/
+
+/-- The joint step of `M` independent walkers: from configuration `i`,
+every walker draws its hop independently. -/
+noncomputable def prodK (n : ℕ) [NeZero n] (M : ℕ) (w : Dir → ℕ) (hw : ∑ d, w d = 256)
+    (i : Fin M → Site n) : PMF (Fin M → Site n) :=
+  PMF.ofFintype (fun j => ∏ m, walkerK n w hw (i m) (j m)) (by
+    have h := Finset.sum_prod_piFinset (Finset.univ : Finset (Site n))
+      (fun (m : Fin M) (s' : Site n) => walkerK n w hw (i m) s')
+    rw [Fintype.piFinset_univ] at h
+    rw [h]
+    exact (Finset.prod_congr rfl fun m _ => walkerK_row_sum n w hw (i m)).trans
+      Finset.prod_const_one)
+
+theorem prodK_apply (n : ℕ) [NeZero n] (M : ℕ) (w : Dir → ℕ) (hw : ∑ d, w d = 256)
+    (i j : Fin M → Site n) :
+    prodK n M w hw i j = ∏ m, walkerK n w hw (i m) (j m) := rfl
+
+theorem prodK_apply_toReal (n : ℕ) [NeZero n] (M : ℕ) (w : Dir → ℕ)
+    (hw : ∑ d, w d = 256) (i j : Fin M → Site n) :
+    (prodK n M w hw i j).toReal = ∏ m, (walkerK n w hw (i m) (j m)).toReal := by
+  rw [prodK_apply, ENNReal.toReal_prod]
+
+/-- The product kernel is doubly stochastic: the joint column sums are one
+(each walker kernel contributes an independent column sum). -/
+theorem prodK_col_sum (n : ℕ) [NeZero n] (M : ℕ) (w : Dir → ℕ) (hw : ∑ d, w d = 256)
+    (j : Fin M → Site n) : ∑ i, prodK n M w hw i j = 1 := by
+  have h := Finset.sum_prod_piFinset (Finset.univ : Finset (Site n))
+    (fun (m : Fin M) (s : Site n) => walkerK n w hw s (j m))
+  rw [Fintype.piFinset_univ] at h
+  simp only [prodK_apply]
+  rw [h]
+  exact (Finset.prod_congr rfl fun m _ => walkerK_col_sum n w hw (j m)).trans
+    Finset.prod_const_one
+
+/-- Uniform configurations stay uniform, for every weight vector: the
+registered start is exactly stationary for every arm (M1). -/
+theorem prodK_stationary (n : ℕ) [NeZero n] (M : ℕ) (w : Dir → ℕ)
+    (hw : ∑ d, w d = 256) :
+    TimesArrow.Markov.IsStationary (prodK n M w hw) (uniformConfig n M) := by
+  refine PMF.ext fun j => ?_
+  show (uniformConfig n M).bind (prodK n M w hw) j = uniformConfig n M j
+  rw [PMF.bind_apply, tsum_fintype]
+  simp only [uniformConfig_apply]
+  rw [← Finset.mul_sum, prodK_col_sum n M w hw j, mul_one]
+
+/-- **Support symmetry of the product chain.** With positive weights every
+joint move has its reverse available (M1). -/
+theorem prodK_support (n : ℕ) [NeZero n] (M : ℕ) (w : Dir → ℕ) (hw : ∑ d, w d = 256)
+    (hwpos : ∀ d, 0 < w d) (i j : Fin M → Site n) :
+    prodK n M w hw i j = 0 ↔ prodK n M w hw j i = 0 := by
+  rw [prodK_apply, prodK_apply, Finset.prod_eq_zero_iff, Finset.prod_eq_zero_iff]
+  constructor
+  · rintro ⟨m, hm⟩
+    exact ⟨m, Finset.mem_univ m, walkerK_support n w hw hwpos (i m) (j m) |>.mp hm.2⟩
+  · rintro ⟨m, hm⟩
+    exact ⟨m, Finset.mem_univ m, walkerK_support n w hw hwpos (i m) (j m) |>.mpr hm.2⟩
+
+/-! ## Reversal: the swapped arms realize the reversed path law -/
+
+/-- **Transposition by swapped weights.** If `w'` reads `w` through `opp`,
+the hop masses of `w'` are the transposed hop masses of `w`. -/
+theorem hopMass_opp (n : ℕ) [NeZero n] (w w' : Dir → ℕ) (hswap : ∀ d, w' d = w (opp d))
+    (i j : Site n) : hopMass n w' i j = hopMass n w j i := by
+  simp only [hopMass]
+  refine Fintype.sum_equiv oppEquiv _ _ fun d => ?_
+  show (if hop n i d = j then w' d else 0)
+      = if hop n j (opp d) = i then w (opp d) else 0
+  by_cases hd : hop n i d = j
+  · rw [if_pos hd, if_pos ((hop_opp_iff n i j d).mp hd), hswap d]
+  · rw [if_neg hd, if_neg fun h => hd ((hop_opp_iff n i j d).mpr h)]
+
+/-- Reading the weights through `opp` transposes the one-walker kernel. -/
+theorem walkerK_transpose (n : ℕ) [NeZero n] (w w' : Dir → ℕ)
+    (hw : ∑ d, w d = 256) (hw' : ∑ d, w' d = 256) (hswap : ∀ d, w' d = w (opp d))
+    (i j : Site n) : walkerK n w' hw' i j = walkerK n w hw j i := by
+  rw [walkerK_apply n w' hw' i j, walkerK_apply n w hw j i, hopMass_opp n w w' hswap i j]
+
+/-- Reading the weights through `opp` transposes the product kernel. -/
+theorem prodK_transpose (n : ℕ) [NeZero n] (M : ℕ) (w w' : Dir → ℕ)
+    (hw : ∑ d, w d = 256) (hw' : ∑ d, w' d = 256) (hswap : ∀ d, w' d = w (opp d))
+    (i j : Fin M → Site n) :
+    prodK n M w' hw' i j = prodK n M w hw j i := by
+  simp only [prodK_apply]
+  exact Finset.prod_congr rfl fun m _ => walkerK_transpose n w w' hw hw' hswap (i m) (j m)
+
+/-- **The reversed arm realizes the reversed path law** (K3): with the
+uniform start, the path law of the E↔W-swapped weights is exactly the law of
+the time-reversed trajectories of the driven chain — the reversed arm is
+the time reversal. -/
+theorem reversedPathPMF_prodK (n : ℕ) [NeZero n] (M T : ℕ) :
+    TimesArrow.Markov.reversedPathPMF (uniformConfig n M)
+        (prodK n M drivenW drivenW_sum) T
+      = TimesArrow.Markov.pathPMF (uniformConfig n M)
+        (prodK n M reversedW reversedW_sum) T := by
+  refine TimesArrow.Markov.reversedPathPMF_eq_pathPMF_transpose _ _
+    (fun i j => prodK_transpose n M drivenW reversedW drivenW_sum reversedW_sum
+      reversedW_eq i j) _ (uniformConfig_const n M) T
+
 /-! ## The executable
 
 Bit-exact Philox trajectories. The counter is `(walker, step, 0, 0)` with

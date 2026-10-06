@@ -6014,6 +6014,27 @@
    "axioms": ["propext", "Classical.choice", "Quot.sound"]},
   {"status": "proved",
    "statement":
+   "product_support_symmetric (n : ℕ) [NeZero n] (M : ℕ) (w : Dir → ℕ) (hw : ∑ d, w d = 256) (hwpos : ∀ d, 0 < w d) (i j : Fin M → Site n) : prodK n M w hw i j = 0 ↔ prodK n M w hw j i = 0",
+   "name": "TimesArrow.Walker.product_support_symmetric",
+   "doc":
+   "Support symmetry of the product chain: with positive weights every joint\nmove has its reverse available (M1).",
+   "axioms": ["propext", "Classical.choice", "Quot.sound"]},
+  {"status": "proved",
+   "statement":
+   "product_uniform_stationary (n : ℕ) [NeZero n] (M : ℕ) (w : Dir → ℕ) (hw : ∑ d, w d = 256) : TimesArrow.Markov.IsStationary (prodK n M w hw) (uniformConfig n M)",
+   "name": "TimesArrow.Walker.product_uniform_stationary",
+   "doc":
+   "The `M`-walker product chain preserves the uniform configuration law for\nevery normalized weight vector: the registered uniform constructor is\nexactly stationary for every arm (M1).",
+   "axioms": ["propext", "Classical.choice", "Quot.sound"]},
+  {"status": "proved",
+   "statement":
+   "reversed_arm_is_reversal (n : ℕ) [NeZero n] (M T : ℕ) : TimesArrow.Markov.reversedPathPMF (uniformConfig n M) (prodK n M drivenW drivenW_sum) T = TimesArrow.Markov.pathPMF (uniformConfig n M) (prodK n M reversedW reversedW_sum) T",
+   "name": "TimesArrow.Walker.reversed_arm_is_reversal",
+   "doc":
+   "**The reversed arm is the time reversal** (K3): with the uniform start,\nthe path law of the E↔W-swapped weights is exactly the law of the\ntime-reversed trajectories of the driven chain.",
+   "axioms": ["propext", "Classical.choice", "Quot.sound"]},
+  {"status": "proved",
+   "statement":
    "support_symmetric (n : ℕ) [NeZero n] (w : Dir → ℕ) (hw : ∑ d, w d = 256) (hwpos : ∀ d, 0 < w d) (i j : Site n) : walkerK n w hw i j = 0 ↔ walkerK n w hw j i = 0",
    "name": "TimesArrow.Walker.support_symmetric",
    "doc":

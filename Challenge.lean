@@ -20,6 +20,23 @@ theorem null_kernel_symmetric (n : ℕ) [NeZero n] (i j : Site n) :
     walkerK n nullW nullW_sum i j = walkerK n nullW nullW_sum j i := by
   sorry
 
+theorem product_uniform_stationary (n : ℕ) [NeZero n] (M : ℕ) (w : Dir → ℕ)
+    (hw : ∑ d, w d = 256) :
+    TimesArrow.Markov.IsStationary (prodK n M w hw) (uniformConfig n M) := by
+  sorry
+
+theorem product_support_symmetric (n : ℕ) [NeZero n] (M : ℕ) (w : Dir → ℕ)
+    (hw : ∑ d, w d = 256) (hwpos : ∀ d, 0 < w d) (i j : Fin M → Site n) :
+    prodK n M w hw i j = 0 ↔ prodK n M w hw j i = 0 := by
+  sorry
+
+theorem reversed_arm_is_reversal (n : ℕ) [NeZero n] (M T : ℕ) :
+    TimesArrow.Markov.reversedPathPMF (uniformConfig n M)
+        (prodK n M drivenW drivenW_sum) T
+      = TimesArrow.Markov.pathPMF (uniformConfig n M)
+        (prodK n M reversedW reversedW_sum) T := by
+  sorry
+
 end TimesArrow.Walker
 
 namespace TimesArrow.Markov
