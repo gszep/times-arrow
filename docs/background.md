@@ -27,8 +27,6 @@ The core framing: relativity gives the cone, thermodynamics picks the half.
   `Σ = I(S:E) + D(ρ_E' ‖ ρ_E^eq)`. Esposito, Lindenberg & Van den Broeck,
   New J. Phys. 12, 013013 (2010).
 - Thermodynamic uncertainty relation. Barato & Seifert, PRL 114, 158101 (2015).
-- Classical speed limits from entropy production. Shiraishi, Funo & Saito,
-  PRL 121, 070601 (2018).
 - Memory and the psychological arrow. Mlodinow & Brun, PRE 89, 052102 (2014).
   Landauer (1961) and Bennett (1982) on the thermodynamics of records.
 - Decoherence and redundant records (quantum Darwinism). Zurek, Nat. Phys. 5, 181 (2009).
@@ -192,11 +190,44 @@ The core framing: relativity gives the cone, thermodynamics picks the half.
   statistical state. Connes & Rovelli, Class. Quantum Grav. 11, 2899 (1994).
 - Page–Wootters: time as correlation with a clock subsystem. PRD 27, 2885 (1983).
   Experimental illustration: Moreva et al., PRA 89, 052122 (2014).
-- Lieb–Robinson bounds: emergent light cones from local interactions. Commun.
-  Math. Phys. 28, 251 (1972).
 - Causal sets: Bombelli, Lee, Meyer & Sorkin, PRL 59, 521 (1987). Classical
   sequential growth: Rideout & Sorkin, PRD 61, 024002 (2000).
 - Is time's arrow perspectival? Rovelli, arXiv:1505.01125 (2015).
+
+## Cones and speed limits (Q3, 003)
+
+- Quantum cones from locality (exponential tails): Lieb & Robinson, Commun.
+  Math. Phys. 28, 251 (1972), DOI 10.1007/bf01645779. Review: Nachtergaele &
+  Sims, Contemp. Math. 529, 141 (2010), DOI 10.1090/conm/529/10429.
+  Locality limits correlation growth: Bravyi, Hastings & Verstraete, PRL 97,
+  050401 (2006). Survey of LR-type speed limits: Chen, Lucas & Yin,
+  Rep. Prog. Phys. 86, 116001 (2023), arXiv:2303.07386.
+- Classical cone bounds: Marchioro, Pellegrinotti, Pulvirenti & Triolo,
+  J. Stat. Phys. 19, 499 (1978), DOI 10.1007/bf01011695; anharmonic lattices
+  with explicit velocity, Raz & Sims, J. Stat. Phys. 137, 79 (2009),
+  DOI 10.1007/s10955-009-9839-5; Nachtergaele, Raz, Schlein & Sims,
+  Commun. Math. Phys. 286, 1073 (2009), DOI 10.1007/s00220-008-0630-2;
+  long-range causal regions, Métivier, Bachelard & Kastner, PRL 112, 210601
+  (2014); equilibration timescales, Nickelsen & Kastner, PRL 122, 180602
+  (2019); butterfly cone in a classical spin chain, Das et al., PRL 121,
+  024101 (2018).
+- Open/dissipative locality: Poulin, PRL 104, 190401 (2010); Barthel &
+  Kliesch, PRL 108, 230504 (2012); Sweke, Eisert & Kastner, J. Phys. A 52,
+  424003 (2019). Diffusivity bounded by the Lieb–Robinson velocity and the
+  decoherence time: Han & Hartnoll, PRL 121, 170601 (2018), arXiv:1806.01859
+  — of which 001's `D ≈ λ/2` (λ the collision time) is the classical
+  kinetic instance.
+- Thermodynamic speed limits: Shiraishi, Funo & Saito, PRL 121, 070601
+  (2018); unified with the TUR, Vo, Van Vu & Hasegawa, PRE 102, 062132
+  (2020); always-saturated topological form, Van Vu & Saito, PRL 130, 010402
+  (2023); discrete Wasserstein distance lower-bounds entropy production,
+  Van Vu & Saito, PRX 13, 011013 (2023); Langevin, Sabbagh, Movilla
+  Miangolarra & Georgiou, PRR 6, 033308 (2024); general activities,
+  Nagayama, Yoshimura & Ito, PRR 7, 013307 (2025).
+- No published bound combines a causal cone with entropy production (checked
+  2026-10-07). Candidate composition for 003, issue #9:
+  `W₁(p₀, p_t) ≤ min(v t, ∫√(σ a) dt)` with σ the entropy-production rate
+  and a the edge-length-squared-weighted dynamical activity.
 
 ## Frames and partitions
 
