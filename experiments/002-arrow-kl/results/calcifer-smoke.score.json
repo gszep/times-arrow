@@ -1,10 +1,10 @@
 {
  "source": "experiments/002-arrow-kl/results/calcifer-smoke.json",
- "commit": "9827aaf8ced79036032bbfdcc7df8732a5fa75bd",
+ "commit": "49998d7a65f1ca705bd7354899c56773803131c0",
  "dirty": false,
  "registered": false,
  "note": "n/a: not the registered configuration (11 arms at n = 8, m = 16, R = 65536; corner n = 4, m = 4, T = 32, R = 1024)",
- "goldens": null,
+ "goldens": true,
  "K1": [
   {
    "T": 1,
