@@ -223,4 +223,34 @@ theorem stepState_rev (n : ℕ) [NeZero n] (s : State n) :
 theorem revState_involutive (n : ℕ) : Function.Involutive (revState n) := fun s => by
   funext p; simp only [revState, rev16_rev16]
 
+/-! ## Sums over the lattice -/
+
+/-- Summing over the lattice is invariant under translation of the sites. -/
+theorem sum_sub_vel (n : ℕ) [NeZero n] (k : Fin 4) {β : Type*} [AddCommMonoid β]
+    (f : Site n → β) : ∑ p, f (p - vel n k) = ∑ p, f p := by
+  refine Finset.sum_bijective (fun p => p - vel n k) ⟨fun p₁ p₂ h => ?_, fun q => ?_⟩
+    (fun p => ⟨fun _ => Finset.mem_univ _, fun _ => Finset.mem_univ _⟩) (fun p _ => rfl)
+  · simpa using congrArg (fun q => q + vel n k) h
+  · exact ⟨q + vel n k, by simp⟩
+
+/-- Summing along a row or column is invariant under translation. -/
+theorem sum_sub_val (n : ℕ) [NeZero n] (v : ZMod n) {β : Type*} [AddCommMonoid β]
+    (f : ZMod n → β) : ∑ x, f (x - v) = ∑ x, f x := by
+  refine Finset.sum_bijective (fun x => x - v) ⟨fun x₁ x₂ h => ?_, fun q => ?_⟩
+    (fun x => ⟨fun _ => Finset.mem_univ _, fun _ => Finset.mem_univ _⟩) (fun x _ => rfl)
+  · simpa using congrArg (fun z => z + v) h
+  · exact ⟨q + v, by simp⟩
+
+/-- Streaming preserves the total particle number. -/
+theorem streamState_mass (n : ℕ) [NeZero n] (s : State n) :
+    ∑ p, mass16 (streamState n s p) = ∑ p, mass16 (s p) := by
+  have expand : ∀ p, mass16 (streamState n s p) = ∑ k : Fin 4, (bits k (s (p - vel n k))).toNat :=
+    fun p => by simp [mass16, streamState, bits_assemble]
+  simp only [expand]
+  calc ∑ p, ∑ k : Fin 4, (bits k (s (p - vel n k))).toNat
+      = ∑ k : Fin 4, ∑ p, (bits k (s (p - vel n k))).toNat := Finset.sum_comm
+    _ = ∑ k : Fin 4, ∑ p, (bits k (s p)).toNat :=
+        Finset.sum_congr rfl fun k _ => sum_sub_vel n k fun q => (bits k (s q)).toNat
+    _ = ∑ p, ∑ k : Fin 4, (bits k (s p)).toNat := Finset.sum_comm.symm
+
 end TimesArrow.LatticeGas

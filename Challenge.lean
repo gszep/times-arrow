@@ -27,6 +27,10 @@ theorem collide_mass :
     ∀ s : Fin 16, mass (collide s.val.toUInt32) = mass s.val.toUInt32 := by
   sorry
 
+theorem mass_conserved (n : ℕ) [NeZero n] (s : State n) :
+    ∑ p, mass16 (stepState n s p) = ∑ p, mass16 (s p) := by
+  sorry
+
 theorem step_inverse (n : ℕ) [NeZero n] :
     Function.Bijective (stepState n) ∧ ∀ s : State n,
       stepState n (revState n (stepState n (revState n s))) = s ∧

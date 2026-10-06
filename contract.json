@@ -208,6 +208,12 @@
    "axioms": ["propext", "Classical.choice", "Quot.sound"]},
   {"status": "proved",
    "statement":
+   "mass_conserved (n : ℕ) [NeZero n] (s : State n) : ∑ p, mass16 (stepState n s p) = ∑ p, mass16 (s p)",
+   "name": "TimesArrow.LatticeGas.mass_conserved",
+   "doc": "HPP conserves the total number of particles.",
+   "axioms": ["propext", "Classical.choice", "Quot.sound"]},
+  {"status": "proved",
+   "statement":
    "step_inverse (n : ℕ) [NeZero n] : Function.Bijective (stepState n) ∧ ∀ s : State n, stepState n (revState n (stepState n (revState n s))) = s ∧ revState n (stepState n (revState n (stepState n s))) = s",
    "name": "TimesArrow.LatticeGas.step_inverse",
    "doc":

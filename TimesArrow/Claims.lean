@@ -38,6 +38,14 @@ theorem collide_mass :
     ∀ s : Fin 16, mass (collide s.val.toUInt32) = mass s.val.toUInt32 := by
   decide +kernel
 
+/-- HPP conserves the total number of particles. -/
+theorem mass_conserved (n : ℕ) [NeZero n] (s : State n) :
+    ∑ p, mass16 (stepState n s p) = ∑ p, mass16 (s p) := by
+  have h : ∑ p, mass16 (stepState n s p) = ∑ p, mass16 (collideState n s p) :=
+    streamState_mass n (collideState n s)
+  rw [h]
+  exact Finset.sum_congr rfl fun p _ => collide16_mass16 (s p)
+
 /-- One HPP step is a bijection. Its inverse is the step conjugated by
 `revState`: reverse every velocity and collide (an involution), step, and do
 both again. Plain velocity reversal does not invert the step — with
