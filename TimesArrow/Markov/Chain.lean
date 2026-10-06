@@ -219,4 +219,28 @@ theorem reversedPathPMF_apply (p : PMF α) (κ : α → PMF α) (T : ℕ) (ω : 
           rw [congrArg reversePath hsn, reversePath_involutive b]
         exact h2.symm)), mul_zero]
 
+/-- **The transposed kernel runs the chain backwards.** If `κ'` is the
+transpose of `κ` (`κ' i j = κ j i`) and the start distribution `p` is
+constant (uniform over its support), the probability of a trajectory under
+`κ'` is the probability of its time reversal under `κ`. -/
+theorem pathPMF_reversePath_eq_transpose (κ κ' : α → PMF α)
+    (h : ∀ i j, κ' i j = κ j i) (p : PMF α) (hp : ∀ x y, p x = p y)
+    (T : ℕ) (ξ : Fin (T + 1) → α) :
+    pathPMF p κ T (reversePath ξ) = pathPMF p κ' T ξ := by
+  rw [pathPMF_reversePath_apply p κ T ξ, pathPMF_apply p κ' T ξ,
+    hp (ξ (Fin.last T)) (ξ 0)]
+  have hprod : ∏ t : Fin T, (κ (ξ t.succ)) (ξ t.castSucc)
+      = ∏ t : Fin T, (κ' (ξ t.castSucc)) (ξ t.succ) :=
+    Finset.prod_congr rfl fun t _ => (h (ξ t.castSucc) (ξ t.succ)).symm
+  rw [hprod]
+
+/-- **The reversed path law is the path law of the transposed kernel**,
+for a constant start distribution: running the transposed chain forward
+samples exactly the time-reversed trajectories of the original chain. -/
+theorem reversedPathPMF_eq_pathPMF_transpose (κ κ' : α → PMF α)
+    (h : ∀ i j, κ' i j = κ j i) (p : PMF α) (hp : ∀ x y, p x = p y) (T : ℕ) :
+    reversedPathPMF p κ T = pathPMF p κ' T := by
+  refine PMF.ext fun ξ => ?_
+  rw [reversedPathPMF_apply, pathPMF_reversePath_eq_transpose κ κ' h p hp T ξ]
+
 end TimesArrow.Markov

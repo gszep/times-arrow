@@ -6,5 +6,7 @@ import TimesArrow.Walker
 import TimesArrow.Markov.KlDiv
 import TimesArrow.Markov.Chain
 import TimesArrow.Markov.EntropyProduction
+import TimesArrow.Markov.Fluctuation
 import TimesArrow.Claims
 import TimesArrow.Claims.Walker
+import TimesArrow.Claims.Markov

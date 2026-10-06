@@ -5995,6 +5995,13 @@
    "Selection sampling selects exactly the particles asked for: the\nexact-`count` subset state of a lattice region holds exactly\n`min count (4 · side²)` particles — every slot when the count exceeds the\nregion.",
    "axioms": ["propext", "Classical.choice", "Quot.sound"]},
   {"status": "proved",
+   "statement":
+   "mirror_tilt_identity {α : Type*} [Fintype α] (p : PMF α) (κ : α → PMF α) (T : ℕ) (hac : ∀ ω, pathPMF p κ T (reversePath ω) = 0 → pathPMF p κ T ω = 0) : ∑ ω, (pathPMF p κ T ω).toReal * Real.exp (-2 * pathEntropyProduction p κ T ω) = ∑ ω, (pathPMF p κ T ω).toReal * Real.exp (pathEntropyProduction p κ T ω)",
+   "name": "TimesArrow.Markov.mirror_tilt_identity",
+   "doc":
+   "**The mirror tilt identity** (002, K4): the mean of `e ^ (-2σ)` under\nthe forward path law equals the mean of `e ^ σ`. With the integral\nfluctuation theorem it gives the exact variance of the exponential-average\nestimator, `(E [e ^ σ] - 1) / R`.",
+   "axioms": ["propext", "Classical.choice", "Quot.sound"]},
+  {"status": "proved",
    "statement": "philox_kat : ∀ v ∈ kat, philox v.1 v.2.1 v.2.2.1 = v.2.2.2",
    "name": "TimesArrow.Philox.philox_kat",
    "doc": "Philox matches the Random123 known-answer vectors.",

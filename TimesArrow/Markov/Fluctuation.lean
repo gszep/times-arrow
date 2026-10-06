@@ -184,4 +184,42 @@ theorem sum_filter_pathEntropyProduction (T : ℕ)
         rw [← toReal_mul_exp_neg_pathEntropyProduction p κ T hac η, hσ, neg_neg,
           mul_comm]
 
+omit [DecidableEq α] in
+/-- **The mirror tilt identity.** The mean of `e ^ (-2σ)` under the forward
+path law equals the mean of `e ^ σ`: reindexing by time reversal and applying
+the tilt `P (rev ω) = P ω * e ^ (-σ ω)` turns each `e ^ (-2σ)` into
+`e ^ σ`. With the integral fluctuation theorem this is the exact variance
+identity behind the exponential-average estimator, whose variance is
+therefore `(E [e ^ σ] - 1) / R`. -/
+theorem sum_mul_exp_two_neg_pathEntropyProduction (T : ℕ)
+    (hac : ∀ ω, pathPMF p κ T (reversePath ω) = 0 → pathPMF p κ T ω = 0) :
+    ∑ ω, (pathPMF p κ T ω).toReal
+        * Real.exp (-2 * pathEntropyProduction p κ T ω)
+      = ∑ ω, (pathPMF p κ T ω).toReal
+        * Real.exp (pathEntropyProduction p κ T ω) := by
+  have hflip := pathEntropyProduction_reversePath p κ T hac
+  refine Fintype.sum_equiv
+    (⟨reversePath, reversePath, reversePath_involutive, reversePath_involutive⟩ :
+      (Fin (T + 1) → α) ≃ (Fin (T + 1) → α)) _ _ fun ω => ?_
+  have htilt := toReal_mul_exp_neg_pathEntropyProduction p κ T hac ω
+  have hσ := hflip ω
+  have h2exp : Real.exp (-(pathEntropyProduction p κ T ω))
+      * Real.exp (-(pathEntropyProduction p κ T ω))
+      = Real.exp (-2 * pathEntropyProduction p κ T ω) := by
+    rw [← Real.exp_add]
+    congr 1
+    ring
+  calc (pathPMF p κ T ω).toReal
+        * Real.exp (-2 * pathEntropyProduction p κ T ω)
+      = (pathPMF p κ T ω).toReal
+          * (Real.exp (-(pathEntropyProduction p κ T ω))
+            * Real.exp (-(pathEntropyProduction p κ T ω))) := by
+        rw [← h2exp]
+    _ = (pathPMF p κ T (reversePath ω)).toReal
+          * Real.exp (-(pathEntropyProduction p κ T ω)) := by
+        rw [← mul_assoc, htilt]
+    _ = (pathPMF p κ T (reversePath ω)).toReal
+          * Real.exp (pathEntropyProduction p κ T (reversePath ω)) := by
+        rw [hσ]
+
 end TimesArrow.Markov

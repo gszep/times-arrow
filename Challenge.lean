@@ -2,6 +2,7 @@ import TimesArrow.Philox
 import TimesArrow.LatticeGas
 import TimesArrow.Selection
 import TimesArrow.Walker
+import TimesArrow.Markov.Fluctuation
 
 namespace TimesArrow.Walker
 
@@ -21,10 +22,23 @@ theorem null_kernel_symmetric (n : ℕ) [NeZero n] (i j : Site n) :
 
 end TimesArrow.Walker
 
+namespace TimesArrow.Markov
+
+theorem mirror_tilt_identity {α : Type*} [Fintype α]
+    (p : PMF α) (κ : α → PMF α) (T : ℕ)
+    (hac : ∀ ω, pathPMF p κ T (reversePath ω) = 0 → pathPMF p κ T ω = 0) :
+    ∑ ω, (pathPMF p κ T ω).toReal
+        * Real.exp (-2 * pathEntropyProduction p κ T ω)
+      = ∑ ω, (pathPMF p κ T ω).toReal
+        * Real.exp (pathEntropyProduction p κ T ω) := by
+  sorry
+
+end TimesArrow.Markov
+
 /-!
 The claim statements that Comparator certifies, each proved by `sorry` here
-and for real in `TimesArrow/Claims.lean`. Review these statements, not the
-proofs.
+and for real in `TimesArrow/Claims.lean` (and its children). Review these
+statements, not the proofs.
 -/
 
 namespace TimesArrow.Philox
