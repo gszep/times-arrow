@@ -2,10 +2,11 @@
 // review page: integer trajectories/tallies, f64 σ, exact DP and the K5 HMM.
 import contract from "../../contract.json" with { type: "json" };
 import { Walk } from "../../src/walk.ts";
+import { watchDevice } from "../../src/gpu.ts";
 import { ARMS, protocolOf, protocolTallyDp, sigma, tallyDp } from "./score.ts";
 import type { ArmName } from "./score.ts";
 import { buildHmm, countMarginal, pathProbability } from "./hmm.ts";
-import { halfMask, lMask, watchDevice } from "./run.ts";
+import { halfMask, lMask } from "./run.ts";
 
 export type WalkVector = {
   seed: number; arm: string; n: number; m: number; t: number;

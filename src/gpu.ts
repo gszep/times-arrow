@@ -53,3 +53,36 @@ export function storage(device: GPUDevice, data: Uint32Array): GPUBuffer {
   device.queue.writeBuffer(b, 0, data);
   return b;
 }
+
+/** An empty storage buffer, copyable in both directions. */
+export function blank(device: GPUDevice, bytes: number): GPUBuffer {
+  return device.createBuffer({
+    size: bytes,
+    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST,
+  });
+}
+
+/** Watches `device.lost` for the lifetime of one run: every readback is
+ * raced against it (a lost device can leave a pending readback hanging),
+ * and the check throws the moment the promise has settled. `device.lost`
+ * settles at most once and never rejects, so leftover subscriptions from
+ * finished runs are inert. */
+export function watchDevice(device: GPUDevice) {
+  let info: GPUDeviceLostInfo | null = null;
+  const lost = device.lost.then((i) => {
+    info = i;
+  });
+  const err = () => new Error(`device lost: ${info?.reason ?? "unknown"}, ${info?.message ?? ""}`);
+  const check = () => {
+    if (info) throw err();
+  };
+  const race = async <T>(readback: Promise<T>): Promise<T> => {
+    const first = await Promise.race([readback.then((r) => ({ r })), lost.then(() => ({ err: err() }))]);
+    if ("err" in first) throw first.err;
+    check();
+    return first.r;
+  };
+  return { check, race };
+}
+
+export type DeviceWatch = ReturnType<typeof watchDevice>;

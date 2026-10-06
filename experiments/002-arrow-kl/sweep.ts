@@ -7,10 +7,7 @@
 // Both modes require the page's complete contract gate: trajectories,
 // tallies, σ, DP histograms and K5 HMM goldens. Device-loss monitoring is in
 // the run driver; the adapter/vendor check is in scripts/headless.ts.
-import { execSync } from "node:child_process";
-import { mkdirSync, writeFileSync } from "node:fs";
-import { hostname } from "node:os";
-import { headless } from "../../scripts/headless.ts";
+import { headless, provenance, writeResults } from "../../scripts/headless.ts";
 import { RAMP_T } from "./score.ts";
 import type { ArmName, CornerResult, MainArm } from "./score.ts";
 
@@ -20,16 +17,8 @@ const full = { R: 65536, blocks: 16, cornerR: 1024, cornerT: 32 };
 const tiny = { R: 512, blocks: 16, cornerR: 16, cornerT: 32 };
 const cfg = smoke ? tiny : full;
 
-const git = (cmd: string) => execSync(`git ${cmd}`, { encoding: "utf8" }).trim();
-const provenance = {
-  commit: git("rev-parse HEAD"),
-  dirty: git("status --porcelain") !== "",
-  host: hostname().split(".")[0],
-  date: new Date().toISOString(),
-  smoke,
-  seeds: { main: { first: 1, last: cfg.R }, corner: { first: 1, last: cfg.cornerR }, pairedAcrossArms: true },
-};
-if (provenance.dirty) throw new Error("commit the code before recording sweep provenance");
+const prov = provenance(smoke);
+if (prov.dirty) throw new Error("commit the code before recording sweep provenance");
 
 const { adapter, goldens, main, corner } = await headless("experiments/002-arrow-kl/", async (evaluate) => {
   const checks: { name: string; pass: boolean }[] = await evaluate("probe.check()");
@@ -63,23 +52,14 @@ const { adapter, goldens, main, corner } = await headless("experiments/002-arrow
   return { adapter: await evaluate("probe.adapter"), goldens: true, main, corner };
 }, vendor);
 
-mkdirSync(new URL("results", import.meta.url), { recursive: true });
-const file = new URL(`results/${provenance.host}${smoke ? "-smoke" : ""}.json`, import.meta.url);
-writeFileSync(
-  file,
-  JSON.stringify(
-    {
-      ...provenance,
-      n: 8,
-      m: 16,
-      sampling: "per-block tally histograms (0.5-nat bins for the ramp); per-path corner records",
-      adapter,
-      goldens,
-      main,
-      corner,
-    },
-    null,
-    1,
-  ) + "\n",
-);
-console.log(file.pathname);
+writeResults(new URL("results", import.meta.url), `${prov.host}${smoke ? "-smoke" : ""}`, {
+  ...prov,
+  seeds: { main: { first: 1, last: cfg.R }, corner: { first: 1, last: cfg.cornerR }, pairedAcrossArms: true },
+  n: 8,
+  m: 16,
+  sampling: "per-block tally histograms (0.5-nat bins for the ramp); per-path corner records",
+  adapter,
+  goldens,
+  main,
+  corner,
+});

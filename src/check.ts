@@ -1,9 +1,9 @@
 import contract from "../contract.json" with { type: "json" };
 import { read, storage } from "./gpu.ts";
-import { Hpp, nullState, packedState } from "./hpp.ts";
+import { Hpp, mass4, nullState, packedState } from "./hpp.ts";
 import { philoxWgsl } from "./philox.ts";
 
-export type Result = { name: string; pass: boolean; detail: string };
+type Result = { name: string; pass: boolean; detail: string };
 
 const philoxTest = /* wgsl */ `
 ${philoxWgsl}
@@ -66,10 +66,9 @@ export async function philoxStream(device: GPUDevice, triples: number[][]): Prom
   return triples.map((_, i) => out.slice(8 * i, 8 * i + 8));
 }
 
-const popcount = (s: number) => ((s & 1) + ((s >>> 1) & 1) + ((s >>> 2) & 1) + ((s >>> 3) & 1)) as number;
 const hamming = (a: Uint32Array, b: Uint32Array) => {
   let d = 0;
-  for (let i = 0; i < a.length; i++) d += popcount(a[i] ^ b[i]);
+  for (let i = 0; i < a.length; i++) d += mass4(a[i] ^ b[i]);
   return d;
 };
 

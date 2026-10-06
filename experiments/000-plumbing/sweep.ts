@@ -1,13 +1,9 @@
 // HPP throughput sweep in headless Chrome: `node experiments/000-plumbing/sweep.ts`.
 // Writes results/<host>-chrome.json with provenance.
-import { execSync } from "node:child_process";
-import { mkdirSync, writeFileSync } from "node:fs";
-import { hostname } from "node:os";
-import { headless } from "../../scripts/headless.ts";
+import { headless, provenance, writeResults } from "../../scripts/headless.ts";
 
 const steps = 500;
-const git = (cmd: string) => execSync(`git ${cmd}`, { encoding: "utf8" }).trim();
-const provenance = { commit: git("rev-parse HEAD"), dirty: git("status --porcelain --untracked-files=no") !== "", host: hostname() };
+const prov = provenance();
 
 const result = await headless("experiments/000-plumbing/", async (evaluate) => {
   const runs = [];
@@ -23,8 +19,9 @@ const result = await headless("experiments/000-plumbing/", async (evaluate) => {
   return { adapter: await evaluate("probe.adapter"), runs };
 });
 
-mkdirSync(new URL("results", import.meta.url), { recursive: true });
-writeFileSync(
-  new URL(`results/${hostname().split(".")[0]}-chrome.json`, import.meta.url),
-  JSON.stringify({ ...provenance, backend: "chrome", date: new Date().toISOString(), steps, ...result }, null, 1) + "\n",
-);
+writeResults(new URL("results", import.meta.url), `${prov.host}-chrome`, {
+  ...prov,
+  backend: "chrome",
+  steps,
+  ...result,
+});

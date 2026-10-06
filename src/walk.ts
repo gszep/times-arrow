@@ -1,4 +1,4 @@
-import { read, storage } from "./gpu.ts";
+import { blank, read } from "./gpu.ts";
 import { philoxWgsl } from "./philox.ts";
 
 /** Per-step direction weights in 256ths of one draw: `e + w + n + s + zero
@@ -89,7 +89,9 @@ fn count(@builtin(global_invocation_id) g: vec3u) {
 }
 `;
 
-export type WalkRun = {
+/** The readback of one ensemble: per-(seed, step) tallies, per-(seed, cell)
+ * out-edge hop counts and per-(seed, time) region occupancies. */
+type WalkRun = {
   /** [seeds·T]: the per-(seed, step t−1) tally n_E − n_W, bit-exact. */
   tallies: Int32Array;
   /** [seeds·4n²]: per (seed, cell·4 + dir) out-hop counts, bit-exact. */
@@ -139,22 +141,19 @@ export class Walk {
       stepEdges: device.createComputePipeline({ layout: pl, compute: { module, entryPoint: "stepEdges" } }),
       count: device.createComputePipeline({ layout: pl, compute: { module, entryPoint: "count" } }),
     };
-    const blank = (words: number) => {
-      const b = device.createBuffer({
-        size: 4 * words,
-        usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST,
-      });
+    const zeroed = (words: number) => {
+      const b = blank(device, 4 * words);
       device.queue.writeBuffer(b, 0, new Uint32Array(words));
       return b;
     };
     this.params = device.createBuffer({ size: 32, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
-    this.pos = blank(batch * m);
-    this.tally = blank(batch * T);
-    this.edges = blank(batch * 4 * n * n);
-    this.cnt = blank(batch * (T + 1) * 2);
-    const thr = blank(4 * T); // one vec4u per step
-    const mask0 = blank(n * n);
-    const mask1 = blank(n * n);
+    this.pos = zeroed(batch * m);
+    this.tally = zeroed(batch * T);
+    this.edges = zeroed(batch * 4 * n * n);
+    this.cnt = zeroed(batch * (T + 1) * 2);
+    const thr = zeroed(4 * T); // one vec4u per step
+    const mask0 = zeroed(n * n);
+    const mask1 = zeroed(n * n);
     let shift = 0;
     while ((1 << shift) < n) shift++;
     device.queue.writeBuffer(this.params, 0, new Uint32Array([n, n - 1, shift, m, batch, T, 0, 0]));
@@ -235,12 +234,10 @@ export class Walk {
    * the GPU and read back once at the end (one mapped buffer). */
   async runSeeds(seed0: number, seeds: number, keep: { edges?: boolean; counts?: boolean } = {}): Promise<WalkRun> {
     const dev = this.device;
-    const blank = (bytes: number) =>
-      dev.createBuffer({ size: bytes, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST });
     const per = { tally: 4 * this.T, edges: 16 * this.n * this.n, counts: 8 * (this.T + 1) };
-    const outT = blank(seeds * per.tally);
-    const outE = keep.edges ? blank(seeds * per.edges) : null;
-    const outC = keep.counts ? blank(seeds * per.counts) : null;
+    const outT = blank(dev, seeds * per.tally);
+    const outE = keep.edges ? blank(dev, seeds * per.edges) : null;
+    const outC = keep.counts ? blank(dev, seeds * per.counts) : null;
     for (let done = 0; done < seeds; ) {
       const b = Math.min(this.batch, seeds - done);
       this.zero(keep);

@@ -7,8 +7,12 @@ const table = contract.hpp.collide;
 const nibbles = (from: number) =>
   table.slice(from, from + 8).reduce((w, s, i) => w | (s << (4 * i)), 0) >>> 0;
 
+/** The particle number of one site word: the bits set in its velocity
+ * nibble (also the per-site Hamming contribution of two states' XOR). */
+export const mass4 = (s: number) => (s & 1) + ((s >>> 1) & 1) + ((s >>> 2) & 1) + ((s >>> 3) & 1);
+
 /** The HPP lattice gas: bit 0 moves +x, bit 1 +y, bit 2 −x, bit 3 −y. */
-export const hppWgsl = /* wgsl */ `
+const hppWgsl = /* wgsl */ `
 ${philoxWgsl}
 struct Params { n: u32, seed: u32, i: u32, pad: u32 }
 @group(0) @binding(0) var<uniform> p: Params;
@@ -97,7 +101,7 @@ fn words(@builtin(global_invocation_id) g: vec3u) {
 `;
 
 /** `count` words `rand(seed, 0, i).x`, drawn on the GPU in one readback. */
-export async function philoxWords(device: GPUDevice, seed: number, count: number): Promise<Uint32Array> {
+async function philoxWords(device: GPUDevice, seed: number, count: number): Promise<Uint32Array> {
   const module = device.createShaderModule({ code: wordsWgsl });
   const pipeline = device.createComputePipeline({ layout: "auto", compute: { module, entryPoint: "words" } });
   const params = device.createBuffer({ size: 8, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
@@ -126,7 +130,7 @@ export async function philoxWords(device: GPUDevice, seed: number, count: number
 }
 
 /** A region of the lattice: the sites `[x0, x0 + side) × [y0, y0 + side)`. */
-export type Region = { x0: number; y0: number; side: number };
+type Region = { x0: number; y0: number; side: number };
 
 /** The state holding a uniform random exact-`count` subset of the region's
  * `4 · side²` velocity slots: selection sampling on the Philox words
@@ -135,7 +139,7 @@ export type Region = { x0: number; y0: number; side: number };
  * (exact integer arithmetic, so every backend draws the same subset). This
  * is the rule pinned in `TimesArrow/Selection.lean`; the contract carries
  * golden states under `hpp.init`. */
-export async function subsetState(
+async function subsetState(
   device: GPUDevice,
   seed: number,
   n: number,

@@ -10,7 +10,8 @@ import { existsSync, readFileSync } from "node:fs";
 import { hostname } from "node:os";
 import assert from "node:assert/strict";
 import { ARMS, LN3, RAMP_T, exactSigmaStats, protocolOf, renderVerdict, score, tallyDp } from "./score.ts";
-import type { ArmName, CornerPaths, CornerResult, MainArm, Results, Weights } from "./score.ts";
+import type { ArmName, CornerPaths, CornerResult, MainArm, Results } from "./score.ts";
+import type { Weights } from "../../src/walk.ts";
 
 const R = 65536;
 const BLOCKS = 16;

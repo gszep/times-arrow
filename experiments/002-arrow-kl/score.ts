@@ -12,7 +12,6 @@
 // are implemented.
 import type { Weights } from "../../src/walk.ts";
 import contract from "../../contract.json" with { type: "json" };
-export type { Weights };
 
 const weights = ([e, w, n, s, zero]: number[]): Weights => ({ e, w, n, s, zero });
 

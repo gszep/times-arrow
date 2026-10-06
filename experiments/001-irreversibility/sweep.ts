@@ -15,11 +15,8 @@
 //
 // The expected GPU vendor comes from TIMES_ARROW_VENDOR, defaulting to this
 // Mac's Intel iGPU on darwin and Artemis's NVIDIA on Linux.
-import { execSync } from "node:child_process";
-import { mkdirSync, writeFileSync } from "node:fs";
-import { hostname } from "node:os";
 import contract from "../../contract.json" with { type: "json" };
-import { headless } from "../../scripts/headless.ts";
+import { headless, provenance, writeResults } from "../../scripts/headless.ts";
 
 const smoke = process.argv.includes("--smoke");
 const vendor = process.env.TIMES_ARROW_VENDOR ?? (process.platform === "darwin" ? "intel" : "nvidia");
@@ -51,14 +48,7 @@ if (!smoke) {
       );
 }
 
-const git = (cmd: string) => execSync(`git ${cmd}`, { encoding: "utf8" }).trim();
-const provenance = {
-  commit: git("rev-parse HEAD"),
-  dirty: git("status --porcelain --untracked-files=no") !== "",
-  host: hostname().split(".")[0],
-  date: new Date().toISOString(),
-  smoke,
-};
+const prov = provenance(smoke);
 
 const { adapter, runs } = await headless("experiments/001-irreversibility/", async (evaluate) => {
   const adapter = await evaluate("probe.adapter");
@@ -84,19 +74,9 @@ const { adapter, runs } = await headless("experiments/001-irreversibility/", asy
   return { adapter, runs };
 }, vendor);
 
-mkdirSync(new URL("results", import.meta.url), { recursive: true });
-const file = new URL(`results/${provenance.host}${smoke ? "-smoke" : ""}.json`, import.meta.url);
-writeFileSync(
-  file,
-  JSON.stringify(
-    {
-      ...provenance,
-      params: { ...cfg, b, sampling: "t = 0, powers of two ≤ 1024, then every 128; echo at r = tE − t; damage on the same grid in r" },
-      adapter,
-      runs,
-    },
-    null,
-    1,
-  ) + "\n",
-);
-console.log(file.pathname);
+writeResults(new URL("results", import.meta.url), `${prov.host}${smoke ? "-smoke" : ""}`, {
+  ...prov,
+  params: { ...cfg, b, sampling: "t = 0, powers of two ≤ 1024, then every 128; echo at r = tE − t; damage on the same grid in r" },
+  adapter,
+  runs,
+});

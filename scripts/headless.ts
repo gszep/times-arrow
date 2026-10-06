@@ -1,6 +1,6 @@
-import { spawn } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { execSync, spawn } from "node:child_process";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { hostname, tmpdir } from "node:os";
 import { join } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import { createServer } from "vite";
@@ -16,6 +16,28 @@ const linuxFlags = [
 ];
 
 export type Evaluate = (expression: string) => Promise<any>;
+
+/** Sweep provenance: the commit, whether tracked changes exist, the host,
+ * and now. Untracked files do not count as dirty (untracked results made
+ * past Artemis runs look dirty). */
+export function provenance(smoke = false) {
+  const git = (cmd: string) => execSync(`git ${cmd}`, { encoding: "utf8" }).trim();
+  return {
+    commit: git("rev-parse HEAD"),
+    dirty: git("status --porcelain --untracked-files=no") !== "",
+    host: hostname().split(".")[0],
+    date: new Date().toISOString(),
+    smoke,
+  };
+}
+
+/** Write sweep results as `<dir>/<name>.json` and print the path. */
+export function writeResults(dir: URL, name: string, data: unknown) {
+  mkdirSync(dir, { recursive: true });
+  const file = new URL(`${name}.json`, dir);
+  writeFileSync(file, JSON.stringify(data, null, 1) + "\n");
+  console.log(file.pathname);
+}
 
 /**
  * Serve the repo with Vite, open `page` in a throwaway headless Chrome, wait

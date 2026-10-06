@@ -3,8 +3,9 @@
 // review page and the sweep. Everything bit-level (echo, Hamming, cone) is
 // exact; `S_b` is f64 from integer counts.
 import type { Adapter } from "../../src/gpu.ts";
-import { read } from "../../src/gpu.ts";
-import { Hpp, nullState, packedState } from "../../src/hpp.ts";
+import { blank, read, watchDevice } from "../../src/gpu.ts";
+import type { DeviceWatch } from "../../src/gpu.ts";
+import { Hpp, mass4, nullState, packedState } from "../../src/hpp.ts";
 import { undoFraction } from "./score.ts";
 
 export type RunConfig = {
@@ -98,8 +99,6 @@ const entropies = (counts: Uint32Array, n: number, b: number[]) => {
   for (const k of b) S[k] = blockEntropy(counts, n, k);
   return S;
 };
-
-const popcount = (s: number) => (s & 1) + ((s >>> 1) & 1) + ((s >>> 2) & 1) + ((s >>> 3) & 1);
 
 const rigWgsl = /* wgsl */ `
 struct Params { n: u32, fx: u32, fy: u32, pad: u32 }
@@ -362,37 +361,6 @@ class Rig {
   }
 }
 
-/** Watches `device.lost` for the lifetime of one run: every run subscribes
- * when it starts, every readback is raced against it (a lost device can leave
- * a pending readback hanging), and the check throws the moment the promise
- * has resolved. `device.lost` settles at most once and never rejects, so
- * leftover subscriptions from finished runs are inert. */
-export function watchDevice(device: GPUDevice) {
-  let info: GPUDeviceLostInfo | null = null;
-  const lost = device.lost.then((i) => {
-    info = i;
-  });
-  const err = () => new Error(`device lost: ${info?.reason ?? "unknown"}, ${info?.message ?? ""}`);
-  const check = () => {
-    if (info) throw err();
-  };
-  const race = async <T>(readback: Promise<T>): Promise<T> => {
-    const first = await Promise.race([readback.then((r) => ({ r })), lost.then(() => ({ err: err() }))]);
-    if ("err" in first) throw first.err;
-    check();
-    return first.r;
-  };
-  return { check, race };
-}
-
-export type DeviceWatch = ReturnType<typeof watchDevice>;
-
-const blank = (device: GPUDevice, bytes: number) =>
-  device.createBuffer({
-    size: bytes,
-    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST,
-  });
-
 const copy = (device: GPUDevice, src: GPUBuffer, dst: GPUBuffer, bytes: number) => {
   const enc = device.createCommandEncoder();
   enc.copyBufferToBuffer(src, 0, dst, 0, bytes);
@@ -421,14 +389,14 @@ export async function run(device: GPUDevice, adapter: Adapter, cfg: RunConfig): 
   const initial = mode === "packed" ? await packedState(device, seed, n) : await nullState(device, seed, n);
   watch.check();
   let mass = 0;
-  for (const s of initial) mass += popcount(s);
+  for (const s of initial) mass += mass4(s);
   if (mass !== count) throw new Error(`constructor drew ${mass} particles, expected ${count}`);
   if (mode === "packed") {
     const side = n / 4;
     const lo = n / 2 - side / 2;
     for (let y = 0; y < n; y++)
       for (let x = 0; x < n; x++)
-        if ((x < lo || x >= lo + side || y < lo || y >= lo + side) && popcount(initial[y * n + x]))
+        if ((x < lo || x >= lo + side || y < lo || y >= lo + side) && mass4(initial[y * n + x]))
           throw new Error(`particle outside the block at (${x}, ${y})`);
   }
 

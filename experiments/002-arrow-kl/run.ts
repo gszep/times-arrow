@@ -4,6 +4,7 @@
 // integer (tallies, edge counts, region counts) is bit-exact; σ and σ_cg
 // are f64 per the stated trust boundary.
 import type { Adapter } from "../../src/gpu.ts";
+import { watchDevice } from "../../src/gpu.ts";
 import { Walk } from "../../src/walk.ts";
 import { ARMS, protocolOf, sigma } from "./score.ts";
 import type { ArmName, CornerPaths, CornerResult, MainArm } from "./score.ts";
@@ -15,29 +16,6 @@ const MAIN_M = 16;
 const CORNER_N = 4;
 const CORNER_M = 4;
 const CORNER_T = 32;
-
-/** Watches `device.lost` for the lifetime of one run: every readback is
- * raced against it (a lost device can leave a pending readback hanging)
- * and the check throws the moment the promise has settled. `device.lost`
- * settles at most once and never rejects, so leftover subscriptions from
- * finished runs are inert. */
-export function watchDevice(device: GPUDevice) {
-  let info: GPUDeviceLostInfo | null = null;
-  const lost = device.lost.then((i) => {
-    info = i;
-  });
-  const err = () => new Error(`device lost: ${info?.reason ?? "unknown"}, ${info?.message ?? ""}`);
-  const check = () => {
-    if (info) throw err();
-  };
-  const race = async <T>(readback: Promise<T>): Promise<T> => {
-    const first = await Promise.race([readback.then((r) => ({ r })), lost.then(() => ({ err: err() }))]);
-    if ("err" in first) throw first.err;
-    check();
-    return first.r;
-  };
-  return { check, race };
-}
 
 /** the left half {x < n/2} — reflection-symmetric, hence exactly blind */
 export function halfMask(n: number): Uint32Array {
