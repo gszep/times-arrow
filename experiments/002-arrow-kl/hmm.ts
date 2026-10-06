@@ -1,5 +1,5 @@
 // The K5 coarse observer of 002, in f64 (WGSL has no f64; the contract
-// will pin the kernel and the corner goldens as Lean rationals at 1e-9).
+// pins the corner goldens as Lean rationals, compared at 1e-9).
 // The count observer sees only region occupancies, so its "fine" space is
 // the compositions of M into N parts (C(19,15) = 3876 states at the
 // 4×4 corner): the occupancy chain of M independent walkers, with the
@@ -174,27 +174,48 @@ function factors(hmm: Hmm, w: Weights): Float64Array {
 export function pathProbability(hmm: Hmm, path: number[], region: number, w: Weights): number {
   const f = factors(hmm, w);
   const em = hmm.emit[region];
-  const alpha = new Float64Array(hmm.states);
-  const next = new Float64Array(hmm.states);
-  const r = hmm.m + 1;
+  let alpha = new Float64Array(hmm.states);
   for (let s = 0; s < hmm.states; s++) alpha[s] = em[s] === path[0] ? hmm.pi[s] : 0;
   for (let t = 1; t < path.length; t++) {
-    next.fill(0);
-    const obs = path[t];
-    for (let c = 0; c < hmm.states; c++) {
-      const a = alpha[c];
-      if (a === 0) continue;
-      for (let k = hmm.rowPtr[c]; k < hmm.rowPtr[c + 1]; k++) {
-        const j = hmm.col[k];
-        if (em[j] !== obs) continue;
-        next[j] += a * hmm.val[k] * f[hmm.ne[k] * r + hmm.nw[k]];
-      }
-    }
-    alpha.set(next);
+    alpha = advance(hmm, alpha, f);
+    for (let s = 0; s < hmm.states; s++) if (em[s] !== path[t]) alpha[s] = 0;
   }
   let p = 0;
   for (let s = 0; s < hmm.states; s++) p += alpha[s];
   return p;
+}
+
+function advance(hmm: Hmm, alpha: Float64Array, f: Float64Array): Float64Array<ArrayBuffer> {
+  const next = new Float64Array(hmm.states);
+  const r = hmm.m + 1;
+  for (let c = 0; c < hmm.states; c++) {
+    const a = alpha[c];
+    if (a === 0) continue;
+    for (let k = hmm.rowPtr[c]; k < hmm.rowPtr[c + 1]; k++)
+      next[hmm.col[k]] += a * hmm.val[k] * f[hmm.ne[k] * r + hmm.nw[k]];
+  }
+  return next;
+}
+
+/** All k-time count probabilities in the contract's little-endian base-(m+1)
+ * order. Shared prefixes reuse the same forward pass as pathProbability. */
+export function countMarginal(hmm: Hmm, region: number, k: number, w: Weights): Float64Array {
+  const base = hmm.m + 1;
+  const law = new Float64Array(base ** k);
+  const f = factors(hmm, w);
+  const em = hmm.emit[region];
+  const visit = (prior: Float64Array, t: number, code: number) => {
+    for (let obs = 0; obs < base; obs++) {
+      const alpha = new Float64Array(hmm.states);
+      let mass = 0;
+      for (let s = 0; s < hmm.states; s++) if (em[s] === obs) mass += alpha[s] = prior[s];
+      const nextCode = code + obs * base ** t;
+      if (t + 1 === k) law[nextCode] = mass;
+      else if (mass > 0) visit(advance(hmm, alpha, f), t + 1, nextCode);
+    }
+  };
+  visit(hmm.pi, 0, 0);
+  return law;
 }
 
 /** The per-path coarse log-ratio of a region-count path, forward arm against

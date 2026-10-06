@@ -84,7 +84,10 @@ def unmarkFloats (s : String) : String :=
 weights, the per-hop sum for schedules. -/
 def sigmaFloat (ws : ℕ → Dir → ℕ) (seed : UInt32) (M T : ℕ) : Float :=
   if T = 0 then 0 else
-    (Array.range T |>.foldl (fun acc s =>
+    if (Array.range T).all (fun s => ws (s + 1) 0 == ws 1 0 && ws (s + 1) 1 == ws 1 1) then
+      let tl := pathTally ws seed M T
+      ((tl.1 : Int) - tl.2).toFloat * Float.log ((ws 1 0).toFloat / (ws 1 1).toFloat)
+    else (Array.range T |>.foldl (fun acc s =>
       let tl := stepTally ws seed M (s + 1)
       let w := ws (s + 1)
       acc + ((tl.1 : Int) - tl.2).toFloat *
@@ -106,6 +109,9 @@ def walkGolden (seed : UInt32) (arm : String) (n m t : ℕ) : Option Json := do
     ("n", toJson n), ("m", toJson m), ("t", toJson t),
     ("state", toJson state),
     ("nE", toJson tl.1), ("nW", toJson tl.2),
+    ("tallies", toJson ((Array.range t).map fun s =>
+      let v := stepTally ws seed m (s + 1)
+      (v.1 : Int) - v.2)),
     ("sigma", rawFloat (sigmaFloat ws seed m t))]
 
 /-- The exact tally distribution of an arm at `T`, as string numerators
@@ -167,7 +173,7 @@ def walkContract (_ : Unit) : Json :=
   let goldens : List Json :=
     ((List.range 2).flatMap fun s =>
       ["driven", "reversed", "null"].flatMap fun a =>
-        [1, 4].map fun t =>
+        [0, 1, 4].map fun t =>
           (walkGolden (s + 1).toUInt32 a 8 16 t).get!)
     ++ [(walkGolden 1 "driven" 8 16 64).get!,
         (walkGolden 1 "ramp" 8 16 16).get!,
@@ -340,5 +346,9 @@ def main : List String → IO Unit
       IO.println s!"{tl.1} {tl.2}"
     let tl := pathTally ws seed.toNat!.toUInt32 M T
     IO.println s!"{tl.1} {tl.2}"
+  | ["walkjson", seed, arm, n, m, t] => do
+    let some g := walkGolden seed.toNat!.toUInt32 arm n.toNat! m.toNat! t.toNat!
+      | throw (IO.userError "invalid walker arm or lattice")
+    IO.println (unmarkFloats g.compress)
   | _ => throw (IO.userError
       "usage: timesarrow contract | rand SEED STEP SITE | hpp SEED N T | hppinv SEED N T | hppecho SEED N T | hppinit MODE SEED N | walk SEED ARM N M T | walktally SEED ARM M T")

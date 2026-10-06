@@ -11,21 +11,24 @@
 // rules that needed an interpretation are marked INTERPRETATION where they
 // are implemented.
 import type { Weights } from "../../src/walk.ts";
+import contract from "../../contract.json" with { type: "json" };
 export type { Weights };
+
+const weights = ([e, w, n, s, zero]: number[]): Weights => ({ e, w, n, s, zero });
 
 /** The registered arms of 002, dyadic in 256ths. */
 export const ARMS = {
-  driven: { e: 48, w: 16, n: 24, s: 24, zero: 144 },
-  reversed: { e: 16, w: 48, n: 24, s: 24, zero: 144 },
-  null: { e: 32, w: 32, n: 24, s: 24, zero: 144 },
+  driven: weights(contract.walk.arms.driven.q),
+  reversed: weights(contract.walk.arms.reversed.q),
+  null: weights(contract.walk.arms.null.q),
 } as const satisfies Record<string, Weights>;
 
 /** The ramp protocol ε(t) = t/16: q_E = (32+t)/256, q_W = (32−t)/256, the
  * stay weight constant. Its reverse protocol is ε(15−t), weights not
  * swapped — the schedule reversal is the protocol reversal. */
-export const ramp = (t: number): Weights => ({ e: 32 + t, w: 32 - t, n: 24, s: 24, zero: 144 });
-const rampRev = (t: number): Weights => ramp(15 - t);
-export const RAMP_T = 16;
+export const ramp = (t: number): Weights => weights(contract.walk.arms.ramp.schedule[t]);
+const rampRev = (t: number): Weights => weights(contract.walk.arms.ramprev.schedule[t]);
+export const RAMP_T = contract.walk.arms.ramp.schedule.length;
 
 export const protocolOf = (arm: ArmName, T: number): Weights[] =>
   arm === "ramp" ? Array.from({ length: T }, (_, t) => ramp(t))
@@ -51,11 +54,17 @@ export function sigma(tallies: ArrayLike<number>, protocol: Weights[]): number {
  * 3-point increments, by DP in f64 (the contract pins the T ≤ 2 tables as
  * exact rationals; denominators 256^(mT)). Entry `K + m·T` is `P(K)`. */
 export function tallyDp(m: number, T: number, q: Weights): Float64Array {
-  const steps = m * T;
+  return protocolTallyDp(m, Array.from({ length: T }, () => q));
+}
+
+/** Tally (not σ) histogram for a possibly time-dependent protocol. */
+export function protocolTallyDp(m: number, protocol: Weights[]): Float64Array {
+  const steps = m * protocol.length;
   let dp = new Float64Array(2 * steps + 3); // K at index K + steps + 1
   dp[steps + 1] = 1;
-  const inc = [q.w / 256, (q.n + q.s + q.zero) / 256, q.e / 256];
   for (let i = 0; i < steps; i++) {
+    const q = protocol[Math.floor(i / m)];
+    const inc = [q.w / 256, (q.n + q.s + q.zero) / 256, q.e / 256];
     const next = new Float64Array(dp.length);
     for (let j = 1; j < dp.length - 1; j++) {
       const p = dp[j];
@@ -298,7 +307,7 @@ function k3(hist: [number, number][], T: number, reversedHist: [number, number][
   const m1 = T === 1 ? mirrorBins(1) : null;
   const m4 = T === 4 ? mirrorBins(4) : null;
   // T = 64: the mirror identity of the exact DP (the f64 stand-in for the
-  // Lean golden, which pins it when it lands) and the cross-arm mirror: the
+   // Lean golden) and the cross-arm mirror: the
   // reversed arm realizes reversedPathPMF, n_R(−j) = n_F(j) within 3σ.
   // INTERPRETATION: "3σ Poisson" is the two-count difference test
   // |n_R(−j) − n_F(j)| ≤ 3·√(n_F(j) + n_R(−j)).
@@ -353,7 +362,7 @@ function k5(corner: CornerResult) {
   const sigmaBand = (Z * Math.sqrt(30) * LN3) / Math.sqrt(R);
   const meanSd = d.cross.reduce((a, c) => a + sigmaPath(c), 0) / R;
   const sdBand = (Z * Math.sqrt(VAR_SIGMA_D) * LN3) / Math.sqrt(R);
-  const halfBad = d.scgHalf.map((s, i) => ({ i, s })).filter((x) => Math.abs(x.s) > 1e-12);
+  const halfBad = d.scgHalf.map((s, i) => ({ i, s })).filter((x) => !Number.isFinite(x.s) || Math.abs(x.s) > 1e-12);
   const halfMax = d.scgHalf.reduce((a, s) => Math.max(a, Math.abs(s)), 0);
   const per = R / corner.blocks;
   const blockMeans = Array.from({ length: corner.blocks }, (_, b) => mean(d.scgL.slice(b * per, (b + 1) * per)));
@@ -362,7 +371,7 @@ function k5(corner: CornerResult) {
   const lBand = T15 * lSe;
   const lOk = Math.abs(lMean) <= lBand;
   const nullSigmaOk = (nu.maxAbsSigma ?? NaN) === 0;
-  const nullScgOk = nu.scgHalf.every((s) => s === 0) && nu.scgL.every((s) => s === 0);
+  const nullScgOk = [...nu.scgHalf, ...nu.scgL].every((s) => Math.abs(s) <= 1e-12);
   return {
     meanSigma,
     sigmaExact: 16 * LN3,
@@ -581,7 +590,7 @@ export function score(results: Results, source?: string) {
     K5: {
       ...K5,
       bitLevel: (K5.halfBad.length === 0 && K5.nullSigmaOk && K5.nullScgOk ? "verified" : "implementation error") as Verdict,
-      verdict: verdict(K5.pass && K5.physicsOk),
+      verdict: (K5.pass ? verdict(K5.physicsOk) : "implementation error") as Verdict,
     },
     K6,
     C1,

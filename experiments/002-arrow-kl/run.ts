@@ -165,15 +165,15 @@ export async function runCorner(device: GPUDevice, cfg: CornerConfig): Promise<C
         paths.scgHalf.push(sigmaCg(hmm, halfPath, 0, ARMS.driven, ARMS.reversed));
         paths.scgL.push(sigmaCg(hmm, lPath, 1, ARMS.driven, ARMS.reversed));
       } else {
-        paths.scgHalf.push(0);
-        paths.scgL.push(0);
+        paths.scgHalf.push(sigmaCg(hmm, halfPath, 0, ARMS.null, ARMS.null));
+        paths.scgL.push(sigmaCg(hmm, lPath, 1, ARMS.null, ARMS.null));
       }
     }
     return paths;
   };
 
-  const driven = await armRun("driven");
   const nullArm = await armRun("null");
+  const driven = await armRun("driven");
   walk.destroy();
   return { n, m, T, R: cfg.R, blocks, driven, null: nullArm };
 }

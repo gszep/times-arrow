@@ -7,6 +7,7 @@ import { f32Bits, same } from "../src/check.ts";
 import { damageDepths } from "../experiments/001-irreversibility/run.ts";
 import { thresholds } from "../src/walk.ts";
 import { ARMS, protocolOf, sigma } from "../experiments/002-arrow-kl/score.ts";
+import { compareWalk } from "../experiments/002-arrow-kl/check.ts";
 import { headless } from "./headless.ts";
 
 const lean = ".lake/build/bin/timesarrow";
@@ -193,21 +194,19 @@ const walkFailures = await headless("experiments/002-arrow-kl/", async (evaluate
     };
   };
 
-  // The contract's walker goldens, in the assumed shape (`walk.golden`
-  // trajectories, `walk.sigma` per-path σ), whenever the Lean lane lands them.
-  const walk = (contract as Record<string, unknown>).walk as Record<string, unknown> | undefined;
-  const goldenVecs = (walk?.golden ?? []) as { seed: number; n: number; m: number; t: number; state: string }[];
-  const sigmaVecs = (walk?.sigma ?? []) as { seed: number; n: number; m: number; t: number; sigma: number }[];
-  if (!goldenVecs.length)
-    console.log("contract.walk goldens not present: golden checks skipped (the full 002 sweep will refuse to run)");
-  for (const g of goldenVecs) {
-    const got = await evaluate(`probe.golden(${g.seed}, ${g.n}, ${g.m}, ${g.t})`);
-    check(`contract walk.golden seed ${g.seed}, n ${g.n}, m ${g.m}, t ${g.t}`, got === g.state, `${got} vs ${g.state}`);
-  }
-  for (const g of sigmaVecs) {
-    const got = await evaluate(`probe.sigmaGolden(${g.seed}, ${g.n}, ${g.m}, ${g.t})`);
-    check(`contract walk.sigma seed ${g.seed}, n ${g.n}, m ${g.m}, t ${g.t}`, Math.abs(got - g.sigma) <= 1e-9 * Math.max(1, Math.abs(g.sigma)), `${got} vs ${g.sigma}`);
-  }
+  results.push(...await evaluate("probe.check()"));
+  if (existsSync(lean)) {
+    for (const arm of ["null", "driven", "reversed", "ramp", "ramprev"]) {
+      for (const n of [4, 8, 16]) {
+        const seed = u32();
+        const m = 1 + Math.floor(Math.random() * 16);
+        const t = Math.floor(Math.random() * (arm.startsWith("ramp") ? 17 : 65));
+        const g = JSON.parse(ref("walkjson", seed, arm, n, m, t));
+        const got = await evaluate(`probe.walk(${JSON.stringify({ seed, arm, n, m, t })})`);
+        results.push(...compareWalk(g, got).map((c) => ({ ...c, name: `random Lean ${c.name}` })));
+      }
+    }
+  } else console.log(`${lean} not built: skipping walker differential tests against Lean`);
 
   // Randomised differential tests, WGSL against the TypeScript reference.
   for (let i = 0; i < 4; i++) {
@@ -284,4 +283,5 @@ const walkFailures = await headless("experiments/002-arrow-kl/", async (evaluate
   for (const r0 of results) console.log(r0.pass ? "pass" : "FAIL", r0.name, r0.detail);
   return results.filter((x) => !x.pass).length;
 });
+console.log(`${results.filter((r) => r.pass).length}/${results.length} checks passed`);
 process.exit(failures + smokeFailures + walkFailures ? 1 : 0);

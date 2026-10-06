@@ -17,9 +17,8 @@ driven vector `(48, 16, 24, 24, 144)`, its E↔W swap (reversed), the null
 
 Two representations, as in the lattice gas:
 
-* the model, `walkerK` and `prodK`: one walker as `Site n → PMF (Site n)`,
-  and the synchronous product on `Fin M → Site n`; the `TimesArrow.Markov`
-  library applies to these directly;
+* the model, `walkerK`: one walker as `Site n → PMF (Site n)`; the
+  synchronous product on `Fin M → Site n` remains to be formalized;
 * the executable, `traj`/`positions`/`tallies`: bit-exact Philox
   trajectories with counter `(walker, step, 0, 0)`, key `(seed, 0)`, the
   initial draw at step `0`, hops at steps `1..T`, the direction read from

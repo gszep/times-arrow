@@ -280,7 +280,7 @@ console.log(renderVerdict(score(buildResults("supported"))));
   assert.ok(Math.abs(k41.ift - 1) > k41.band);
   assert.equal(k464.verdict, "supported"); // the wrong drive still collapses
   assert.equal(v.K5.bitLevel, "implementation error"); // the half path with σ_cg ≠ 0
-  assert.equal(v.K5.verdict, "refuted"); // the corner mean, σ_∂ and L bands all off
+  assert.equal(v.K5.verdict, "implementation error"); // invalid pipeline blocks physics interpretation
   assert.ok(!v.K5.sigmaOk && !v.K5.sdOk && !v.K5.lOk && !v.K5.nullSigmaOk);
   assert.equal(v.K6!.verdict, "refuted"); // the distorted mirror law
   assert.ok(Math.abs(v.K6!.diff) > v.K6!.bias + v.K6!.band, `K6 diff ${v.K6!.diff} band ${v.K6!.band} kPopulated ${v.K6!.kPopulated} dPlugin ${v.K6!.dPlugin} dMean ${v.K6!.dMean}`);
@@ -288,6 +288,19 @@ console.log(renderVerdict(score(buildResults("supported"))));
   assert.ok(!v.C1!.meanOk && !v.C1!.crooksOk);
   console.log("pass: the refuted ensemble refutes K1, K2, K3, K4(T=1), K5, K6 and C1 through their registered clauses");
 }
+
+// Isolated K5 failures distinguish pipeline faults from physics refutations.
+for (const kind of ["half", "L", "null", "sigma", "boundary"] as const) {
+  const r = buildResults("supported");
+  if (kind === "half") r.corner.driven.scgHalf[0] = 1e-6;
+  if (kind === "L") r.corner.driven.scgL.fill(1);
+  if (kind === "null") r.corner.null.scgL[0] = 1e-6;
+  if (kind === "sigma") r.corner.driven.tally.fill(0);
+  if (kind === "boundary") r.corner.driven.cross.fill(0);
+  assert.equal(score(r).K5.verdict,
+    kind === "sigma" || kind === "boundary" ? "refuted" : "implementation error", kind);
+}
+console.log("pass: K5 pipeline failures are implementation errors; mean-band failures refute");
 
 // The smoke output: bit-level checks hold, statistical verdicts are n/a.
 {

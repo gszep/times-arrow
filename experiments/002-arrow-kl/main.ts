@@ -1,12 +1,14 @@
 import contract from "../../contract.json" with { type: "json" };
 import { gpu } from "../../src/gpu.ts";
 import { Walk } from "../../src/walk.ts";
-import { ARMS, LN3, exactSigmaStats, protocolOf, sigma, tallyDp, T15, Z } from "./score.ts";
+import { ARMS, LN3, exactSigmaStats, sigma, tallyDp, T15, Z } from "./score.ts";
 import { runMain, runCorner, halfMask, lMask } from "./run.ts";
 import { buildHmm } from "./hmm.ts";
 import type { ArmName, CornerResult } from "./score.ts";
 import type { Weights } from "../../src/walk.ts";
 import type { Hmm } from "./hmm.ts";
+import { checkWalk, walkVector } from "./check.ts";
+import type { WalkVector } from "./check.ts";
 
 const $ = (id: string) => document.getElementById(id)!;
 const params = new URLSearchParams(location.search);
@@ -177,7 +179,7 @@ try {
       t++;
       if (t >= T) {
         if (($("record") as HTMLInputElement).checked) {
-          const tallies = await live.readTallies();
+          const { tallies } = await live.snapshot();
           const ratio = Math.log((32 + drive) / (32 - drive));
           const s = sigma(tallies, Array.from({ length: T }, () => driveWeights(drive)));
           const k = Math.round(s / ratio);
@@ -270,7 +272,7 @@ try {
         return Math.sqrt(xs.reduce((a, x) => a + (x - mu) ** 2, 0) / (xs.length - 1));
       };
       const per = c.R / c.blocks;
-      const blocksL = c.driven.scgL.map((_, i) => mean(c.driven.scgL.slice(i * per, (i + 1) * per)));
+      const blocksL = Array.from({ length: c.blocks }, (_, i) => mean(c.driven.scgL.slice(i * per, (i + 1) * per)));
       const seL = sdB(blocksL) / Math.sqrt(c.blocks);
       const maxHalf = Math.max(0, ...c.driven.scgHalf.map(Math.abs));
       $("cornerOut").innerHTML = [
@@ -278,7 +280,7 @@ try {
         `⟨σ_∂⟩ = ${(mean(c.driven.cross) * LN3).toFixed(3)} vs 4 ln 3 = ${(4 * LN3).toFixed(3)} ± ${(Z * Math.sqrt(6.4349) * LN3 / Math.sqrt(c.R)).toFixed(3)} (the boundary share — a fine-path functional)`,
         `half-count: max |σ_cg| = ${maxHalf.toExponential(2)} ${maxHalf <= 1e-12 ? "≤" : "ABOVE"} 1e-12 — the reflection-symmetric region is exactly blind (a torus artefact)`,
         `L-count: ⟨σ_cg⟩ = ${mean(c.driven.scgL).toExponential(3)} vs the pipeline null |·| ≤ ${(T15 * seL).toExponential(3)} (t₁₅ · ${c.blocks}-block SE); the registered bound E[σ_cg] ≥ 1.28 × 10⁻⁵ nats is untestable at any feasible R_c`,
-        `null corner: σ ≡ 0 (${c.null.maxAbsSigma === 0 ? "holds" : "FAILS"}), σ_cg ≡ 0 (${c.null.scgL.every((s) => s === 0) ? "holds" : "FAILS"}) — pathwise, by the weights`,
+        `null corner: σ ≡ 0 (${c.null.maxAbsSigma === 0 ? "holds" : "FAILS"}), σ_cg ≡ 0 (${[...c.null.scgHalf, ...c.null.scgL].every((s) => Math.abs(s) <= 1e-12) ? "holds" : "FAILS"}) — measured pathwise by two HMM passes`,
         `first driven path, L-count sequence: ${c.driven.l[0].join(", ")}`,
       ].join("<br>");
     } catch (e) {
@@ -291,13 +293,13 @@ try {
 
   // ── the claims panel ──────────────────────────────────────────────────────
   const rows: [string, string, string, string][] = [
-    ["M1", "the model fits the library: constructor stationary, kernel support symmetric, σ = hop tally — goldens bit for bit", "any golden vector or differential test fails (an implementation error; nothing is promoted until fixed)", "verified once the WGSL reproduces contract.walk; structure conjecture (round-3 model lemmas)"],
+    ["M1", "the model fits the library: constructor stationary, kernel support symmetric, σ = hop tally — goldens bit for bit", "any golden vector or differential test fails (an implementation error; nothing is promoted until fixed)", "verified by the contract gate; one-walker stationarity and support symmetry proved; product/path instantiation conjecture"],
     ["K1", "the second law is linear: ⟨σ⟩ = 2T ln 3, Var(σ) = (15/4)T(ln 3)², the histogram matches the exact DP", "any mean or std leaves its 3.1σ band, χ² exceeds its threshold, or ≥ 2 of 16 block means fall outside", "supported (statistical); the library theorem is proved (faec5f1)"],
     ["K2", "the arrow is the state, not the law: the null (q_E = q_W) has σ ≡ 0 pathwise", "any null path with σ ≠ 0 (bit-exact), or the driven mean ≤ 0", "null reversibility proved (on main); null runs verified bit for bit"],
     ["K3", "the detailed FT: P_F(σ=s)/P_F(σ=−s) = e^s exactly; the reversed arm realizes reversedPathPMF", "any mirror bin test fails at its threshold, or the T = 64 cross-arm mirror fails in ≥ 10% of bins", "supported (statistical); the dFT is proved (281f5db)"],
     ["K4", "the integral FT: ⟨e^−σ⟩ = 1, with the measurability boundary T* = ln R/(16 ln(4/3)) ≈ 2.41 and the deep collapse", "the T = 1 average leaves its 4σ̂ band, or the T = 64 estimate ≥ 10⁻³", "supported (statistical); the IFT is proved (281f5db); the variance identity is a round-3 conjecture"],
-    ["K5", "coarse-graining loses the arrow: the half is exactly blind, the L keeps a certified-positive but undetectably small share", "any half-count σ_cg off 0 by > 10⁻¹², the L pipeline null |⟨σ_cg⟩| > 3.73 SE, or ⟨σ⟩_c / ⟨σ_∂⟩ leaves its band", "blindness conjecture (Lean round-3 target) + verified exact DP; L-positivity verified (exact DP)"],
-    ["K6", "the estimator story: D̂_mean unbiased, the plug-in the same quantity with bias (K̂−1)/(2R) ≈ 8.9 × 10⁻⁴", "the difference leaves its t₁₅ band (a systematically negative plug-in, or a blow-up)", "supported (statistical); the sufficiency identity is a round-3 conjecture"],
+    ["K5", "coarse-graining loses the arrow: the half is exactly blind, the L keeps a certified-positive but undetectably small share", "⟨σ⟩_c or ⟨σ_∂⟩ leaves its band. Half-count σ_cg off 0 by > 10⁻¹² or L pipeline null |⟨σ_cg⟩| > 3.73 SE is an implementation error", "blindness conjecture (Lean round-3 target) + verified exact DP; L-positivity verified (exact DP)"],
+    ["K6", "the estimator story: D̂_mean unbiased, the plug-in the same quantity with bias (K̂−1)/(2R) ≈ 8.9 × 10⁻⁴. At T=64 the estimator uses the dFT tilt to reconstruct the inaccessible reverse tail, so K6 effectively tests the reversed-arm mirror, not an independent tail measurement.", "the difference leaves its t₁₅ band (a systematically negative plug-in, or a blow-up)", "supported (statistical); the sufficiency identity is a round-3 conjecture"],
     ["C1", "Crooks/Jarzynski for the ramp protocol: Crooks ratio holds with slope 1, the histograms cross at s* ∈ [−1,1] (ΔF = 0); Jarzynski is certified only through the ratio", "the mean leaves its band, or the slope/bin/crossing checks fail", "supported/refuted (statistical); the inhomogeneous path law is a round-3 conjecture"],
   ];
   $("claims").innerHTML = `
@@ -325,25 +327,8 @@ try {
       config,
       run: (cfg: { arm: ArmName; T: number; R: number; blocks?: number }) => runMain(device, cfg),
       runCorner: (cfg: { R: number; blocks?: number; T?: number }) => runCorner(device, cfg),
-      /** the packed walker positions after the constructor + t steps, two
-       * hex digits per walker (x then y) — the assumed contract-golden format */
-      golden: async (gseed: number, gn: number, gm: number, gt: number) => {
-        const walk = new Walk(device, { n: gn, m: gm, T: Math.max(1, gt), batch: 1 });
-        walk.setProtocol(Array.from({ length: Math.max(1, gt) }, () => ARMS.driven));
-        walk.init(gseed);
-        for (let t = 1; t <= gt; t++) walk.step(t, gseed);
-        const pos = await walk.positions();
-        walk.destroy();
-        return Array.from(pos, (s) => `${(s & 0xff).toString(16)}${((s >>> 8) & 0xff).toString(16)}`).join("");
-      },
-      /** σ of one registered driven path (the assumed `walk.sigma` goldens) */
-      sigmaGolden: async (gseed: number, gn: number, gm: number, gt: number) => {
-        const walk = new Walk(device, { n: gn, m: gm, T: gt, batch: 1 });
-        walk.setProtocol(protocolOf("driven", gt));
-        const run = await walk.runSeeds(gseed, 1);
-        walk.destroy();
-        return sigma(run.tallies, protocolOf("driven", gt));
-      },
+      check: () => checkWalk(device),
+      walk: (g: Pick<WalkVector, "seed" | "arm" | "n" | "m" | "t">) => walkVector(device, g),
       /** one full trace for differential tests: positions, per-step tallies
        * and per-cell out-edge counts of one path under given weights
        * (transverse weights fixed at the registered 24/24) */
@@ -353,7 +338,7 @@ try {
         walk.setProtocol(Array.from({ length: gt }, () => q));
         walk.init(gseed);
         for (let t = 1; t <= gt; t++) walk.step(t, gseed, true);
-        const [pos, tallies, edges] = await Promise.all([walk.positions(), walk.readTallies(), walk.readEdges()]);
+        const { pos, tallies, edges } = await walk.snapshot();
         walk.destroy();
         return {
           pos: Array.from(pos, (s) => `${(s & 0xff).toString(16)}${((s >>> 8) & 0xff).toString(16)}`).join(""),

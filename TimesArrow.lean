@@ -7,3 +7,4 @@ import TimesArrow.Markov.KlDiv
 import TimesArrow.Markov.Chain
 import TimesArrow.Markov.EntropyProduction
 import TimesArrow.Claims
+import TimesArrow.Claims.Walker

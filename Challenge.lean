@@ -1,6 +1,25 @@
 import TimesArrow.Philox
 import TimesArrow.LatticeGas
 import TimesArrow.Selection
+import TimesArrow.Walker
+
+namespace TimesArrow.Walker
+
+theorem uniform_stationary (n : ℕ) [NeZero n] (w : Dir → ℕ) (hw : ∑ d, w d = 256) :
+    TimesArrow.Markov.IsStationary (walkerK n w hw)
+      (PMF.uniformOfFintype (Site n)) := by
+  sorry
+
+theorem support_symmetric (n : ℕ) [NeZero n] (w : Dir → ℕ) (hw : ∑ d, w d = 256)
+    (hwpos : ∀ d, 0 < w d) (i j : Site n) :
+    walkerK n w hw i j = 0 ↔ walkerK n w hw j i = 0 := by
+  sorry
+
+theorem null_kernel_symmetric (n : ℕ) [NeZero n] (i j : Site n) :
+    walkerK n nullW nullW_sum i j = walkerK n nullW nullW_sum j i := by
+  sorry
+
+end TimesArrow.Walker
 
 /-!
 The claim statements that Comparator certifies, each proved by `sorry` here

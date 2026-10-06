@@ -4,19 +4,12 @@
 // end-to-end validation (R = 512 per arm, a 16-path corner) to
 // results/<host>-smoke.json instead. The full ensemble is meant for Artemis.
 //
-// The full run is guarded: it refuses to start unless the contract pins the
-// walker goldens under the expected key `walk` (ASSUMED SHAPE, until the
-// Lean lane lands it: `walk.golden = [{seed, n, m, t, state}…]`, `state`
-// two hex digits per walker, x then y; optional `walk.sigma =
-// [{seed, n, m, t, sigma}]` at 1e-9) — and, inside the page, refuses
-// unless the GPU reproduces them bit for bit. The smoke run is exempt; it
-// validates plumbing, not the goldens. The device-loss watch is inside the
-// run driver; the expected-vendor and software-adapter checks are in
-// scripts/headless.ts.
+// Both modes require the page's complete contract gate: trajectories,
+// tallies, σ, DP histograms and K5 HMM goldens. Device-loss monitoring is in
+// the run driver; the adapter/vendor check is in scripts/headless.ts.
 import { execSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { hostname } from "node:os";
-import contract from "../../contract.json" with { type: "json" };
 import { headless } from "../../scripts/headless.ts";
 import { RAMP_T } from "./score.ts";
 import type { ArmName, CornerResult, MainArm } from "./score.ts";
@@ -27,25 +20,6 @@ const full = { R: 65536, blocks: 16, cornerR: 1024, cornerT: 32 };
 const tiny = { R: 512, blocks: 16, cornerR: 16, cornerT: 32 };
 const cfg = smoke ? tiny : full;
 
-// The goldens the guard demands, in the assumed shape.
-type GoldenVec = { seed: number; n: number; m: number; t: number; state: string };
-type SigmaVec = { seed: number; n: number; m: number; t: number; sigma: number };
-let goldenVectors: GoldenVec[] = [];
-let sigmaVectors: SigmaVec[] = [];
-if (!smoke) {
-  const walk = (contract as Record<string, unknown>).walk as Record<string, unknown> | undefined;
-  const need = (key: string) => {
-    const v = walk?.[key];
-    if (!Array.isArray(v) || v.length === 0)
-      throw new Error(
-        `contract.walk.${key} golden vectors are missing; the full 002 sweep refuses to run until the Lean lane pins them`,
-      );
-    return v;
-  };
-  goldenVectors = need("golden") as GoldenVec[];
-  sigmaVectors = (walk?.sigma ?? []) as SigmaVec[];
-}
-
 const git = (cmd: string) => execSync(`git ${cmd}`, { encoding: "utf8" }).trim();
 const provenance = {
   commit: git("rev-parse HEAD"),
@@ -53,23 +27,15 @@ const provenance = {
   host: hostname().split(".")[0],
   date: new Date().toISOString(),
   smoke,
+  seeds: { main: { first: 1, last: cfg.R }, corner: { first: 1, last: cfg.cornerR }, pairedAcrossArms: true },
 };
+if (provenance.dirty) throw new Error("commit the code before recording sweep provenance");
 
 const { adapter, goldens, main, corner } = await headless("experiments/002-arrow-kl/", async (evaluate) => {
-  let goldensPassed: boolean | null = null;
-  for (const g of goldenVectors) {
-    const got = (await evaluate(`probe.golden(${g.seed}, ${g.n}, ${g.m}, ${g.t})`)) as string;
-    if (got !== g.state)
-      throw new Error(
-        `the GPU walker trace (seed ${g.seed}, n ${g.n}, m ${g.m}, t ${g.t}) differs from contract.walk.golden:\n  got ${got}\n  want ${g.state}`,
-      );
-  }
-  for (const g of sigmaVectors) {
-    const got = (await evaluate(`probe.sigmaGolden(${g.seed}, ${g.n}, ${g.m}, ${g.t})`)) as number;
-    if (Math.abs(got - g.sigma) > 1e-9 * Math.max(1, Math.abs(g.sigma)))
-      throw new Error(`probe.sigmaGolden(seed ${g.seed}) = ${got}, contract says ${g.sigma}`);
-  }
-  if (!smoke) goldensPassed = true;
+  const checks: { name: string; pass: boolean }[] = await evaluate("probe.check()");
+  const failed = checks.filter((c) => !c.pass);
+  if (!checks.length || failed.length) throw new Error(`walker contract gate failed: ${JSON.stringify(failed)}`);
+  console.log(`contract.walk: ${checks.length} checks passed`);
 
   const main: MainArm[] = [];
   const run = async (arm: ArmName, T: number) => {
@@ -83,7 +49,7 @@ const { adapter, goldens, main, corner } = await headless("experiments/002-arrow
         : `mean σ ${(a.blockSum!.reduce((x, y) => x + y, 0) / a.R).toPrecision(6)}`;
     console.log(`${arm} T=${T}: R=${a.R}, ${note}, max|σ| ${a.maxAbsSigma ?? "—"}`);
   };
-  for (const arm of ["driven", "reversed", "null"] as const)
+  for (const arm of ["null", "driven", "reversed"] as const)
     for (const T of smoke ? [1, 4] : [1, 4, 64]) await run(arm, T);
   for (const arm of ["ramp", "ramprev"] as const) await run(arm, RAMP_T);
 
@@ -94,7 +60,7 @@ const { adapter, goldens, main, corner } = await headless("experiments/002-arrow
   console.log(
     `corner: R=${corner.R}, ⟨σ⟩ ${(corner.driven.tally.reduce((a, b) => a + b, 0) / corner.R).toFixed(1)}·ln 3, max |σ_cg^half| ${maxHalf.toExponential(2)}, null σ ≡ 0 ${corner.null.maxAbsSigma === 0}`,
   );
-  return { adapter: await evaluate("probe.adapter"), goldens: goldensPassed, main, corner };
+  return { adapter: await evaluate("probe.adapter"), goldens: true, main, corner };
 }, vendor);
 
 mkdirSync(new URL("results", import.meta.url), { recursive: true });

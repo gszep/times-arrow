@@ -299,20 +299,15 @@ export class Walk {
     return (await read(this.device, this.pos))[0];
   }
 
-  /** The live batch's per-step tallies, one mapped readback. */
-  async readTallies(): Promise<Int32Array> {
-    const words = (await read(this.device, this.tally))[0];
-    return new Int32Array(words.buffer, words.byteOffset, words.length);
+  /** Positions, tallies and edge counts batched into one mapped readback. */
+  async snapshot() {
+    const [pos, words, edges] = await read(this.device, this.pos, this.tally, this.edges);
+    return { pos, tallies: new Int32Array(words.buffer, words.byteOffset, words.length), edges };
   }
 
   /** Zero the live batch's per-step tallies (a fresh path starts here). */
   zeroTally(): void {
     this.device.queue.writeBuffer(this.tally, 0, new Uint32Array(this.batch * this.T));
-  }
-
-  /** The live batch's per-cell out-edge hop counts, one mapped readback. */
-  async readEdges(): Promise<Uint32Array> {
-    return (await read(this.device, this.edges))[0];
   }
 
   destroy(): void {
