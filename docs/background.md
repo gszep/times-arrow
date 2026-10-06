@@ -180,6 +180,12 @@ The core framing: relativity gives the cone, thermodynamics picks the half.
   observer. Wang, Cai, Cui & Zhao, SciPost Phys. Core **7**, 082 (2024);
   Cai, Wang & Zhao, PRE **111**, 024102 (2025) and Phys. Lett. B **860**,
   139220 (2025).
+- Two-point-measurement entropy production in stationary spacetimes is tied
+  to the observer's proper time and differs between observers in relative
+  motion — the irreversibility of time dilation. Basso, Maziero & Céleri,
+  Class. Quantum Grav. **40**, 195001 (2023); quantum detailed fluctuation
+  theorem in curved spacetime, with observer-dependent entropy production,
+  Basso, Maziero & Céleri, PRL **134**, 050406 (2025).
 - Open (004's opening): the per-path flat-spacetime claim `σ[Λγ] = σ[γ]` —
   entropy production as a Lorentz scalar along a worldline, with `β^μ` a
   four-vector and the reversal fixed by the bath — is stated nowhere we found.
@@ -247,8 +253,34 @@ The core framing: relativity gives the cone, thermodynamics picks the half.
 
 - The thermodynamic cost of timekeeping bounds clock accuracy. Erker et al.,
   PRX 7, 031022 (2017). Experiment: Pearson et al., PRX 11, 021029 (2021).
-- Quantum clocks and time dilation. Smith & Ahmadi, Nat. Commun. 11, 5360 (2020).
-  Castro-Ruiz, Giacomini & Brukner, PNAS 114, E2303 (2017).
+- Brownian protein-cycle clocks driven by a constant force: the cost of a
+  given precision diverges as the clock's uncertainty vanishes. Barato &
+  Seifert, PRX **6**, 041053 (2016).
+- Autonomous quantum clocks: the finite-dimensional "quasi-ideal" clock, with
+  a polynomial precision advantage over stochastic clocks of the same
+  dimension. Woods, Silva & Oppenheim, Ann. Henri Poincaré **20**, 125
+  (2019); axiomatic autonomous ticking clocks, Woods, Quantum **5**, 381
+  (2021); dimensional versus entropic advantage reconciled, Pour Tak Dost &
+  Woods, arXiv:2303.10029. Reviews: Milburn, Contemp. Phys. **61**, 69
+  (2020); Marín Guzmán, Erker, Gasparinetti, Huber & Yunger Halpern,
+  Rep. Prog. Phys. **87**, 122001 (2024).
+- Bounds on tick statistics: the TUR (Barato & Seifert, PRL 114, 158101
+  (2015)) and dissipation bounds on all steady-state current fluctuations
+  (Gingrich, Horowitz, Perunov & England, PRL **116**, 120601 (2016));
+  precision versus dynamical activity (Di Terlizzi & Baiesi, J. Phys. A
+  **52**, 02LT03 (2018)); first-passage bounds on intertick intervals
+  (Garrahan, PRE **95**, 032134 (2017)).
+- Quantum clocks and time dilation: localized-wave-packet clocks see the
+  classical factor, superposed momenta a quantum correction. Smith & Ahmadi,
+  Nat. Commun. **11**, 5360 (2020). Entanglement of quantum clocks through
+  gravity: Castro Ruiz, Giacomini & Brukner, PNAS 114, E2303 (2017). Temporal
+  localisability of events near gravitating bodies: Castro-Ruiz, Giacomini,
+  Belenchia & Brukner, Nat. Commun. **11**, 2672 (2020).
+- No published work combines clock-accuracy bounds with relativistic
+  covariance (checked 2026-10-07): thermodynamic clock results are
+  non-relativistic, relativistic clock results are entropy-free. Open for 005
+  (issue #10): whether the TUR on a dissipative clock along a worldline is a
+  covariant bound on resolved proper time.
 
 ## Tooling references
 
