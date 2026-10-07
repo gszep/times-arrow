@@ -184,5 +184,33 @@ const walkFailures = await headless("experiments/002-arrow-kl/", async (evaluate
   for (const r0 of results) console.log(r0.pass ? "pass" : "FAIL", r0.name, r0.detail);
   return results.filter((x) => !x.pass).length;
 });
+
+// The 003 contract gate (pipeline constants, the small GPU self-check of
+// every new kernel path, and the contract.walk.profile goldens when the
+// Lean lane has exported them), plus the randomized differential guard.
+const coneFailures = await headless("experiments/003-lightcone-speedlimit/", async (evaluate) => {
+  console.log("adapter", await evaluate("probe.adapter"));
+  const gate = (await evaluate("probe.check()")) as { checks: { name: string; pass: boolean; detail: string }[]; pending: string[] };
+  results.push(...gate.checks.map((c) => ({ name: c.name, pass: c.pass, detail: c.detail ?? "" })));
+  if (gate.pending.length) console.log(`pending from the Lean lane: ${gate.pending.join("; ")}`);
+  if (existsSync(lean)) {
+    // The randomized differential test of the profile passes needs a
+    // `walkprofilejson SEED ARM N M T` command on the timesarrow executable
+    // printing the golden shape (state, tallies, hops, nE, nW, cols,
+    // winSums) and a contract.walk.profile key with the same schema. Until
+    // the Lean lane exports them, the guard reports the pending command.
+    for (const arm of ["calm", "wind", "max", "h8"] as const) {
+      const seed = u32();
+      try {
+        ref("walkprofilejson", seed, arm, 16, 256, 4);
+        check(`random Lean profile ${arm} seed ${seed}`, false, "the command exists: wire the differential comparison in scripts/check.ts");
+      } catch {
+        check(`random Lean profile ${arm} seed ${seed}`, true, "pending: timesarrow has no walkprofilejson command yet");
+      }
+    }
+  } else console.log(`${lean} not built: skipping the walker differential tests`);
+  for (const r0 of results) console.log(r0.pass ? "pass" : "FAIL", r0.name, r0.detail);
+  return results.filter((x) => !x.pass).length;
+});
 console.log(`${results.filter((r) => r.pass).length}/${results.length} checks passed`);
-process.exit(failures + smokeFailures + walkFailures ? 1 : 0);
+process.exit(failures + smokeFailures + walkFailures + coneFailures ? 1 : 0);

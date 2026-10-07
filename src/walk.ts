@@ -447,7 +447,12 @@ export class Walk {
     const slot = (tab: Int32Array | null, i: number) => (tab && tab[i] >= 0 ? tab[i] : -1);
     this.zeroMeasure();
     this.initProfile(seed0);
-    this.occupy(0, seed0, slot(winAt, 0), slot(dispAt, 0));
+    const occ = (i: number) => {
+      const w = slot(winAt, i);
+      const d = slot(dispAt, i);
+      if (w >= 0 || d >= 0) this.occupy(i, seed0, w, d);
+    };
+    occ(0);
     for (let t = 1; t <= this.T; t++) {
       this.step(t, seed0);
       if (t === 1 && keep.pos1) {
@@ -455,9 +460,9 @@ export class Walk {
         enc.copyBufferToBuffer(this.pos, 0, this.pos1, 0, this.pos.size);
         this.device.queue.submit([enc.finish()]);
       }
-      if (t < this.T) this.occupy(t, seed0, slot(winAt, t), slot(dispAt, t));
+      if (t < this.T) occ(t);
     }
-    this.occupy(this.T, seed0, -1, slot(dispAt, this.T));
+    if (dispAt && dispAt[this.T] >= 0) this.occupy(this.T, seed0, -1, dispAt[this.T]);
     this.checkCones(seed0);
     const parts = await read(
       this.device,

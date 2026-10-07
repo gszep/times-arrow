@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>003 · the light cone as a speed limit</title>
+    <link rel="stylesheet" href="../../src/page.css" />
+    <style>
+      canvas {
+        width: 100%;
+      }
+      #strip {
+        image-rendering: pixelated;
+        max-width: 34rem;
+      }
+      button {
+        margin: 0.2rem;
+        padding: 0.4rem 0.8rem;
+        font-size: 1rem;
+      }
+      section {
+        margin-top: 1.5rem;
+      }
+      #verdict {
+        font-size: 0.72rem;
+        white-space: pre-wrap;
+      }
+      .on {
+        background: #047857;
+        color: #fff;
+      }
+      table {
+        font-size: 0.78rem;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>003 · the light cone as a speed limit</h1>
+    <p>
+      <b>Hypothesis.</b> For a synchronous nearest-neighbour chain (speed 1 cell/step), transport is
+      bounded by two envelopes — the cone <i>t</i> and the dissipation <i>E_diss(t) = Σ√(aσ(s))</i> —
+      and the realized W₁ sits near their minimum: a localized packet spreads causally
+      (W₁ ≈ Aμt) until dissipation takes over (W₁/t → A√(tanh(ρ/2)/ρ)), with the crossover
+      t× ≈ constant/δ. The held-out arm h8 predicts the crossover and the t = 512 branch from
+      the two training arms alone, without refitting.
+      Pre-registration: <a href="https://github.com/gszep/times-arrow/blob/main/experiments/003-lightcone-speedlimit/README.md">README</a>.
+    </p>
+    <section>
+      <h2>The live packet</h2>
+      <p id="params"></p>
+      <p>
+        <button id="play">▶</button>
+        <button id="reset">reset</button>
+        <span id="live"></span>
+      </p>
+      <canvas id="strip" width="512" height="160"></canvas>
+      <p id="armtable"></p>
+    </section>
+    <section>
+      <h2>W₁(t) against the two envelopes</h2>
+      <p>
+        <button id="runEns">run the ensemble (R seeds)</button>
+        <span id="ensStatus"></span>
+      </p>
+      <canvas id="wplot" height="300"></canvas>
+      <p id="ens"></p>
+    </section>
+    <section id="measured">
+      <h2>Registered ensemble</h2>
+      <p id="mnote"></p>
+      <p id="verdict"></p>
+    </section>
+    <details>
+      <summary>Claims, assumptions, falsifiers, trust boundary</summary>
+      <div id="claims"></div>
+    </details>
+    <p id="out"></p>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
