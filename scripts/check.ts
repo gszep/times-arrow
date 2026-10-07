@@ -6,6 +6,7 @@ import { f32Bits, same } from "../src/check.ts";
 import { damageDepths } from "../experiments/001-irreversibility/run.ts";
 import { ARMS, protocolOf, sigma } from "../experiments/002-arrow-kl/score.ts";
 import { compareWalk } from "../experiments/002-arrow-kl/check.ts";
+import { compareProfile } from "../experiments/003-lightcone-speedlimit/check.ts";
 import { headless } from "./headless.ts";
 
 const lean = ".lake/build/bin/timesarrow";
@@ -194,19 +195,19 @@ const coneFailures = await headless("experiments/003-lightcone-speedlimit/", asy
   results.push(...gate.checks.map((c) => ({ name: c.name, pass: c.pass, detail: c.detail ?? "" })));
   if (gate.pending.length) console.log(`pending from the Lean lane: ${gate.pending.join("; ")}`);
   if (existsSync(lean)) {
-    // The randomized differential test of the profile passes needs a
-    // `walkprofilejson SEED ARM N M T` command on the timesarrow executable
-    // printing the golden shape (state, tallies, hops, nE, nW, cols,
-    // winSums) and a contract.walk.profile key with the same schema. Until
-    // the Lean lane exports them, the guard reports the pending command.
-    for (const arm of ["calm", "wind", "max", "h8"] as const) {
+    // The randomized differential test of the profile passes against
+    // `timesarrow walkprofilejson`, which prints the same vector
+    // (state, tallies, hops, nE, nW, cols, window bounds and sums).
+    for (const [arm, n, m, t] of [
+      ["calm", 16, 256, 4], ["wind", 16, 256, 4], ["max", 16, 256, 4],
+      ["h8", 16, 256, 4], ["windXOR", 16, 256, 4], ["wind", 4, 1024, 32],
+    ] as const) {
       const seed = u32();
-      try {
-        ref("walkprofilejson", seed, arm, 16, 256, 4);
-        check(`random Lean profile ${arm} seed ${seed}`, false, "the command exists: wire the differential comparison in scripts/check.ts");
-      } catch {
-        check(`random Lean profile ${arm} seed ${seed}`, true, "pending: timesarrow has no walkprofilejson command yet");
-      }
+      const g = JSON.parse(ref("walkprofilejson", seed, arm, n, m, t));
+      const got = await evaluate(`probe.profile(${JSON.stringify({ seed, arm, n, m, t })})`);
+      results.push(
+        ...compareProfile(g, got).map((c) => ({ name: `random Lean ${c.name}`, pass: c.pass, detail: c.detail ?? "" })),
+      );
     }
   } else console.log(`${lean} not built: skipping the walker differential tests`);
   for (const r0 of results) console.log(r0.pass ? "pass" : "FAIL", r0.name, r0.detail);

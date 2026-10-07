@@ -9,6 +9,9 @@ the lattice as one hex digit per site, `hppinv <seed> <n> <t>` prints the
 state after undoing `t` steps with the inverse map, `hppecho <seed> <n>
 <t>` prints the full Loschmidt-echo result, which must equal the initial
 state, and `hppinit <packed|null> <seed> <n>` prints a 001 initial state.
+`walkjson <seed> <arm> <n> <m> <t>` prints one 002 trajectory golden and
+`walkprofilejson <seed> <arm> <n> <m> <t>` the whole 003 profile vector
+(trajectory, per-time occupancies and window sums).
 -/
 
 open Lean TimesArrow Philox LatticeGas TimesArrow.Walker
@@ -25,7 +28,8 @@ def hexState (a : Array UInt32) : String :=
 
 /-! ## The walker model of 002 -/
 
-/-- The schedule of an arm name: hop `s ∈ {1..T}` uses `ws s`. -/
+/-- The schedule of an arm name: hop `s ∈ {1..T}` uses `ws s`. The 003
+arms are the three-weight profiles; windXOR swaps E ↔ W at step 1 only. -/
 def armSched (arm : String) : Option (ℕ → Dir → ℕ) :=
   match arm with
   | "driven" => some (fun _ => drivenW)
@@ -33,6 +37,14 @@ def armSched (arm : String) : Option (ℕ → Dir → ℕ) :=
   | "null" => some (fun _ => nullW)
   | "ramp" => some rampW
   | "ramprev" => some rampRevW
+  | "calm" => some (fun _ => calmW)
+  | "w5" => some (fun _ => w5W)
+  | "w4" => some (fun _ => w4W)
+  | "wind" => some (fun _ => windW)
+  | "c2" => some (fun _ => c2W)
+  | "max" => some (fun _ => maxW)
+  | "h8" => some (fun _ => h8W)
+  | "windXOR" => some windXorW
   | _ => none
 
 /-- The schedule of an arm name, as an `IO` action that fails on unknown
@@ -40,7 +52,7 @@ arms. -/
 def armSchedIO (arm : String) : IO (ℕ → Dir → ℕ) :=
   match armSched arm with
   | some f => pure f
-  | none => throw (IO.userError "arm must be driven, reversed, null, ramp or ramprev")
+  | none => throw (IO.userError "arm must be a 002 arm (driven, reversed, null, ramp, ramprev) or a 003 arm (calm, w5, w4, wind, c2, max, h8, windXOR)")
 
 /-- Render a float as a decimal string with up to 17 significant digits —
 the f64 round-trip bound; Lean's own float printing rounds to 6. -/
@@ -167,6 +179,68 @@ def cornerJson (_ : Unit) : Json :=
     ("L", region inL (toJson [toJson [0, 0], toJson [1, 0], toJson [0, 1]])),
     ("index", toJson "count sequence c = ∑_t c_t·5^t, c_t = walkers in the region at time t; times 0..k-1")]
 
+/-! ## The 003 profile goldens -/
+
+/-- Every 003 profile field of one run as JSON pairs, from a single
+bit-exact pass of the registered profile protocol: the trajectory vector
+(`state` one hex pair `x`,`y` per walker — so `n ≤ 16` — plus tallies,
+hops and the path edge totals), the per-time column occupancy `cols`, and
+the registered window `bounds` with their pooled `sums`. `walkprofilejson`
+prints all of them; the contract picks per family. -/
+def profileFields (seed : UInt32) (arm : String) (n m t : ℕ) :
+    Option (List (String × Json)) := do
+  let some ws := armSched arm | none
+  let sh := n.log2
+  guard (2 ^ sh == n ∧ n ≤ 16)
+  let some wins := windowsOf t | none
+  let (pos, counts, cols) := profileRun sh ws seed m t
+  return [
+    ("seed", toJson seed), ("arm", toJson arm),
+    ("n", toJson n), ("m", toJson m), ("t", toJson t),
+    ("state", toJson (String.ofList (pos.toList.flatMap fun p =>
+      [Nat.digitChar p.1.val, Nat.digitChar p.2.val]))),
+    ("tallies", toJson (counts.map fun c => (c.1 : Int) - c.2)),
+    ("hops", toJson (counts.map fun c => c.1 + c.2)),
+    ("nE", toJson (counts.foldl (fun a c => a + c.1) 0)),
+    ("nW", toJson (counts.foldl (fun a c => a + c.2) 0)),
+    ("cols", toJson cols),
+    ("bounds", toJson (wins.map fun b => toJson [b.1, b.2])),
+    ("sums", toJson (wins.map fun b => winRow cols b.1 b.2))]
+
+/-- The object of `fields` restricted to `keys`. -/
+def pick (fields : List (String × Json)) (keys : List String) : Json :=
+  Json.mkObj (fields.filter fun kv => keys.contains kv.1)
+
+/-- The `profile` section of the walk contract: the 003 profile goldens
+(trajectories and edge totals, per-time column occupancies, window-pooled
+sums, and the rational population circle-W₁ values at the registered
+size), exactly the schema the 003 gate and the sweep read. -/
+def profileContract (_ : Unit) : Json :=
+  let trajGoldens : List (Nat × String × Nat × Nat × Nat) :=
+    [(1, "calm", 16, 256, 4), (1, "wind", 16, 256, 4), (1, "max", 16, 256, 4),
+     (1, "h8", 16, 256, 4), (2, "windXOR", 16, 256, 4),
+     (1, "c2", 16, 256, 2), (1, "w5", 16, 256, 2), (1, "w4", 16, 256, 2),
+     (2, "wind", 16, 256, 32), (1, "wind", 4, 1024, 4)]
+  let occGoldens : List (Nat × String × Nat × Nat × Nat) :=
+    [(1, "calm", 16, 256, 4), (1, "wind", 16, 256, 8), (2, "max", 16, 256, 2),
+     (1, "wind", 4, 1024, 4)]
+  let winGoldens : List (Nat × String × Nat × Nat × Nat) :=
+    [(1, "wind", 16, 256, 32), (2, "calm", 4, 1024, 32)]
+  let vec (s : ℕ) (a : String) (n m t : ℕ) : List (String × Json) :=
+    (profileFields s.toUInt32 a n m t).get!
+  Json.mkObj [
+    ("golden", toJson (trajGoldens.map fun (s, a, n, m, t) =>
+      pick (vec s a n m t) ["seed", "arm", "n", "m", "t", "state", "tallies", "hops", "nE", "nW"])),
+    ("occupancy", toJson (occGoldens.map fun (s, a, n, m, t) =>
+      pick (vec s a n m t) ["seed", "arm", "n", "m", "t", "cols"])),
+    ("windows", toJson (winGoldens.map fun (s, a, n, m, t) =>
+      pick (vec s a n m t) ["seed", "arm", "n", "m", "t", "bounds", "sums"])),
+    ("circleW1", toJson ((List.range 3).map fun i =>
+      let t := i + 1
+      let r := profileW1Q calmW 1024 65536 t
+      Json.mkObj [("arm", toJson "calm"), ("t", toJson t),
+        ("num", toJson (toString r.num)), ("den", toJson (toString r.den))]))]
+
 /-- The `walk` section of the contract: the arms, the draw recipe, the
 trajectory goldens, the exact-DP σ histograms and the K5 corner goldens. -/
 def walkContract (_ : Unit) : Json :=
@@ -226,7 +300,8 @@ def walkContract (_ : Unit) : Json :=
         ("1", dpExactJson nullW 16 1), ("4", dpExactJson nullW 16 4)]),
       ("ramp", dpSchedJson rampW 16 16),
       ("ramprev", dpSchedJson rampRevW 16 16)]),
-    ("corner", cornerJson ())]
+    ("corner", cornerJson ()),
+    ("profile", profileContract ())]
 
 /-- The source text of a theorem's statement, from its name to `:=`. -/
 def statement (mod n : Name) : MetaM String := do
@@ -350,5 +425,9 @@ def main : List String → IO Unit
     let some g := walkGolden seed.toNat!.toUInt32 arm n.toNat! m.toNat! t.toNat!
       | throw (IO.userError "invalid walker arm or lattice")
     IO.println (unmarkFloats g.compress)
+  | ["walkprofilejson", seed, arm, n, m, t] => do
+    let some fields := profileFields seed.toNat!.toUInt32 arm n.toNat! m.toNat! t.toNat!
+      | throw (IO.userError "invalid profile arm, lattice (a power of two ≤ 16) or horizon")
+    IO.println (Json.mkObj fields).compress
   | _ => throw (IO.userError
-      "usage: timesarrow contract | rand SEED STEP SITE | hpp SEED N T | hppinv SEED N T | hppecho SEED N T | hppinit MODE SEED N | walk SEED ARM N M T | walktally SEED ARM M T")
+      "usage: timesarrow contract | rand SEED STEP SITE | hpp SEED N T | hppinv SEED N T | hppecho SEED N T | hppinit MODE SEED N | walk SEED ARM N M T | walktally SEED ARM M T | walkprofilejson SEED ARM N M T")

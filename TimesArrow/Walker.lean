@@ -1060,11 +1060,15 @@ def stepDirs (ws : ℕ → Dir → ℕ) (seed : UInt32) (M s : ℕ) : Array Dir 
   Array.range M |>.map fun m =>
     dirOf (ws s) ((rand seed s.toUInt32 m.toUInt32).x0 >>> 24).toNat
 
-/-- The east and west hop counts of all `M` walkers at step `s`. -/
-def stepTally (ws : ℕ → Dir → ℕ) (seed : UInt32) (M s : ℕ) : ℕ × ℕ :=
-  (stepDirs ws seed M s).foldl (fun acc d =>
+/-- The east and west counts of a direction array. -/
+def dirTally (dirs : Array Dir) : ℕ × ℕ :=
+  dirs.foldl (fun acc d =>
     if d = 0 then (acc.1 + 1, acc.2) else if d = 1 then (acc.1, acc.2 + 1) else acc)
     (0, 0)
+
+/-- The east and west hop counts of all `M` walkers at step `s`. -/
+def stepTally (ws : ℕ → Dir → ℕ) (seed : UInt32) (M s : ℕ) : ℕ × ℕ :=
+  dirTally (stepDirs ws seed M s)
 
 /-- The aggregate east and west hop counts of a whole `T`-step path. -/
 def pathTally (ws : ℕ → Dir → ℕ) (seed : UInt32) (M T : ℕ) : ℕ × ℕ :=

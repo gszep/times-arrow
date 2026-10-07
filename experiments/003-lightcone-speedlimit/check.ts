@@ -178,6 +178,61 @@ async function contractGoldens(device: GPUDevice, profile: any): Promise<Check[]
   return checks;
 }
 
+/** The profile differential vector of one run on the GPU — exactly what
+ * `timesarrow walkprofilejson` prints: the trajectory fields (state,
+ * tallies, hops, nE, nW), the per-time column occupancy and the
+ * registered window bounds with their pooled sums. One edges pass plus
+ * one profile batch of the same seed, the same production paths the
+ * goldens check. */
+export async function profileVector(device: GPUDevice, g: { seed: number; arm: ArmName; n: number; m: number; t: number }) {
+  const T = Math.max(1, g.t);
+  const windows = windowsOf(T);
+  const watch = watchDevice(device);
+  const walk = new Walk(device, { n: g.n, m: g.m, T, batch: 1, edges: true, win: windows.length, grid: T + 1 });
+  try {
+    walk.setProtocol(protocolOf(g.arm, T));
+    walk.initProfile(g.seed);
+    for (let t = 1; t <= T; t++) walk.step(t, g.seed, true);
+    const snap = await watch.race(walk.snapshot());
+    if (!snap.edges) throw new Error("edge counts were not allocated");
+    const layout: ProfileLayout = { winAt: new Int32Array(T), dispAt: new Int32Array(T + 1) };
+    windows.forEach(([b, e], k) => {
+      for (let t = b; t < e; t++) layout.winAt[t] = k;
+    });
+    for (let t = 0; t <= T; t++) layout.dispAt[t] = t;
+    const run = await watch.race(walk.profileBatch(g.seed, layout, { win: true, grid: true }));
+    return {
+      state: Array.from(snap.pos, (s) => `${decodeX(s).toString(16)}${decodeY(s).toString(16)}`).join(""),
+      tallies: Array.from(snap.tallies).slice(0, g.t),
+      hops: Array.from(snap.hops).slice(0, g.t),
+      nE: snap.edges.reduce((a, e, i) => a + (i % 4 === 0 ? e : 0), 0),
+      nW: snap.edges.reduce((a, e, i) => a + (i % 4 === 1 ? e : 0), 0),
+      cols: Array.from({ length: T + 1 }, (_, t) => Array.from(run.dhist!.subarray(t * g.n, (t + 1) * g.n))),
+      winBounds: windows,
+      winSums: Array.from({ length: windows.length }, (_, k) =>
+        Array.from(run.win!.subarray(k * g.n, (k + 1) * g.n))),
+    };
+  } finally {
+    walk.destroy();
+  }
+}
+
+/** Compare a `walkprofilejson` reference against the GPU vector, field by
+ * field — every field integer, so every comparison is exact. */
+export function compareProfile(g: any, got: Awaited<ReturnType<typeof profileVector>>): Check[] {
+  const name = `profile ${g.arm} seed ${g.seed}, n ${g.n}, m ${g.m}, t ${g.t}`;
+  const eq = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+  return [
+    { name: `${name}: trajectory`, pass: got.state === g.state, detail: "" },
+    { name: `${name}: tallies`, pass: eq(got.tallies, g.tallies), detail: "" },
+    { name: `${name}: hops`, pass: eq(got.hops, g.hops), detail: "" },
+    { name: `${name}: edge totals`, pass: got.nE === g.nE && got.nW === g.nW, detail: "" },
+    { name: `${name}: columns`, pass: eq(got.cols, g.cols), detail: "" },
+    { name: `${name}: window bounds`, pass: eq(got.winBounds, g.bounds), detail: "" },
+    { name: `${name}: window sums`, pass: eq(got.winSums, g.sums), detail: "" },
+  ];
+}
+
 /** The full 003 contract gate. */
 export async function checkCone(device: GPUDevice): Promise<Gate> {
   const checks: Check[] = [

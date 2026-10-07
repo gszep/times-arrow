@@ -8,7 +8,7 @@ import {
 } from "./score.ts";
 import type { ArmName, Results } from "./score.ts";
 import { runArm, runPair } from "./run.ts";
-import { checkCone } from "./check.ts";
+import { checkCone, profileVector } from "./check.ts";
 
 const $ = (id: string) => document.getElementById(id)!;
 const params = new URLSearchParams(location.search);
@@ -288,6 +288,7 @@ try {
       adapter,
       config,
       check: () => checkCone(device),
+      profile: (g: { seed: number; arm: ArmName; n: number; m: number; t: number }) => profileVector(device, g),
       run: (cfg: { arm: ArmName; R: number; blocks?: number; n?: number; m?: number; T?: number }) => runArm(device, cfg),
       pair: (cfg: { R: number; blocks?: number; n?: number; m?: number; T?: number }) => runPair(device, cfg),
       law: () => law,

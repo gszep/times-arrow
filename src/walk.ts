@@ -498,7 +498,7 @@ export class Walk {
     return {
       pos,
       tallies: new Int32Array(acc.buffer, acc.byteOffset, this.batch * this.T),
-      hops: acc.subarray(acc.byteOffset / 4 + this.batch * this.T, acc.byteOffset / 4 + 2 * this.batch * this.T),
+      hops: acc.subarray(this.batch * this.T, 2 * this.batch * this.T),
       edges: this.hasEdges ? edges : null,
     };
   }

@@ -3,6 +3,7 @@ import TimesArrow.LatticeGas
 import TimesArrow.Selection
 import TimesArrow.Reversible
 import TimesArrow.Walker
+import TimesArrow.WalkerProfile
 import TimesArrow.Markov.KlDiv
 import TimesArrow.Markov.Chain
 import TimesArrow.Markov.EntropyProduction
