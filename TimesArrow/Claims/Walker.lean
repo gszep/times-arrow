@@ -85,4 +85,13 @@ theorem driven_step_entropy_production_pos :
     show (((16 : ℕ) : ℝ) * (1 / 8) * Real.log 3) = 2 * Real.log 3 from by norm_num]
   exact mul_pos (by norm_num) (Real.log_pos (by norm_num))
 
+/-- **The null model produces no entropy pathwise** (K2): the null product
+chain is reversible, so every trajectory is exactly as probable as its time
+reversal and `σ ≡ 0` — the undriven state orients nothing. -/
+theorem null_sigma_zero (n : ℕ) [NeZero n] (M T : ℕ)
+    (ω : Fin (T + 1) → Fin M → Site n) :
+    TimesArrow.Markov.pathEntropyProduction (uniformConfig n M)
+        (prodK n M nullW nullW_sum) T ω = 0 :=
+  null_path_sigma_zero n M T ω
+
 end TimesArrow.Walker

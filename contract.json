@@ -6028,6 +6028,13 @@
    "axioms": ["propext", "Classical.choice", "Quot.sound"]},
   {"status": "proved",
    "statement":
+   "null_sigma_zero (n : ℕ) [NeZero n] (M T : ℕ) (ω : Fin (T + 1) → Fin M → Site n) : TimesArrow.Markov.pathEntropyProduction (uniformConfig n M) (prodK n M nullW nullW_sum) T ω = 0",
+   "name": "TimesArrow.Walker.null_sigma_zero",
+   "doc":
+   "**The null model produces no entropy pathwise** (K2): the null product\nchain is reversible, so every trajectory is exactly as probable as its time\nreversal and `σ ≡ 0` — the undriven state orients nothing.",
+   "axioms": ["propext", "Classical.choice", "Quot.sound"]},
+  {"status": "proved",
+   "statement":
    "path_sigma_eq_hop_tally (n : ℕ) [NeZero n] (h3 : 3 ≤ n) (M T : ℕ) (ω : Fin (T + 1) → Fin M → Site n) (hω : TimesArrow.Markov.pathPMF (uniformConfig n M) (prodK n M drivenW drivenW_sum) T ω ≠ 0) : TimesArrow.Markov.pathEntropyProduction (uniformConfig n M) (prodK n M drivenW drivenW_sum) T ω = (netHops n M T ω : ℝ) * Real.log 3",
    "name": "TimesArrow.Walker.path_sigma_eq_hop_tally",
    "doc":

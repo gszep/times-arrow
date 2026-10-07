@@ -57,6 +57,13 @@ theorem driven_step_entropy_production_pos :
         (prodK 8 16 drivenW drivenW_sum) := by
   sorry
 
+
+theorem null_sigma_zero (n : ℕ) [NeZero n] (M T : ℕ)
+    (ω : Fin (T + 1) → Fin M → Site n) :
+    TimesArrow.Markov.pathEntropyProduction (uniformConfig n M)
+        (prodK n M nullW nullW_sum) T ω = 0 := by
+  sorry
+
 end TimesArrow.Walker
 
 namespace TimesArrow.Markov

@@ -987,6 +987,36 @@ theorem stepEntropyProduction_prodK (n : ℕ) [NeZero n] (h3 : 3 ≤ n) (M : ℕ
   rw [← h1, hmean, Finset.sum_congr rfl fun ω _ => (hper ω).symm, ← Finset.sum_mul,
     hE]
 
+/-- The null product chain is symmetric in its configurations. -/
+theorem prodK_symm_null (n : ℕ) [NeZero n] (M : ℕ) (i j : Fin M → Site n) :
+    prodK n M nullW nullW_sum i j = prodK n M nullW nullW_sum j i := by
+  simp only [prodK_apply]
+  exact Finset.prod_congr rfl fun m _ =>
+    walkerK_symm n nullW nullW_sum (by decide +kernel) (i m) (j m)
+
+/-- The null product chain is in detailed balance with the uniform law. -/
+theorem prodK_null_reversible (n : ℕ) [NeZero n] (M : ℕ) :
+    TimesArrow.Markov.IsReversible (prodK n M nullW nullW_sum) (uniformConfig n M) := by
+  intro i j
+  rw [uniformConfig_const n M i j, prodK_symm_null n M i j]
+
+/-- **The null model produces no entropy pathwise** (K2): the null product
+chain is reversible, so every trajectory is exactly as probable as its time
+reversal and `σ ≡ 0` — the undriven state orients nothing. -/
+theorem null_path_sigma_zero (n : ℕ) [NeZero n] (M T : ℕ)
+    (ω : Fin (T + 1) → Fin M → Site n) :
+    TimesArrow.Markov.pathEntropyProduction (uniformConfig n M)
+        (prodK n M nullW nullW_sum) T ω = 0 := by
+  have hrev := TimesArrow.Markov.pathPMF_reversePath (prodK n M nullW nullW_sum)
+    (uniformConfig n M) (prodK_null_reversible n M) T ω
+  unfold TimesArrow.Markov.pathEntropyProduction
+  rw [hrev]
+  by_cases h0 : TimesArrow.Markov.pathPMF (uniformConfig n M)
+      (prodK n M nullW nullW_sum) T ω = 0
+  · rw [h0, ENNReal.toReal_zero, zero_div, Real.log_zero]
+  · rw [div_self (ENNReal.toReal_ne_zero.mpr ⟨h0, PMF.apply_ne_top _ _⟩),
+      Real.log_one]
+
 /-! ## The executable
 
 Bit-exact Philox trajectories. The counter is `(walker, step, 0, 0)` with
