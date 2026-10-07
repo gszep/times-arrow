@@ -24,20 +24,28 @@ const url = (patch: Record<string, string | number>) =>
   `?${new URLSearchParams({ ...Object.fromEntries(params), ...Object.fromEntries(Object.entries(patch).map(([k, v]) => [k, String(v)])) })}`;
 const link = (text: string, patch: Record<string, string | number>) => `<a href="${url(patch)}">${text}</a>`;
 
-// The committed compact results, if the registered ensemble has run.
-const committed = Object.values(import.meta.glob("./results/*.json", { import: "default", eager: true })) as Results[];
-const ensemble = committed.find((r) => !r.smoke);
-if (ensemble) {
-  const s = score(ensemble, "results (committed compact form)");
-  $("mnote").textContent =
-    `The registered ensemble — 8 arms at n = ${ensemble.n}, m = ${ensemble.m}, R = ${ensemble.R}, T = ${ensemble.T}, ` +
-    `seeds 1…${ensemble.R} — run headless on ${ensemble.host} at commit ${ensemble.commit}. Verdict by the committed scorer.`;
-  $("verdict").textContent = renderVerdict(s);
-} else {
-  $("mnote").textContent =
-    "The registered ensemble (n = 1024, m = 65536, R = 256, T = 512) has not run — this page shows the " +
-    "live simulation and the registered predictions only. " +
-    link("load the registered configuration for the live view", { n: REG.n, m: REG.m, T: REG.T, R: 16 });
+// The committed compact results, if the registered ensemble has run. The
+// scorer's own `<results>.score.json` outputs are excluded — they are
+// verdicts, not data.
+const committed = Object.values(
+  import.meta.glob(["./results/*.json", "!./results/*.score.json"], { import: "default", eager: true }),
+) as Results[];
+try {
+  const ensemble = committed.find((r) => !r.smoke);
+  if (ensemble) {
+    const s = score(ensemble, "results (committed compact form)");
+    $("mnote").textContent =
+      `The registered ensemble — 8 arms at n = ${ensemble.n}, m = ${ensemble.m}, R = ${ensemble.R}, T = ${ensemble.T}, ` +
+      `seeds 1…${ensemble.R} — run headless on ${ensemble.host} at commit ${ensemble.commit}. Verdict by the committed scorer.`;
+    $("verdict").textContent = renderVerdict(s);
+  } else {
+    $("mnote").textContent =
+      "The registered ensemble (n = 1024, m = 65536, R = 256, T = 512) has not run — this page shows the " +
+      "live simulation and the registered predictions only. " +
+      link("load the registered configuration for the live view", { n: REG.n, m: REG.m, T: REG.T, R: 16 });
+  }
+} catch (e) {
+  $("mnote").textContent = `the committed results could not be scored: ${String(e instanceof Error ? e.message : e)}`;
 }
 
 type Series = { points: [number, number][]; color: string; dash?: boolean; label?: string };
@@ -217,6 +225,9 @@ try {
       `W̄₁(${T}) = ${meas[meas.length - 1].toFixed(4)} vs population ${law.w1Grid[law.w1Grid.length - 1].toFixed(4)} · D(${T}) = ${law.DGrid[law.DGrid.length - 1].toFixed(3)} (${law.DGrid[law.DGrid.length - 1] === T ? "cone" : "dissipation"} bound)`,
       `η̂(${T}) = ${eta[eta.length - 1].toFixed(5)} · η̂_lin(${T}) = ${etaLin[etaLin.length - 1].toFixed(5)}`,
       `t̂× = ${r.tCross === null || r.tCross === undefined ? "no crossing" : r.tCross.toFixed(5)} · Ê(${windows[windows.length - 1][1]}) = ${r.Ehat![r.Ehat!.length - 1].toFixed(3)} · σ̂₁ = ${sigmaHat[1]?.toFixed(6) ?? "—"}`,
+      ...(r.zeroSites?.length
+        ? [`pooled zero occupancy at windows ${[...new Set(r.zeroSites.map(([k]) => k))].join(", ")} — a statistical failure under the registered law (probability ≤ exp(−256) at the registered R·m); σ̂ and Ê past the first zero are not evaluated`]
+        : []),
     ].join("<br>");
   };
 

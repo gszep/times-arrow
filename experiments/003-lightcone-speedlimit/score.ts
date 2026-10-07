@@ -698,7 +698,7 @@ export function score(results: Results, source?: string) {
 export function renderVerdict(s: Score): string {
   const v = (x: Verdict) => x;
   const line = (id: string, r: Row | { verdict: Verdict; detail: string } | null) =>
-    `${(id + " ".repeat(14)).slice(0, 14)} ${r ? `${v(r.verdict)}  ${r.detail}` : "n/a: arm not present"}`;
+    `${(id + " ".repeat(14)).slice(0, 14)} ${r ? `${v(r.verdict)}  ${r.detail}` : `n/a${s.registered ? ": arm not present" : ": needs the registered configuration"}`}`;
   const lines = [
     `003 verdict — ${s.source ?? "(results)"} · commit ${s.commit ?? "?"}${s.dirty ? " · DIRTY" : " · clean"} · ${s.registered ? "registered configuration" : "NOT the registered configuration: statistical verdicts are n/a"} · FWER ${s.fwer.sum} ≤ 0.05`,
     line("M1", { verdict: s.M1.verdict, detail: s.M1.detail }),

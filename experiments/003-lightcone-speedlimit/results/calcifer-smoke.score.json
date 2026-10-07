@@ -1,0 +1,378 @@
+{
+ "source": "experiments/003-lightcone-speedlimit/results/calcifer-smoke.json",
+ "commit": "fe677c0b3443212876abd72d279e0f3f84c70f62",
+ "dirty": false,
+ "registered": false,
+ "note": "n/a: not the registered configuration (n = 1024, m = 65536, R = 256, T = 512, 8 arms)",
+ "M1": {
+  "name": "M1",
+  "pass": false,
+  "verdict": "pending",
+  "detail": "gate passed; pending contract keys: contract.walk.profile (golden, occupancy, windows, circleW1 — the schema is documented in experiments/003-lightcone-speedlimit/check.ts)"
+ },
+ "C1": {
+  "rows": [
+   {
+    "arm": "calm",
+    "cone": true,
+    "y": true,
+    "w1": true
+   },
+   {
+    "arm": "w5",
+    "cone": true,
+    "y": true,
+    "w1": true
+   },
+   {
+    "arm": "w4",
+    "cone": true,
+    "y": true,
+    "w1": true
+   },
+   {
+    "arm": "c2",
+    "cone": true,
+    "y": true,
+    "w1": true
+   },
+   {
+    "arm": "max",
+    "cone": true,
+    "y": true,
+    "w1": true
+   },
+   {
+    "arm": "h8",
+    "cone": true,
+    "y": true,
+    "w1": true
+   },
+   {
+    "arm": "wind",
+    "cone": true,
+    "y": true,
+    "w1": true
+   },
+   {
+    "arm": "windXOR",
+    "cone": true,
+    "y": true,
+    "w1": true
+   }
+  ],
+  "maxCone": 64,
+  "pass": true,
+  "verdict": "verified",
+  "detail": "max displacement 64 ≤ T on 8 arms; y ≡ 0; Ŵ ≤ t on the grid"
+ },
+ "C2": {
+  "worst": {
+   "arm": "calm",
+   "slack": 0
+  },
+  "pass": true,
+  "verdict": "verified"
+ },
+ "pipeline": [
+  {
+   "name": "rational calm W₁ at t = 1",
+   "pass": true,
+   "verdict": "verified",
+   "detail": "0.49219 vs 0.4921875 (±1e-14)"
+  },
+  {
+   "name": "calm distance witness at t = 1",
+   "pass": true,
+   "verdict": "verified",
+   "detail": "0.49219 vs 0.4921875 (±1e-14)"
+  },
+  {
+   "name": "rational calm W₁ at t = 2",
+   "pass": true,
+   "verdict": "verified",
+   "detail": "0.73828 vs 0.73828125 (±1e-14)"
+  },
+  {
+   "name": "calm distance witness at t = 2",
+   "pass": true,
+   "verdict": "verified",
+   "detail": "0.73828 vs 0.73828125 (±1e-14)"
+  },
+  {
+   "name": "rational calm W₁ at t = 3",
+   "pass": true,
+   "verdict": "verified",
+   "detail": "0.92285 vs 0.9228515625 (±1e-14)"
+  },
+  {
+   "name": "calm distance witness at t = 3",
+   "pass": true,
+   "verdict": "verified",
+   "detail": "0.92285 vs 0.9228515625 (±1e-14)"
+  },
+  {
+   "name": "calm E_diss(512) equals the frozen denominator",
+   "pass": true,
+   "verdict": "verified",
+   "detail": "23.751 vs 23.750753735433943 (±1e-10)"
+  },
+  {
+   "name": "c₅₁₂ = W₁(512)/E_diss(512)",
+   "pass": true,
+   "verdict": "verified",
+   "detail": "0.52898 vs 0.5289774930939531 (±1e-12)"
+  },
+  {
+   "name": "w5 dissipative branch b_d = A√(tanh(ρ/2)/ρ)",
+   "pass": true,
+   "verdict": "verified",
+   "detail": "0.52812 vs 0.52812328 (±1e-8)"
+  },
+  {
+   "name": "w4 dissipative branch b_d = A√(tanh(ρ/2)/ρ)",
+   "pass": true,
+   "verdict": "verified",
+   "detail": "0.51434 vs 0.51433595 (±1e-8)"
+  },
+  {
+   "name": "wind dissipative branch b_d = A√(tanh(ρ/2)/ρ)",
+   "pass": true,
+   "verdict": "verified",
+   "detail": "0.49762 vs 0.49762074 (±1e-8)"
+  },
+  {
+   "name": "c2 causal branch b_c = Aμ",
+   "pass": true,
+   "verdict": "verified",
+   "detail": "0.47681 vs 0.476806640625 (±1e-8)"
+  },
+  {
+   "name": "max causal branch b_c = Aμ",
+   "pass": true,
+   "verdict": "verified",
+   "detail": "0.97668 vs 0.97668457 (±1e-8)"
+  },
+  {
+   "name": "h8 dissipative branch b_d = A√(tanh(ρ/2)/ρ)",
+   "pass": true,
+   "verdict": "verified",
+   "detail": "0.55955 vs 0.55954658 (±1e-8)"
+  },
+  {
+   "name": "P centre: h8 σ̂ at time 1",
+   "pass": true,
+   "verdict": "verified",
+   "detail": "3.4402 vs 3.4401988985 (±1e-9)"
+  },
+  {
+   "name": "P centre: h8 σ̂ at time 2",
+   "pass": true,
+   "verdict": "verified",
+   "detail": "2.2426 vs 2.2425826092 (±1e-9)"
+  },
+  {
+   "name": "P centre: h8 Ê(24)",
+   "pass": true,
+   "verdict": "verified",
+   "detail": "21.066 vs 21.066146065 (±1e-9)"
+  },
+  {
+   "name": "C_fit as written in the lock",
+   "pass": true,
+   "verdict": "verified",
+   "detail": "2.4401 vs 2.4401213499 (±1e-9)"
+  },
+  {
+   "name": "the held-out t_h = C_fit/δ_h8",
+   "pass": true,
+   "verdict": "verified",
+   "detail": "10.594 vs 10.5938460336 (±1e-9)"
+  },
+  {
+   "name": "w5 training crossing",
+   "pass": true,
+   "verdict": "verified",
+   "detail": "17.167 vs 17.16748 (±0.0001)"
+  },
+  {
+   "name": "w4 training crossing",
+   "pass": true,
+   "verdict": "verified",
+   "detail": "23.935 vs 23.93471 (±0.0001)"
+  },
+  {
+   "name": "wind population crossing",
+   "pass": true,
+   "verdict": "verified",
+   "detail": "44.737 vs 44.73715 (±0.0001)"
+  },
+  {
+   "name": "h8 population crossing",
+   "pass": true,
+   "verdict": "verified",
+   "detail": "10.269 vs 10.2694847413 (±1e-9)"
+  },
+  {
+   "name": "the Bonferroni FWER",
+   "pass": true,
+   "verdict": "verified",
+   "detail": "0.017494 vs 0.01749428125 (±0)"
+  }
+ ],
+ "C3": null,
+ "C4": null,
+ "C5": [
+  {
+   "arm": "w5",
+   "verdict": "n/a",
+   "pass": true,
+   "detail": "n/a: not the registered configuration (n = 1024, m = 65536, R = 256, T = 512, 8 arms)"
+  },
+  {
+   "arm": "w4",
+   "verdict": "n/a",
+   "pass": true,
+   "detail": "n/a: not the registered configuration (n = 1024, m = 65536, R = 256, T = 512, 8 arms)"
+  },
+  {
+   "arm": "wind",
+   "verdict": "n/a",
+   "pass": true,
+   "detail": "n/a: not the registered configuration (n = 1024, m = 65536, R = 256, T = 512, 8 arms)"
+  },
+  {
+   "arm": "c2",
+   "verdict": "n/a",
+   "pass": true,
+   "detail": "n/a: not the registered configuration (n = 1024, m = 65536, R = 256, T = 512, 8 arms)"
+  },
+  {
+   "arm": "max",
+   "verdict": "n/a",
+   "pass": true,
+   "detail": "n/a: not the registered configuration (n = 1024, m = 65536, R = 256, T = 512, 8 arms)"
+  },
+  {
+   "arm": "h8",
+   "verdict": "n/a",
+   "pass": true,
+   "detail": "n/a: not the registered configuration (n = 1024, m = 65536, R = 256, T = 512, 8 arms)"
+  }
+ ],
+ "X1": {
+  "identityOk": true,
+  "damaged": 125614,
+  "countPass": false,
+  "pass": false,
+  "verdict": "n/a",
+  "detail": "identity holds bit for bit; damaged 125614 vs 7995392 ± 8429 (not the registered configuration)"
+ },
+ "T1": [
+  {
+   "name": "calm tally",
+   "mean": 0,
+   "half": 270009,
+   "total": -865,
+   "dev": -865,
+   "pass": true,
+   "verdict": "n/a",
+   "detail": "calm tally: -865 vs 0 ± 270009"
+  },
+  {
+   "name": "w5 tally",
+   "mean": 3959422976,
+   "half": 204757,
+   "total": 7730643,
+   "dev": -3951692333,
+   "pass": false,
+   "verdict": "n/a",
+   "detail": "w5 tally: 7730643 vs 3959422976 ± 204757"
+  },
+  {
+   "name": "w4 tally",
+   "mean": 4026531840,
+   "half": 202155,
+   "total": 7861863,
+   "dev": -4018669977,
+   "pass": false,
+   "verdict": "n/a",
+   "detail": "w4 tally: 7861863 vs 4026531840 ± 202155"
+  },
+  {
+   "name": "wind tally",
+   "mean": 4093640704,
+   "half": 199474,
+   "total": 7993669,
+   "dev": -4085647035,
+   "pass": false,
+   "verdict": "n/a",
+   "detail": "wind tally: 7993669 vs 4093640704 ± 199474"
+  },
+  {
+   "name": "c2 tally",
+   "mean": 4160749568,
+   "half": 196711,
+   "total": 8123691,
+   "dev": -4152625877,
+   "pass": false,
+   "verdict": "n/a",
+   "detail": "c2 tally: 8123691 vs 4160749568 ± 196711"
+  },
+  {
+   "name": "max tally",
+   "mean": 8522825728,
+   "half": 47638,
+   "total": 16646406,
+   "dev": -8506179322,
+   "pass": false,
+   "verdict": "n/a",
+   "detail": "max tally: 16646406 vs 8522825728 ± 47638"
+  },
+  {
+   "name": "h8 tally",
+   "mean": 3758096384,
+   "half": 212122,
+   "total": 7335887,
+   "dev": -3750760497,
+   "pass": false,
+   "verdict": "n/a",
+   "detail": "h8 tally: 7335887 vs 3758096384 ± 212122"
+  },
+  {
+   "name": "windXOR tally",
+   "mean": 4077649920,
+   "half": 199474,
+   "total": 7742441,
+   "dev": -4069907479,
+   "pass": false,
+   "verdict": "n/a",
+   "detail": "windXOR tally: 7742441 vs 4077649920 ± 199474"
+  },
+  {
+   "name": "wind hop-1 activity",
+   "mean": 8388608,
+   "half": 8438,
+   "total": 131790,
+   "dev": -8256818,
+   "pass": false,
+   "verdict": "n/a",
+   "detail": "wind hop-1 activity: 131790 vs 8388608 ± 8438"
+  }
+ ],
+ "P": null,
+ "fwer": {
+  "sum": 0.01749428125,
+  "budget": 0.05,
+  "pass": true
+ },
+ "diagnostics": [
+  "calm: t̂× = 2.5083, D(64) = 9.0515 (dissipation bound)",
+  "w5: t̂× = 15.418, D(64) = 57.512 (dissipation bound)",
+  "w4: t̂× = 21.576, D(64) = 59.899 (dissipation bound)",
+  "wind: t̂× = 39.633, D(64) = 62.762 (dissipation bound)",
+  "c2: t̂× = none, D(64) = 64 (cone bound)",
+  "max: t̂× = none, D(64) = 64 (cone bound)",
+  "h8: t̂× = 9.1758, D(64) = 51.883 (dissipation bound)"
+ ]
+}
