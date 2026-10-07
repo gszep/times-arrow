@@ -197,7 +197,6 @@ export function exactLaw(arm: ArmName, cfg: { n: number; m: number; T: number })
   const windows = windowsOf(T);
   const grid = gridOf(T);
   const winMean = windows.map(() => new Float64Array(n));
-  const sigmaStep = new Float64Array(T);
   const EdissStep = new Float64Array(T + 1); // cumulative at every time 0..T
   const EdissGrid = new Float64Array(grid.length);
   const DGrid = new Float64Array(grid.length);
@@ -219,7 +218,6 @@ export function exactLaw(arm: ArmName, cfg: { n: number; m: number; T: number })
       const R = qW * p[(x + 1) % n];
       sig += (F - R) * Math.log(F / R);
     }
-    sigmaStep[s] = sig;
     EdissStep[s + 1] = EdissStep[s] + Math.sqrt(a * sig);
     const Ediss = EdissStep[s + 1];
     const wk = windows.findIndex(([b, e]) => s >= b && s < e);
@@ -260,7 +258,7 @@ export function exactLaw(arm: ArmName, cfg: { n: number; m: number; T: number })
     }
     return sig;
   });
-  return { n, m, T, windows, grid, sigmaStep, EdissStep, EdissGrid, DGrid, w1Grid, meanDGrid, winMean, windowSigma, d0 };
+  return { n, m, T, windows, grid, EdissStep, EdissGrid, DGrid, w1Grid, meanDGrid, winMean, windowSigma, d0 };
 }
 
 /** The population crossing of E_diss(t) − t (per-step, unwindowed),

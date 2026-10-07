@@ -196,12 +196,3 @@ export async function runPair(device: GPUDevice, cfg: RunConfig): Promise<{ wind
     },
   };
 }
-
-/** The full ensemble over all eight arms (the sweep's shape). */
-export async function runAll(device: GPUDevice, cfg: RunConfig): Promise<ConeArm[]> {
-  const arms: ConeArm[] = [];
-  for (const arm of ARM_NAMES.filter((a) => a !== "wind")) arms.push(await runArm(device, { ...cfg, arm }));
-  const pair = await runPair(device, cfg);
-  arms.push(pair.wind, pair.windXOR);
-  return arms;
-}
