@@ -11,6 +11,7 @@
 // rules that needed an interpretation are marked INTERPRETATION where they
 // are implemented.
 import type { Weights } from "../../src/walk.ts";
+import type { LiveCornerPaths, LiveCornerResult } from "./run.ts";
 import contract from "../../contract.json" with { type: "json" };
 
 const weights = ([e, w, n, s, zero]: number[]): Weights => ({ e, w, n, s, zero });
@@ -111,15 +112,15 @@ export type MainArm = {
   /** ramp arms: full-arm histogram over 0.5-nat bins [bin, count], bin b = ⌊σ/0.5⌋ */
   hist?: [number, number][];
 };
+/** One corner arm as the committed results file carries it: the per-path
+ * records the scorer reads (`compactCorner` projects the live corner into
+ * it). The raw half/L occupancy sequences stay in the raw form, which the
+ * sweep writes to the experiment's results release. */
 export type CornerPaths = {
   /** per path: the integer tally n_E − n_W */
   tally: number[];
   /** per path: the integer crossing tally #E(∂A) − #W(∂A) */
   cross: number[];
-  /** per path: the half-count occupancy sequence, t = 0..T */
-  half: number[][];
-  /** per path: the L-count occupancy sequence */
-  l: number[][];
   /** per path: σ_cg of the half-count path (f64; the null arm's are 0 —
    * its reversed kernel equals its forward kernel, exact by the weights) */
   scgHalf: number[];
@@ -136,6 +137,19 @@ export type CornerResult = {
   driven: CornerPaths;
   null: CornerPaths;
 };
+
+/** Project the live corner into the committed compact form. */
+export function compactCorner(live: LiveCornerResult): CornerResult {
+  const arm = ({ tally, cross, scgHalf, scgL, maxAbsSigma }: LiveCornerPaths): CornerPaths => ({
+    tally,
+    cross,
+    scgHalf,
+    scgL,
+    maxAbsSigma,
+  });
+  return { ...live, driven: arm(live.driven), null: arm(live.null) };
+}
+
 export type Results = {
   commit?: string;
   dirty?: boolean;

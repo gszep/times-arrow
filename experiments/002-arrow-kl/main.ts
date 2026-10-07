@@ -4,8 +4,9 @@ import { gpu } from "../../src/gpu.ts";
 import { Walk } from "../../src/walk.ts";
 import { ARMS, LN3, exactSigmaStats, renderVerdict, score, sigma, tallyDp, T15, Z } from "./score.ts";
 import { runMain, runCorner, halfMask, lMask } from "./run.ts";
+import type { LiveCornerResult } from "./run.ts";
 import { buildHmm } from "./hmm.ts";
-import type { ArmName, CornerResult, Results } from "./score.ts";
+import type { ArmName, Results } from "./score.ts";
 import type { Weights } from "../../src/walk.ts";
 import type { Hmm } from "./hmm.ts";
 import { checkWalk, walkVector } from "./check.ts";
@@ -131,7 +132,7 @@ try {
   let playing = false;
   const hist = new Map<number, number>();
   let recorded = 0;
-  let corner: CornerResult | null = null;
+  let corner: LiveCornerResult | null = null;
   let hmm: Hmm | null = null;
 
   $("params").innerHTML = [

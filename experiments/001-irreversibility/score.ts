@@ -11,9 +11,30 @@
 // for the locked configuration — n = 1024, tMax = 32768, tE = 16384, seeds
 // 1…16 — and read "n/a" otherwise. Registered rules that needed an
 // interpretation are marked INTERPRETATION where they are implemented.
-import type { EchoSample, ForwardSample, RunResult } from "./run.ts";
+import type { RunResult } from "./run.ts";
 
-/** The shape `sweep.ts` writes: provenance plus the run results. */
+/** One run as the committed results file carries it: exactly the fields
+ * the scorer and the page read (`scoreRun` projects a full run into it).
+ * Everything else a run produces (the momentum profiles, the damage-site
+ * counts, the undo fractions, the per-run adapter) stays in the raw form,
+ * which the sweep writes to the experiment's results release. */
+export type ScoreRun = {
+  config: { n: number; seed: number; mode: "packed" | "null"; tMax: number; tE: number };
+  forward: { t: number; S: Record<number, number>; mass: number }[];
+  echo: {
+    r: number;
+    Sp: Record<number, number>;
+    Sd: Record<number, number>;
+    massP: number;
+    massD: number;
+    H: number;
+    maxDist: number;
+  }[];
+  finalHamming: number | null;
+  naiveHamming: number | null;
+};
+
+/** The shape `sweep.ts` writes: provenance plus the compact scorer input. */
 export type Results = {
   commit?: string;
   dirty?: boolean;
@@ -21,8 +42,19 @@ export type Results = {
   date?: string;
   smoke?: boolean;
   params: { n: number; tMax: number; tE: number; seeds: number[]; b: number[] };
-  runs: RunResult[];
+  runs: ScoreRun[];
 };
+
+/** Project a full run result into the committed compact form. */
+export function scoreRun(r: RunResult): ScoreRun {
+  return {
+    config: { n: r.config.n, seed: r.config.seed, mode: r.config.mode, tMax: r.config.tMax, tE: r.config.tE },
+    forward: r.forward.map((s) => ({ t: s.t, S: s.S, mass: s.mass })),
+    echo: r.echo.map((s) => ({ r: s.r, Sp: s.Sp, Sd: s.Sd, massP: s.massP, massD: s.massD, H: s.H, maxDist: s.maxDist })),
+    finalHamming: r.finalHamming,
+    naiveHamming: r.naiveHamming,
+  };
+}
 
 const BS = [4, 8, 16, 32, 64];
 const REGISTERED = { n: 1024, tMax: 32768, tE: 16384, seeds: Array.from({ length: 16 }, (_, i) => i + 1) };
@@ -50,7 +82,7 @@ const sd = (xs: number[]) => {
 
 export type BandPoint = { t: number; mu: number; half: number };
 
-function sharedGrid(runs: RunResult[]): number[] {
+function sharedGrid(runs: ScoreRun[]): number[] {
   const grid = runs[0].forward.map((s) => s.t);
   for (const r of runs)
     if (r.forward.length !== grid.length || r.forward.some((s, i) => s.t !== grid[i]))
@@ -60,7 +92,7 @@ function sharedGrid(runs: RunResult[]): number[] {
 
 /** The registered null band: at each sampled `t`, the mean μ̂ and the
  * half-width 3σ̂ of the null runs' `S_b`, σ̂ the across-seed s.d. (ddof = 1). */
-export function nullBand(runs: RunResult[], b: number): BandPoint[] {
+export function nullBand(runs: ScoreRun[], b: number): BandPoint[] {
   if (runs.length < 2) throw new Error(`the null band needs ≥ 2 null runs, got ${runs.length}`);
   return sharedGrid(runs).map((t, i) => {
     const at = runs.map((r) => r.forward[i].S[b]);
@@ -73,8 +105,8 @@ export function nullBand(runs: RunResult[], b: number): BandPoint[] {
  * pristine value is exactly 1 when the echo is bit for bit; the registered
  * S1(d) bound is U ≤ 0.05 for the damaged twin. */
 export function undoFraction(
-  forward: ForwardSample[],
-  echo: EchoSample[],
+  forward: { t: number; S: Record<number, number> }[],
+  echo: { Sp: Record<number, number>; Sd: Record<number, number> }[],
   b: number,
   tE: number,
 ): { pristine: number; damaged: number } | null {
@@ -91,7 +123,7 @@ const inBand = (S: number, e: BandPoint) => e.mu - e.half <= S && S <= e.mu + e.
  * t* (first sampled t with S_16 in the band at that t), the longest downward
  * excursion after t* (a maximal run of consecutive sampled times ≥ t* with
  * S_16 below μ̂ − 3σ̂), and the band check at t_max. */
-function e1(packed: RunResult[], bandAt: Map<number, BandPoint>, tE: number) {
+function e1(packed: ScoreRun[], bandAt: Map<number, BandPoint>, tE: number) {
   // INTERPRETATION: the 1%-of-1.81×10⁵ initial-state check is applied to the
   // seed mean of S_16(0) — the registered text writes E[S_16(0)], and a wrong
   // initial state is a systematic error every seed shares (the per-seed
@@ -147,7 +179,7 @@ function e1(packed: RunResult[], bandAt: Map<number, BandPoint>, tE: number) {
 /** E2 — partition robustness of the rise. Per packed seed, the rise
  * rise_i(b) = S_b(t_max) − S_b(0) for every registered b, its monotonicity
  * across b, and the per-seed ratio rise_i(64)/rise_i(4). */
-function e2(packed: RunResult[]) {
+function e2(packed: ScoreRun[]) {
   const perSeed = packed.map((r) => {
     const first = r.forward[0];
     const last = r.forward[r.forward.length - 1];
@@ -183,7 +215,7 @@ function e2(packed: RunResult[]) {
 /** S1 — echo sensitivity, one flipped bit. (a) is the light-cone check (L3),
  * exact at any configuration; (b)–(d) are the statistical claims under the
  * registered ≥ 2-of-16 rule; β̂ is exploratory. */
-function s1(packed: RunResult[], bandAt: Map<number, BandPoint>, params: Results["params"]) {
+function s1(packed: ScoreRun[], bandAt: Map<number, BandPoint>, params: Results["params"]) {
   const { n, tE } = params;
   const half = n / 2;
   const at = (t: number) => {

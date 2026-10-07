@@ -260,3 +260,16 @@ decelerates, so the exponential fit is a poor model of it.
   ending 23% — not ≤ 5% — of the way down the entropy drop.
 - The null ensemble's within-seed temporal s.d. (45.6 nats) matches the
   registered σ_S = 44.9 to 1.5%.
+
+### Data
+
+`results/artemis.json` and the smoke files in this repo are the compact
+scorer inputs — every number the committed scorer and the page read,
+minified. The full raw outputs (momentum profiles, damage-site counts, undo
+fractions) are attached to release
+[results-001](https://github.com/gszep/times-arrow/releases/tag/results-001);
+each compact file's `release` block records their SHA-256 and the command
+that regenerates them bit for bit (the runs are deterministic). The
+exploratory `results/calcifer-collisions.json` keeps its full bytes,
+minified — its generator `diagnose.ts` is gone, so it cannot be regenerated;
+its readable raw is in the same release.

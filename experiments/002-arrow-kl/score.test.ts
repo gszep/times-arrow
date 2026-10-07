@@ -115,12 +115,9 @@ function rampArms(offset: number, ratioExp: number): [MainArm, MainArm] {
 function cornerPaths(
   o: { tally?: number; cross?: number; halfBad?: number; scgL?: (i: number) => number; nullBad?: boolean },
 ): CornerPaths {
-  const seq = Array.from({ length: 33 }, (_, t) => t % 3);
   return {
     tally: Array.from({ length: 1024 }, () => o.tally ?? 16),
     cross: Array.from({ length: 1024 }, () => o.cross ?? 4),
-    half: Array.from({ length: 1024 }, () => seq),
-    l: Array.from({ length: 1024 }, () => seq),
     scgHalf: Array.from({ length: 1024 }, (_, i) => (o.halfBad !== undefined && i === 7 ? o.halfBad : 0)),
     scgL: Array.from({ length: 1024 }, (_, i) => (o.scgL ? o.scgL(i) : 0)),
     maxAbsSigma: o.nullBad ? 0.001 : 0,

@@ -7,9 +7,10 @@
 // Both modes require the page's complete contract gate: trajectories,
 // tallies, σ, DP histograms and K5 HMM goldens. Device-loss monitoring is in
 // the run driver; the adapter/vendor check is in scripts/headless.ts.
-import { headless, provenance, writeResults } from "../../scripts/headless.ts";
-import { RAMP_T } from "./score.ts";
-import type { ArmName, CornerResult, MainArm } from "./score.ts";
+import { headless, provenance, writeRaw, writeResults } from "../../scripts/headless.ts";
+import { RAMP_T, compactCorner } from "./score.ts";
+import type { ArmName, MainArm } from "./score.ts";
+import type { LiveCornerResult } from "./run.ts";
 
 const smoke = process.argv.includes("--smoke");
 const vendor = process.env.TIMES_ARROW_VENDOR ?? (process.platform === "darwin" ? "intel" : "nvidia");
@@ -44,7 +45,7 @@ const { adapter, goldens, main, corner } = await headless("experiments/002-arrow
 
   const corner = (await evaluate(
     `probe.runCorner(${JSON.stringify({ R: cfg.cornerR, blocks: cfg.blocks, T: cfg.cornerT })})`,
-  )) as CornerResult;
+  )) as LiveCornerResult;
   const maxHalf = Math.max(0, ...corner.driven.scgHalf.map(Math.abs));
   console.log(
     `corner: R=${corner.R}, ⟨σ⟩ ${(corner.driven.tally.reduce((a, b) => a + b, 0) / corner.R).toFixed(1)}·ln 3, max |σ_cg^half| ${maxHalf.toExponential(2)}, null σ ≡ 0 ${corner.null.maxAbsSigma === 0}`,
@@ -52,7 +53,8 @@ const { adapter, goldens, main, corner } = await headless("experiments/002-arrow
   return { adapter: await evaluate("probe.adapter"), goldens: true, main, corner };
 }, vendor);
 
-writeResults(new URL("results", import.meta.url), `${prov.host}${smoke ? "-smoke" : ""}`, {
+const name = `${prov.host}${smoke ? "-smoke" : ""}`;
+const raw = {
   ...prov,
   seeds: { main: { first: 1, last: cfg.R }, corner: { first: 1, last: cfg.cornerR }, pairedAcrossArms: true },
   n: 8,
@@ -62,4 +64,8 @@ writeResults(new URL("results", import.meta.url), `${prov.host}${smoke ? "-smoke
   goldens,
   main,
   corner,
-});
+};
+// The compact form is committed (exactly the scorer's input); the raw form
+// goes to the results-002 release, with its SHA-256 in the compact file.
+writeRaw(`002-${name}`, raw);
+writeResults(new URL("results", import.meta.url), name, { ...raw, corner: compactCorner(corner) });

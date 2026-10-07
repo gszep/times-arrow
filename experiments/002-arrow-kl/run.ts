@@ -11,6 +11,15 @@ import type { ArmName, CornerPaths, CornerResult, MainArm } from "./score.ts";
 import { buildHmm, sigmaCg } from "./hmm.ts";
 import type { Hmm } from "./hmm.ts";
 
+/** The live corner, as the page and the contract checks read it: the
+ * committed form (`CornerPaths`) plus the raw half/L occupancy sequences
+ * per path. The sweep keeps only the committed form in Git. */
+export type LiveCornerPaths = CornerPaths & { half: number[][]; l: number[][] };
+export type LiveCornerResult = Omit<CornerResult, "driven" | "null"> & {
+  driven: LiveCornerPaths;
+  null: LiveCornerPaths;
+};
+
 const MAIN_N = 8;
 const MAIN_M = 16;
 const CORNER_N = 4;
@@ -96,7 +105,7 @@ export type CornerConfig = { R: number; blocks?: number; T?: number; hmm?: Hmm }
  * per-seed out-edge counts), the two region-count paths, and σ_cg of each
  * by the HMM's two forward passes. The null arm's reversed kernel equals
  * its forward kernel (q_E = q_W), so its σ_cg ≡ 0 is exact by the weights. */
-export async function runCorner(device: GPUDevice, cfg: CornerConfig): Promise<CornerResult> {
+export async function runCorner(device: GPUDevice, cfg: CornerConfig): Promise<LiveCornerResult> {
   const n = CORNER_N;
   const m = CORNER_M;
   const T = cfg.T ?? CORNER_T;
@@ -109,11 +118,11 @@ export async function runCorner(device: GPUDevice, cfg: CornerConfig): Promise<C
   const hmm = cfg.hmm ?? buildHmm(n, m, ARMS.driven, [half, l]);
   const inL = (x: number, y: number) => l[((y % n) + n) % n * n + ((x % n) + n) % n];
 
-  const armRun = async (armName: "driven" | "null"): Promise<CornerPaths> => {
+  const armRun = async (armName: "driven" | "null"): Promise<LiveCornerPaths> => {
     const protocol = protocolOf(armName, T);
     walk.setProtocol(protocol);
     const run = await watch.race(walk.runSeeds(1, cfg.R, { edges: true, counts: true }));
-    const paths: CornerPaths = { tally: [], cross: [], half: [], l: [], scgHalf: [], scgL: [], maxAbsSigma: 0 };
+    const paths: LiveCornerPaths = { tally: [], cross: [], half: [], l: [], scgHalf: [], scgL: [], maxAbsSigma: 0 };
     const edges = 4 * n * n;
     for (let seed = 0; seed < cfg.R; seed++) {
       // σ_∂: an E-hop from (x, y) crosses ∂A iff A-membership differs

@@ -73,8 +73,14 @@ results that had to be retracted:
   exceeds the registered per-test α. A quick Monte Carlo under the exact
   law is the cheapest check and needs no simulation of the real system.
 - **Provenance.** Every sweep writes JSON recording the commit, parameters,
-  seeds and GPU adapter. Results from code that has since changed are stale.
-  Re-run them or delete them.
+  seeds and GPU adapter. The committed results file is the compact scorer
+  input — minified, exactly the fields the scorer and the page read; the
+  full raw output goes to the experiment's `results-NNN` GitHub release,
+  never Git, with its SHA-256 and regeneration command recorded in the
+  compact file's `release` block (`writeResults`/`writeRaw` in
+  `scripts/headless.ts`). Runs are deterministic (Philox keyed by seed), so
+  a raw can always be re-derived. Results from code that has since changed
+  are stale. Re-run them or delete them.
 - **Retract loudly.** When a result turns out to be an artefact, mark it
   refuted in the experiment's README with the cause, delete the
   contaminated data and re-queue the runs.

@@ -336,3 +336,13 @@ feasible `R_c`: the realized per-path σ_cg scatter (block SE 1.07 × 10⁻³ at
 `R_c = 1024`, i.e. ≈ 0.034 per path — smaller than the registration's
 conservative √30 ln 3 scale) still puts resolving it at `R_c ≈ 10⁸` paired
 paths (**exploratory** revision of the registered ~10⁹).
+
+### Data
+
+`results/artemis.json` and the smoke files in this repo are the compact
+scorer inputs — every number the committed scorer and the page read,
+minified. The full raw outputs (the per-path half/L occupancy sequences
+behind every σ_cg) are attached to release
+[results-002](https://github.com/gszep/times-arrow/releases/tag/results-002);
+each compact file's `release` block records their SHA-256 and the command
+that regenerates them bit for bit (the runs are deterministic).

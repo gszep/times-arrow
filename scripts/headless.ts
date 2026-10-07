@@ -1,4 +1,5 @@
 import { execSync, spawn } from "node:child_process";
+import { createHash } from "node:crypto";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { hostname, tmpdir } from "node:os";
 import { join } from "node:path";
@@ -31,12 +32,27 @@ export function provenance(smoke = false) {
   };
 }
 
-/** Write sweep results as `<dir>/<name>.json` and print the path. */
+/** Write the committed results file `<dir>/<name>.json`: minified — the
+ * compact form, exactly the fields the scorer and the page read. */
 export function writeResults(dir: URL, name: string, data: unknown) {
   mkdirSync(dir, { recursive: true });
   const file = new URL(`${name}.json`, dir);
-  writeFileSync(file, JSON.stringify(data, null, 1) + "\n");
+  writeFileSync(file, JSON.stringify(data) + "\n");
   console.log(file.pathname);
+}
+
+/** Write the full raw sweep output to the scratch dir (never Git), print
+ * its path and SHA-256, and return both. Upload it to the experiment's
+ * `results-NNN` release and record the SHA-256 in the compact file's
+ * `release` block. */
+export function writeRaw(name: string, data: unknown) {
+  const dir = join(tmpdir(), "times-arrow-results");
+  mkdirSync(dir, { recursive: true });
+  const file = join(dir, `${name}.json`);
+  writeFileSync(file, JSON.stringify(data, null, 1) + "\n");
+  const sha256 = createHash("sha256").update(readFileSync(file)).digest("hex");
+  console.log(`${file} sha256 ${sha256}`);
+  return { file, sha256 };
 }
 
 /**

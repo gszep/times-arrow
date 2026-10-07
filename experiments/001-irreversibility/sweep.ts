@@ -16,7 +16,8 @@
 // The expected GPU vendor comes from TIMES_ARROW_VENDOR, defaulting to this
 // Mac's Intel iGPU on darwin and Artemis's NVIDIA on Linux.
 import contract from "../../contract.json" with { type: "json" };
-import { headless, provenance, writeResults } from "../../scripts/headless.ts";
+import { headless, provenance, writeRaw, writeResults } from "../../scripts/headless.ts";
+import { scoreRun } from "./score.ts";
 
 const smoke = process.argv.includes("--smoke");
 const vendor = process.env.TIMES_ARROW_VENDOR ?? (process.platform === "darwin" ? "intel" : "nvidia");
@@ -74,9 +75,14 @@ const { adapter, runs } = await headless("experiments/001-irreversibility/", asy
   return { adapter, runs };
 }, vendor);
 
-writeResults(new URL("results", import.meta.url), `${prov.host}${smoke ? "-smoke" : ""}`, {
+const name = `${prov.host}${smoke ? "-smoke" : ""}`;
+const raw = {
   ...prov,
   params: { ...cfg, b, sampling: "t = 0, powers of two ≤ 1024, then every 128; echo at r = tE − t; damage on the same grid in r" },
   adapter,
   runs,
-});
+};
+// The compact form is committed (exactly the scorer's input); the raw form
+// goes to the results-001 release, with its SHA-256 in the compact file.
+writeRaw(`001-${name}`, raw);
+writeResults(new URL("results", import.meta.url), name, { ...raw, runs: runs.map(scoreRun) });
