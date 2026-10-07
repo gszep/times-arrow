@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>playground · a room with a door</title>
+    <link rel="stylesheet" href="../src/page.css" />
+    <style>
+      canvas {
+        width: 100%;
+      }
+      #table {
+        max-width: 22rem;
+        touch-action: none;
+        border: 1px solid #ddd;
+      }
+      button {
+        margin: 0.15rem;
+        padding: 0.35rem 0.7rem;
+        font-size: 0.95rem;
+      }
+      section {
+        margin-top: 1.4rem;
+      }
+      input[type="range"] {
+        width: 100%;
+      }
+      #nin,
+      #flux,
+      #sent {
+        height: 11rem;
+      }
+      #legend span {
+        white-space: nowrap;
+      }
+      .try {
+        font-size: 0.9rem;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>playground · a room with a door</h1>
+    <p>
+      A room with a door sits in a billiard table. Tens of thousands of non-interacting point
+      particles (f32 on the GPU, specular walls, one speed) start packed inside and leak out. A
+      system/environment partition is just a closed surface you count across: when it lines up with
+      the room's walls the count relaxes cleanly and irreversibly (effusion); drawn anywhere else it
+      recrosses noisily and gives no arrow. <b>Exploratory playground — no claims, nothing
+      pre-registered.</b>
+    </p>
+    <p class="try">
+      <b>Try:</b> shrink the door to 0 (nothing flows, the clock never starts) · remove the walls
+      (recrossing, and on this plain rectangle the gas keeps long memories) · switch to the circle
+      and drag it off the walls · add the scatterer (Sinai: the outer table turns chaotic and mixes)
+      · press reverse — every velocity negates and the whole history retraces, up to f32 rounding.
+      Watch N<sub>in</sub> fold back and the clock unwind: the arrow was in the initial condition,
+      not in the dynamics.
+    </p>
+    <p id="params"></p>
+    <p>
+      <button id="play">▶</button>
+      <button id="reverse">⇄ reverse</button>
+      <button id="reset">↺ reset</button>
+      <button id="walls">walls</button>
+      <button id="scatterb">scatterer</button>
+      <button id="surfaceb">surface</button>
+      <button id="startb">start</button>
+    </p>
+    <p>
+      <label>door width <span id="doorlabel"></span> (0 … 0.4)</label>
+      <input type="range" id="door" min="0" max="0.4" step="0.005" />
+    </p>
+    <p id="nrow">n: <span id="nlinks"></span></p>
+    <p id="speedrow">steps/frame: <span id="speedlinks"></span> · seed: <span id="seedlinks"></span></p>
+    <canvas id="table" width="640" height="640"></canvas>
+    <p id="legend">
+      <span style="color: #b91c1c">■ inside the surface</span> ·
+      <span style="color: #0d9488">■ outside</span> · <span style="color: #1f2937">— walls</span> ·
+      <span style="color: #d97706">— door</span> ·
+      <span style="color: #7c3aed">┄ counting surface</span>
+    </p>
+    <p id="hint"></p>
+    <p id="live"></p>
+    <p id="clockline"></p>
+    <section>
+      <h2>N_in/N against the rough effusion curve</h2>
+      <canvas id="nin"></canvas>
+      <p id="tauline"></p>
+    </section>
+    <section>
+      <h2>Crossings per step (recrossing is the noise)</h2>
+      <canvas id="flux"></canvas>
+    </section>
+    <section>
+      <h2>Coarse entropy of the two-cell partition</h2>
+      <canvas id="sent"></canvas>
+      <p>S = −p ln p − (1−p) ln(1−p) with p = N_in/N; the clock is the entropy produced since the start.</p>
+    </section>
+    <details>
+      <summary>Assumptions</summary>
+      <ul>
+        <li>2D billiards in the unit square: continuous f32 positions, no lattice. Free flight speed 0.02 table widths per step; one speed for all particles; specular, infinitely thin walls.</li>
+        <li>N non-interacting point particles; initial condition drawn by Philox4x32-10 keyed (seed, step, site) — the seed is in the URL. Crossings are counted once per step, from which side of the surface a particle starts and ends the step on.</li>
+        <li>Reverse negates every velocity; specular reflection and the wall snap are time-symmetric, so the run retraces its own history up to f32 rounding.</li>
+        <li>The rough curve is leak-only effusion, τ = π·A_room/(door·⟨v⟩): return flux through the door, imperfect mixing in the outer rectangle and the scatterer all shift the real relaxation.</li>
+        <li>On the plain rectangle every reflection flips exactly one velocity component, so |v<sub>x</sub>| and |v<sub>y</sub>| are conserved: the outer gas spreads in columns, mixes poorly, and the count stays above the area-fraction line for a long time. The scatterer breaks both integrals (Sinai billiard) and the approach to the area fraction is roughly twice as fast — but the small chamber between door and table wall always returns particles quickly, so both relax more slowly than the rough curve.</li>
+        <li>What would kill the intuition shown here: wall tunnelling (watch N_in with the door shut), speed drift, or aligned counts that stop descending.</li>
+        <li>Exploration only — no claims, no pre-registration, no Lean contract for this page.</li>
+      </ul>
+    </details>
+    <p id="out"></p>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

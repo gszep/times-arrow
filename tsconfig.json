@@ -12,5 +12,5 @@
     "resolveJsonModule": true,
     "skipLibCheck": true
   },
-  "include": ["src", "scripts", "experiments", "vite.config.ts"]
+  "include": ["src", "scripts", "experiments", "play", "vite.config.ts"]
 }
