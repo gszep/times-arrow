@@ -93,6 +93,24 @@ one-source; the RNG stream is 002's hop draws, bit-exact.
 
 ## Hypothesis (pre-registered)
 
+### Held-out prediction lock
+
+**Conjecture; frozen before evaluating this arm's chain or sampling law.**
+Add held-out `h8 = (e,w,stay) = (120,8,128)` with the same constructor,
+seeds, horizon and observables. Only `w5` and `w4` calibrate
+`C_fit = [17.167·δ_w5 + 23.935·δ_w4]/2`, where
+`δ_q = 1 − √(a_q μ_q ln(e_q/w_q))`.
+Predict its per-step-envelope crossover `t_h = C_fit/δ_h8` to within
+15% (finite-start/model tolerance); for the windowed measured crossing
+allow a further 0.25 step of estimation/pipeline error. Predict its
+`η_d(512)` at the closed-form branch
+`b_h = (63/64)√(tanh(ln(15)/2)/ln(15))`, with absolute model tolerance
+0.006 and sampling allowance 0.0001. These centres and tolerances will not
+be fitted to the held-out exact answer. Alternatives: an inverse-square
+crossover law normalized at `w5`, and a drive-independent dissipative
+tightness equal to the `w5` closed-form branch. Exact-law sizing may reject this design but
+cannot change this lock; any failure will be reported in the result section.
+
 Exact-chain predictions, all per walker (`f64`; the scratch sizing scripts
 stay out of Git):
 
