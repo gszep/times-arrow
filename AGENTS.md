@@ -150,6 +150,13 @@ Claims:
 - Prove finite checks with `decide +kernel`, which adds no axioms. Never use `native_decide`: it adds `Lean.ofReduceBool`, which is not on the allow-list.
 
 Gotchas that each cost a debugging round:
+- **Stage storage-buffer limit:** WebGPU guarantees only 8 storage buffers
+  per shader stage (this Mac's adapter tops out at 10). A kernel over the
+  limit compiles cleanly but `createComputePipeline` returns an invalid
+  pipeline without throwing, and every dispatch is a silent no-op — buffers
+  read back as if nothing ran. Keep shared kernels at ≤ 8 storage bindings
+  by sectioning one buffer (src/walk.ts puts tallies + hop counts in one
+  atomic buffer and window + display + checks in one occupancy buffer).
 - **Explicit layouts:** `layout: "auto"` drops bindings that an entry point doesn't use, so pipelines that share bind groups need one explicit layout.
 - **Adapter retry:** headless Chrome on Linux returns `null` for the first `requestAdapter` call. `src/gpu.ts` retries once.
 - **Watchdog:** one long command buffer (≈18 s on the Mac's iGPU) loses the device. The readback then returns zeros or a partial state, and error scopes don't catch it. `Hpp.step` submits about 2²⁷ cell updates at a time, and benches check `device.lost`.

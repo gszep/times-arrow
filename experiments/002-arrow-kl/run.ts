@@ -112,7 +112,7 @@ export async function runCorner(device: GPUDevice, cfg: CornerConfig): Promise<L
   const blocks = cfg.blocks ?? 16;
   const half = halfMask(n);
   const l = lMask(n);
-  const walk = new Walk(device, { n, m, T, batch: Math.min(1024, cfg.R) });
+  const walk = new Walk(device, { n, m, T, batch: Math.min(1024, cfg.R), edges: true });
   walk.setRegions(half, l);
   const watch = watchDevice(device);
   const hmm = cfg.hmm ?? buildHmm(n, m, ARMS.driven, [half, l]);

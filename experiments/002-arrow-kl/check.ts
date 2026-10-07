@@ -2,6 +2,7 @@
 // review page: integer trajectories/tallies, f64 σ, exact DP and the K5 HMM.
 import contract from "../../contract.json" with { type: "json" };
 import { Walk } from "../../src/walk.ts";
+import { decodeX, decodeY } from "../../src/walk.ts";
 import { watchDevice } from "../../src/gpu.ts";
 import { ARMS, protocolOf, protocolTallyDp, sigma, tallyDp } from "./score.ts";
 import type { ArmName } from "./score.ts";
@@ -19,18 +20,19 @@ const close = (a: number, b: number) =>
 /** Same GPU path as the ensemble, with all readbacks in one mapped buffer. */
 export async function walkVector(device: GPUDevice, g: Pick<WalkVector, "seed" | "arm" | "n" | "m" | "t">) {
   const protocol = protocolOf(g.arm as ArmName, Math.max(1, g.t));
-  const walk = new Walk(device, { n: g.n, m: g.m, T: Math.max(1, g.t), batch: 1 });
+  const walk = new Walk(device, { n: g.n, m: g.m, T: Math.max(1, g.t), batch: 1, edges: true });
   const watch = watchDevice(device);
   try {
     walk.setProtocol(protocol);
     walk.init(g.seed);
     for (let t = 1; t <= g.t; t++) walk.step(t, g.seed, true);
     const { pos, tallies, edges } = await watch.race(walk.snapshot());
+    if (!edges) throw new Error("edge counts were not allocated");
     const counts = [0, 0];
     for (let i = 0; i < edges.length; i++) if (i % 4 < 2) counts[i % 4] += edges[i];
     const plain = g.t === 0 ? new Int32Array() : (await watch.race(walk.runSeeds(g.seed, 1))).tallies;
     return {
-      state: Array.from(pos, (s) => `${(s & 0xff).toString(16)}${((s >>> 8) & 0xff).toString(16)}`).join(""),
+      state: Array.from(pos, (s) => `${decodeX(s).toString(16)}${decodeY(s).toString(16)}`).join(""),
       nE: counts[0], nW: counts[1], tallies: Array.from(tallies).slice(0, g.t),
       plainTallies: Array.from(plain), sigma: sigma(plain, protocol),
     };

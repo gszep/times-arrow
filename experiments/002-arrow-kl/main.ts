@@ -166,8 +166,8 @@ try {
     }
     ctx.fillStyle = "#047857";
     for (let i = 0; i < m; i++) {
-      const x = (words[i] & 0xff) * cell;
-      const y = ((words[i] >>> 8) & 0xff) * cell;
+      const x = (words[i] & 1023) * cell;
+      const y = ((words[i] >> 10) & 1023) * cell;
       ctx.beginPath();
       ctx.arc(x + cell / 2, y + cell / 2, Math.max(2, cell / 3), 0, 2 * Math.PI);
       ctx.fill();
