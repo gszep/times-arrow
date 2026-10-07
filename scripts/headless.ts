@@ -4,6 +4,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { hostname, tmpdir } from "node:os";
 import { join } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { createServer } from "vite";
 
 const chrome =
@@ -35,10 +36,11 @@ export function provenance(smoke = false) {
 /** Write the committed results file `<dir>/<name>.json`: minified — the
  * compact form, exactly the fields the scorer and the page read. */
 export function writeResults(dir: URL, name: string, data: unknown) {
-  mkdirSync(dir, { recursive: true });
-  const file = new URL(`${name}.json`, dir);
+  const d = fileURLToPath(dir);
+  mkdirSync(d, { recursive: true });
+  const file = pathToFileURL(join(d, `${name}.json`));
   writeFileSync(file, JSON.stringify(data) + "\n");
-  console.log(file.pathname);
+  console.log(file.href);
 }
 
 /** Write the full raw sweep output to the scratch dir (never Git), print
