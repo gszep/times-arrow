@@ -462,8 +462,13 @@ export function pipelineRows(): Row[] {
  * verdicts are n/a unless the results are the registered configuration;
  * bit-exact verdicts (M1, C1, X1's identity) are always computed. */
 export function score(results: Results, source?: string) {
-  const registered = isRegistered(results);
-  const na = registered ? null : `n/a: not the registered configuration (n = ${REG.n}, m = ${REG.m}, R = ${REG.R}, T = ${REG.T}, 8 arms)`;
+  const gated = results.goldens === true && !(results.m1Pending?.length);
+  const registered = isRegistered(results) && gated;
+  const na = registered
+    ? null
+    : gated
+      ? `n/a: not the registered configuration (n = ${REG.n}, m = ${REG.m}, R = ${REG.R}, T = ${REG.T}, 8 arms)`
+      : "n/a: the contract gate has not fully passed (goldens or pending Lean keys)";
   const statistical = (ok: boolean): Verdict => (na ? "n/a" : ok ? "supported" : "refuted");
   const arm = (name: ArmName) => {
     const a = results.arms.find((x) => x.arm === name);

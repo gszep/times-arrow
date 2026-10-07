@@ -28,6 +28,7 @@ const { gate, arms, adapter } = await headless("experiments/003-lightcone-speedl
   const failed = gate.checks.filter((c) => !c.pass);
   if (!gate.checks.length || failed.length) throw new Error(`003 contract gate failed: ${JSON.stringify(failed)}`);
   console.log(`gate: ${gate.checks.length} checks passed; pending from the Lean lane: ${gate.pending.join("; ") || "none"}`);
+  if (!smoke && gate.pending.length) throw new Error(`003 contract gate incomplete: ${gate.pending.join("; ")}`);
 
   const arms: ConeArm[] = [];
   const run = async (arm: ArmName) => {
