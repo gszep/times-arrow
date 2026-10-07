@@ -30,7 +30,8 @@ not established novelty (`docs/background.md`).
   `p₀ = A δ₀ + ε u`, `A = 63/64`, `ε = 1/64`: 64513 walkers in column
   zero, one in each other column. The uniform component is stationary in
   the probability law, not in each finite empirical sample.
-- Weights are integers in 256ths. `ρ = ln(e/w)`, `a = (e+w)/256`,
+- Weights are integers in 256ths: `q_E = e/256`, `q_W = w/256`,
+  `q₀ = stay/256`. `ρ = ln(e/w)`, `a = (e+w)/256`,
   `μ = (e−w)/256`, `σ_step = μρ`, `δ = 1−√(a μρ)`.
 
   | arm | (e, w, stay) | μ | √(a μρ) | role |
@@ -48,8 +49,10 @@ not established novelty (`docs/background.md`).
   is not an activity-controlled comparison with the half-lazy arms.
 - One dynamics source: the hop thresholds and Philox `(walker,step)`
   stream in `src/walk.ts`, with draws at steps 1…512. Implementation
-  prerequisite: generalize that shared module's **8-bit coordinate
-  packing** to represent 1024 columns, and pass 002's goldens unchanged.
+  prerequisite: generalize that shared module's coordinate packing to
+  `packed = x | (y << 10)`: x in bits 0–9, y in bits 10–19, bits 20–31
+  zero; decode with `x = packed & 1023`, `y = (packed >> 10) & 1023`.
+  Wrap each coordinate with mask `n−1`; pass 002's goldens unchanged.
   Add `initProfile` and column occupancies, including pre-hop occupancies
   at every step. No separate 003 dynamics kernel. Window occupancy sums
   are batched into one readback; use per-seed integer buffers and f64 host
@@ -67,25 +70,34 @@ the empirical mean has an additional finite-count bias. The rational
 calm goldens at t=1,2,3 are `63/128`, `189/256`, `945/1024`.
 
 The raw empirical edge ratio is **not** a usable EP estimator here:
-at s=0 a background reverse edge has only 3 expected counts in `wind`,
+at time 0 a background reverse edge has only 3 expected counts in `wind`,
 1 in `max`. Positive theoretical flux does not prevent sampled zeros;
 an infinite raw log-count EP is not an implementation error.
 Use the **model-assisted occupancy estimator**, with the registered q:
 
 ```
-p̂_k(x) = Σ_{r,s in window k} count(r,s,x) / (R m w_k)
+p̂_k(x) = Σ_{r=1}^R Σ_{s=b_k+1}^{e_k} count(r,s,x) / (R m w_k)
 F̂_k(x) = q_E p̂_k(x),   R̂_k(x) = q_W p̂_k(x+1)
 σ̂_k = Σ_x (F̂_k − R̂_k) ln(F̂_k/R̂_k)
-Ê(t) = Σ_{k: end_k≤t} w_k √(a σ̂_k)
+Ê(t) = Σ_{k: e_k≤t} w_k √(a σ̂_k)
 ```
 
-This estimates the flux EP conditional on the known transition law;
-it does not independently estimate unknown rates. Actual edge counts and
-`â` remain diagnostics. Windows are `[s,s+1)` for s=0…23, `[24,32)`,
-then 32-step windows through 512. `t̂×` is the first positive-to-nonpositive
+Here `count(r,s,x)` is seed r's occupancy **before hop s**, i.e. at
+time `s−1`, for integer `s=1…512`. Window `[b_k,e_k)` is in occupancy
+time, has `w_k=e_k−b_k`, and includes hop indices `b_k+1…e_k` inclusive.
+The integer bounds are `(b_k,e_k)=(j,j+1)` for `j=0…23`, `(24,32)`,
+and `(32j,32(j+1))` for `j=1…15`. Thus the last window counts times
+480…511 before hops 481…512; no occupancy at time 512 enters Ê(512).
+All σ diagnostics labelled by time τ use the pre-hop occupancy of hop τ+1.
+
+Pooling precedes the nonlinear map: `σ̂_k` estimates the flux EP of the
+**mean window distribution**, not the mean of the per-time EPs. It is
+conditional on the known transition law, not an independent estimate of
+unknown rates. Actual edge counts and `â` remain diagnostics.
+`t̂×` is the first positive-to-nonpositive
 crossing of `Ê(t)−t`, linearly interpolated **on all window endpoints**;
 the equality at t=0 is excluded. Missing crossing is `+∞` for scoring.
-The s=0 occupancy estimator is deterministic, with no sampling variance.
+The time-0 occupancy estimator is deterministic, with no sampling variance.
 For pooled occupancy a zero site has probability at most `exp(−256)`;
 any such event is reported as a statistical failure, never silently clipped.
 
@@ -94,6 +106,16 @@ any such event is reported as a statistical failure, never silently clipped.
 `Ê` is used only for crossover and pipeline checks. Windowing changes
 the wind crossing from 44.73715 to 43.57940; it is not a correction to η.
 Display grid: `{0,1,2,3,4,8,16,24,32,64,128,256,384,512}`.
+
+**C4's unbiased finite-size observable.** Let `d(x)=min(x,n−x)` for
+`x=0…n−1`, and define
+`L̂(t) = (Rm)⁻¹ Σ_{r,j} [d(X_{r,j}(t))−d(X_{r,j}(0))]`,
+`η̂_lin(t)=L̂(t)/D(t)`. Equivalently subtract the deterministic initial
+mean distance `ε n/4 = 4` from the pooled endpoint mean distance. The
+uniform part is stationary, so `E L̂ = A E d(X_t) = W₁(p₀,p_t)`.
+This is an unbiased fixed-distance observable of the population W₁,
+not the sample-optimized empirical circle W₁. C4 scores only η̂_lin;
+calm's η̂ from median-optimized Ŵ remains diagnostic. C5 scores η̂ as above.
 
 ## Hypothesis (pre-registered)
 
@@ -129,11 +151,16 @@ does not establish a universal asymptotic or continuum law.
 
 | # | Prediction, criterion and tolerance | Size under the registered exact law | Alternative distinguished |
 |---|---|---|---|
-| C3 | Held-out `t× ∝ δ⁻¹`: reject if `\|t̂×_h8 − 10.5938460336\| > 1.5890769050 + 0.25 = 1.8390769050` steps. Training uses w5,w4 only; no fitting on h8. | ≤1/4096 = 0.000244141, full-pool rank sizing below | `t× = 17.167(δ_w5/δ)²` predicts **6.41967765** steps at h8; outside the acceptance interval [8.75477,12.43293]. |
-| C4 | Calm relaxation at t=512 tracks the dissipative scale: centre `1/√π = 0.5641895835`; reject if `\|η̂_d−1/√π\| > 0.040 + 0.001 = 0.041`. The cone still applies; its envelope binds only during the initial transient (population crossing 2.820997). | <0.000195 including calibration risk; budget 0.001 | Saturation of the dissipative envelope (`η_d=1`) or the weak-drive ballistic constant `A/√2≈0.6961`; neither is compatible with this interval. |
+| C3 | Held-out `t× ∝ δ⁻¹`: reject if `\|t̂×_h8 − 10.5938460336\| > 1.5890769050 + 0.25 = 1.8390769050` steps. Training uses w5,w4 only; no fitting on h8. | ≤1/4096 = 0.000244141, full-pool rank sizing below | `t× = 17.167(δ_w5/δ)²` predicts **6.41967765** steps at h8; outside the acceptance interval [8.75477,12.43293]. Normalized powers with exponent **0.656…1.369** still fit this interval; this excludes δ⁻², not nearby alternatives to δ⁻¹. |
+| C4 | Calm finite-size relaxation at t=512: population centre `c₅₁₂ = 0.5289774930939531`; reject if `\|η̂_lin−c₅₁₂\| > 0.0007`. Sampling band only, no model-discrepancy tolerance or fitted bias subtraction. The cone's envelope binds only during the initial transient (population crossing 2.820997). | ≤0.000233065 analytically; budget 0.001; no MC calibration risk | Acceptance interval **[0.5282774931,0.5296774931]** excludes the uncorrected continuum value `1/√π = 0.5641895835` at this finite size, and even the constant 0.530000. This tests the finite-size law, not the continuum limit or its coefficient. |
 | C5 | At t=512 test **the branches themselves**: `b_d(ρ)=A√(tanh(ρ/2)/ρ)` for w5,w4,wind,h8 with tolerance `0.006+0.0001=0.0061`; `b_c=Aμ` for c2,max with tolerance `0.0001+0.0001=0.0002`. Reject each arm on an absolute deviation beyond its tolerance (6 sub-tests). | <0.000001000012 each including calibration risk; budget 0.001 each | h8 distinguishes a constant branch fixed at w5 (**0.52812328**); w4/wind also exclude it. All four dissipative arms exclude extending the weak-drive constant `A/√2` across the sweep. Causal arms distinguish continuing `b_d` without switching: **0.47599447** at c2, **0.41653649** at max. |
 
-Tolerances are **model discrepancy + sampling allowance**. The dissipative
+C3/C5 tolerances are **model discrepancy + sampling allowance**. C4 uses
+its exact finite-size centre and a sampling band alone. C3's 15% model
+band alone admits exponents 0.697…1.312 in `17.167(δ_w5/δ)^β`;
+including its 0.25-step allowance gives 0.656…1.369. This is its limited
+discrimination, not a precise exponent measurement or a power calculation
+under unspecified alternative sampling laws. The dissipative
 branch follows from `W₁≈A μt`, `E_diss≈t√(a μρ)`, and `μ/a=tanh(ρ/2)`;
 finite-t excess EP and ε require a discrepancy budget. The inverse-δ law
 approximates the integrated transient lead by a constant. Neither tightness
@@ -148,9 +175,9 @@ come from 20,000 independent exact-law endpoint samples **per arm**:
 of the 1024 uniform-start walkers; circle W₁ recomputed by the median.
 No GPU, Philox, or unknown dynamics is simulated. Seed 731903 per arm.
 
-| arm | branch centre | population η | MC E[η̂] | MC sd(η̂), R=256 | certified upper bound on branch discrepancy |
+| arm | branch centre | population η | MC E[η̂] | MC sd(η̂), R=256 | certified upper bound on branch discrepancy (C5 only) |
 |---|---|---|---|---|---|
-| calm | 0.56418958 | 0.52897749 | 0.53030765 | 9.964×10⁻⁵ | 0.034024 < 0.040 |
+| calm (η̂ diagnostic) | 0.56418958 | 0.52897749 | 0.53030765 | 9.964×10⁻⁵ | — |
 | w5 | 0.52812328 | 0.52422901 | 0.52427552 | 6.665×10⁻⁶ | 0.003856 < 0.006 |
 | w4 | 0.51433595 | 0.51076279 | 0.51080688 | 6.301×10⁻⁶ | 0.003537 < 0.006 |
 | wind | 0.49762074 | 0.49439922 | 0.49444052 | 5.950×10⁻⁶ | 0.003188 < 0.006 |
@@ -163,23 +190,44 @@ expectation. The estimated empirical offset +0.00003787 is covered by
 its model tolerance. The table's discrepancies are reported, not
 subtracted from observations to make the branch pass.
 
-**Analytical size, not estimated-sd normal tails.** Changing one independent
+**C4 analytical size.** The calm increment has the exact representation
+`B₁−B₂` with independent Bernoulli(1/2) variables. Its T-step displacement
+is `Binomial(2T,1/2)−T`; at T=n/2 the circle distance equals its absolute
+value. Consequently
+`W₁ = A T binom(2T,T)/2^(2T) = 12.56361417006169` and
+`D = E_diss(512) = 23.750753735433943`, fixing c₅₁₂ above. The
+distance function is 1-Lipschitz on the circle. Changing any of the
+`2RmT` independent Bernoulli draws changes L̂ by at most `1/(Rm)`.
+Bounded differences gives
+`Pr(|η̂_lin−c₅₁₂|>h) ≤ 2 exp(−Rm D² h²/T)`.
+At h=0.0007 this is 0.000233064415; α=0.001 needs only
+0.000641254190. The deterministic initial positions add no randomness.
+This bound is a written calculation, not yet a Lean **proved** claim;
+it uses the same f64 trust boundary as the exact-chain denominator.
+The fixed-distance witness attains the population W₁ because the
+coupling leaves the uniform component fixed and moves only the atom.
+Thus no finite-count bias certificate or exact-law MC fit enters C4.
+Its population gap from `1/√π` is 0.035212090454, not a model allowance.
+Passing C4 can support this finite-size prediction only; it cannot
+establish or refute an asymptotic continuum coefficient.
+
+**C5 analytical size, not estimated-sd normal tails.** Changing one independent
 hop draw changes an endpoint by at most 2 cells and W̄₁ by at most
 `2/(Rm)`. Bounded differences therefore gives
 `Pr(|W̄₁−E W̄₁|>h) ≤ 2 exp(−Rm h²/(2T))`.
 For α=0.001 the sufficient η half-width is
-`sqrt(2T ln(2000)/(Rm))/D`: 0.00090688 for calm and at most 0.00005420
-for a driven arm. The registered 0.001 / 0.0001 allowances exceed these,
-and exceed `4.12·sd` (more than 1.25× a 3.29σ band) on every arm.
+`sqrt(2T ln(2000)/(Rm))/D`: at most 0.00005420 for a driven arm.
+The registered 0.0001 allowances exceed these and exceed `4.12·sd`
+(more than 1.25× a 3.29σ band) on every C5 arm.
 No normality, skew correction, or fitted variance is needed for size.
-At the actual allowances the bounds are 0.000193732 for calm and at
-most 1.15×10⁻¹¹ for a driven arm, before adding certificate risk.
+At the actual allowances the bounds are at most 1.15×10⁻¹¹ for a
+driven arm, before adding certificate risk.
 
 The same inequality for the 20,000-replicate MC mean gives a two-sided
 10⁻⁶ certificate radius
-`sqrt(2T ln(2×10⁶)/(20000m))/D`: 0.000141753 for calm, at most
-0.000008471 otherwise. The final column adds this radius to the absolute
-MC discrepancy, rounding upwards. Its seven certificate failure
+`sqrt(2T ln(2×10⁶)/(20000m))/D`: at most 0.000008471 on C5 arms.
+The final column adds this radius to the absolute MC discrepancy,
+rounding upwards. Its six certificate failure
 probabilities are included in the FWER. The numerical recurrence and
 sampling arithmetic are f64, not a formal interval-arithmetic proof.
 
@@ -206,8 +254,8 @@ changes the constructor and omits terms in the estimator's derivative.
 |---|---|---|---|
 | t̂× | 0.047543 | 0.045716 | 0.962 |
 | Ê(512) | 0.0026258 | 0.0025219 | 0.960 |
-| σ̂ at s=1 | 0.0106916 | 0.0104068 | 0.973 |
-| σ̂ at s=2 | 0.0055137 | 0.0063043 | 1.144 |
+| σ̂ at time 1 | 0.0106916 | 0.0104068 | 0.973 |
+| σ̂ at time 2 | 0.0055137 | 0.0063043 | 1.144 |
 | σ̂ in [480,512) | 4.7451×10⁻⁷ | 5.0708×10⁻⁷ | 1.069 |
 
 These observed ratios fit within 1.25; 256 replicates are not a tail
@@ -250,8 +298,8 @@ after a failure. Its allowance exceeds 4.12 times its full-pool sd.
 | U1 | If `a_cone` means activity at locations inside each trajectory's own radius-vs cone, `a_cone=a`. | **Negative result for this reading only**: trajectory induction, **conjecture → proved**. This does not close #9 open problem 1 for conditional, boundary, common-origin or other definitions of cone-restricted activity. |
 | F1 | A one-sided nonzero population edge has +∞ flux EP; the registered full-support law has none. Max has period-2 packet parity and ε-dependent per-step EP, so coarse windows smear it. | Front lemma **conjecture → proved**; finite sampled zero counts are statistical, not a counterexample. The max dissipative envelope is diagnostic. |
 | X1 | Same-draw step-1 mirror damages exactly draws in [3,125): `x_XOR=x_wind−2 I_damage` modulo n forever; damage never grows/heals. Total damaged `7,995,392 ± 8,429`. | Identities **verified** after integer checks, lemma **conjecture → proved**. Count is one statistical check, Bernstein size ≤0.000415, budget 0.001. |
-| T1 | Eight cumulative E−W totals at T=512 and one wind s=0 hop-activity count, bands below. Blocks are displayed, not separately tested. | Nine statistical checks, each Bernstein size ≤0.000415, budget 0.001. **supported/refuted (statistical)**. |
-| P | h8 pooled σ̂ at s=1 and s=2, and Ê(24), a **single omnibus** test with the fixed population centres and rank-protected box below. | Pipeline **supported/refuted (statistical)**, size ≤1/4096. Failure blocks physics promotion but is not proof of a bug. |
+| T1 | Eight cumulative E−W totals at T=512 and one wind hop-1 activity count (from time 0), bands below. Blocks are displayed, not separately tested. | Nine statistical checks, each Bernstein size ≤0.000415, budget 0.001. **supported/refuted (statistical)**. |
+| P | h8 pooled σ̂ at times 1 and 2 (before hops 2 and 3), and Ê(24), a **single omnibus** test with the fixed population centres and rank-protected box below. | Pipeline **supported/refuted (statistical)**, size ≤1/4096. Failure blocks physics promotion but is not proof of a bug. |
 
 T1 is a three-point increment sum, not generally binomial. With
 `L=RmT`, its mean is Lμ, variance `V=L(a−μ²)`, and each centred
@@ -270,7 +318,7 @@ same inequality with b=1 applies. All half-widths exceed 1.25×3.29σ.
 | max tally | 8,522,825,728 | 47,638 |
 | h8 tally | 3,758,096,384 | 212,122 |
 | windXOR tally | 4,077,649,920 | 199,474 |
-| wind s=0 hop count | 8,388,608 | 8,438 |
+| wind hop-1 count (from time 0) | 8,388,608 | 8,438 |
 
 P centres (displayed rounded; evaluated from the recurrence) are
 `(3.4401988985, 2.2425826092, 21.0661460650)`, with
@@ -296,13 +344,21 @@ give mass error ≤1.78×10⁻¹⁵, zero rational-golden error, and agreement
 of median-W₁ with `A E[dist]` within 7.05×10⁻¹². Scripts and raw
 calibration draws remain outside Git; the frozen scoring thresholds,
 sampling laws, seeds, counts and sizes are specified here.
+C4's rational-binomial numerator, recurrence denominator, concentration
+band and C3 exponent intervals are independently recalculated in
+`$TMPDIR/opencode/003-r4.ts`, SHA-256
+`f610b23708adfcb2d9e8b313d9afc54ea06614b6a1c1e0f62e3221fb48f31c1e`.
+The rational W₁ and recurrence distance witness agree within 10⁻¹⁴;
+the script checks that the 40 windows cover hops 1…512 exactly once
+and that the held-out prediction lock is byte-for-byte unchanged.
 
 ### Enumeration, scope and review contract
 
 - **19 statistical tests:** C3=1; C4=1; C5=6; X1=1; T1=9; P=1.
   C4+C5 allocate 7×0.001; X1+T1 allocate 10×0.001; C3+P allocate
-  2/4096. Add seven 10⁻⁶ mean-bias certificate risks. Bonferroni gives
-  **FWER ≤0.01749528125 < 1.75% < 5%**, without independence across
+  2/4096. Add six 10⁻⁶ C5 mean-bias certificate risks; C4 has none.
+  Bonferroni gives
+  **FWER ≤0.01749428125 < 1.75% < 5%**, without independence across
   arms/tests. A pooled-occupancy zero anywhere on the seven base arms
   adds at most `7·1024·513·exp(−256)<2.5×10⁻¹⁰⁵`.
 - These are sizes under ideal independent hop draws of the registered
@@ -323,7 +379,7 @@ sampling laws, seeds, counts and sizes are specified here.
   stated induction to other finite-speed systems. Damage's no-spread
   is independence, not a general statement about interacting systems.
 - **Float trust boundary, to appear verbatim on the page:** “The GPU
-  computes integer positions and counts only. W₁, σ̂, Ê, η and E_diss
+  computes integer positions and counts only. W₁, L̂, σ̂, Ê, η and E_diss
   are evaluated in host f64; ordinary per-operation rounding is of order
   10⁻¹⁵ relative, not f32-level estimator noise. Accumulated arithmetic
   error is distinct from finite-count bias and sampling error.” Counts
@@ -345,7 +401,7 @@ sampling laws, seeds, counts and sizes are specified here.
 
 Formalize the trajectory cone and U1's precisely scoped activity; the
 W₁ coupling/triangle bound and circle median formula; extended-real
-front EP; traffic and net-flux transport inequalities; the damage
+front EP; C4's fixed-distance witness; traffic and net-flux transport inequalities; the damage
 identity; and support symmetry when q_N=q_S=0. Claim statements go in
 `TimesArrow.Claims` and `Challenge.lean` together. Constants and rational
 goldens are exported through `contract.json`; all new measurement passes
