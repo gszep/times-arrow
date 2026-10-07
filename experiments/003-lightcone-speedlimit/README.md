@@ -7,15 +7,13 @@
 > `W₁(p₀,p_t) ≤ min(t, E_diss(t))`,
 > `E_diss(t) = Σ_{s<t} √(a σ(s))`.
 
-This inequality follows from the cone and the traffic inequality; it is a
-mathematical consistency check, not a refutable empirical physics claim.
-Its Lean formalization is **conjecture** until proved. The empirical
-**conjectures** here are finite-horizon tightness and a held-out crossover
-prediction. Their centres are closed-form branches or a training-only fit,
-not the exact answer for the arm being tested. No claim of a fundamental
-priority of dissipation over causality, or of Lorentz invariance, follows.
-The literature-absence statement “no published bound combines these” is a
-**conjecture**, not established novelty (`docs/background.md`).
+The inequality follows from the cone and traffic inequality: a mathematical
+consistency check, with Lean formalization **conjecture** until proved.
+The empirical **conjectures** are finite-horizon tightness and held-out
+crossover, centred on closed-form branches or a training-only fit.
+Neither fundamental priority of dissipation nor Lorentz invariance follows.
+“No published bound combines these” is a literature-absence **conjecture**,
+not established novelty (`docs/background.md`).
 
 ## Setup (pre-registered)
 
@@ -132,16 +130,14 @@ does not establish a universal asymptotic or continuum law.
 | # | Prediction, criterion and tolerance | Size under the registered exact law | Alternative distinguished |
 |---|---|---|---|
 | C3 | Held-out `t× ∝ δ⁻¹`: reject if `\|t̂×_h8 − 10.5938460336\| > 1.5890769050 + 0.25 = 1.8390769050` steps. Training uses w5,w4 only; no fitting on h8. | ≤1/4096 = 0.000244141, full-pool rank sizing below | `t× = 17.167(δ_w5/δ)²` predicts **6.41967765** steps at h8; outside the acceptance interval [8.75477,12.43293]. |
-| C4 | Calm relaxation at t=512 tracks the dissipative scale: centre `1/√π = 0.5641895835`; reject if `\|η̂_d−1/√π\| > 0.040 + 0.001 = 0.041`. The cone still applies; its envelope binds only during the initial transient (population crossing 2.820997). | ≤0.001, plus ≤10⁻⁶ calibration-certificate risk | Saturation of the dissipative envelope (`η_d=1`) or the weak-drive ballistic constant `A/√2≈0.6961`; neither is compatible with this interval. |
-| C5 | At t=512 test **the branches themselves**: `b_d(ρ)=A√(tanh(ρ/2)/ρ)` for w5,w4,wind,h8 with tolerance `0.006+0.0001=0.0061`; `b_c=Aμ` for c2,max with tolerance `0.0001+0.0001=0.0002`. Reject each arm on an absolute deviation beyond its tolerance (6 sub-tests). | ≤0.001 each, plus ≤10⁻⁶ calibration-certificate risk each | h8 distinguishes a constant branch fixed at w5 (**0.52812328**); w4/wind also fall outside that constant's tolerance. Causal arms distinguish continuing `b_d` without switching envelopes: **0.47599447** at c2, **0.41653649** at max. |
+| C4 | Calm relaxation at t=512 tracks the dissipative scale: centre `1/√π = 0.5641895835`; reject if `\|η̂_d−1/√π\| > 0.040 + 0.001 = 0.041`. The cone still applies; its envelope binds only during the initial transient (population crossing 2.820997). | <0.000195 including calibration risk; budget 0.001 | Saturation of the dissipative envelope (`η_d=1`) or the weak-drive ballistic constant `A/√2≈0.6961`; neither is compatible with this interval. |
+| C5 | At t=512 test **the branches themselves**: `b_d(ρ)=A√(tanh(ρ/2)/ρ)` for w5,w4,wind,h8 with tolerance `0.006+0.0001=0.0061`; `b_c=Aμ` for c2,max with tolerance `0.0001+0.0001=0.0002`. Reject each arm on an absolute deviation beyond its tolerance (6 sub-tests). | <0.000001000012 each including calibration risk; budget 0.001 each | h8 distinguishes a constant branch fixed at w5 (**0.52812328**); w4/wind also exclude it. All four dissipative arms exclude extending the weak-drive constant `A/√2` across the sweep. Causal arms distinguish continuing `b_d` without switching: **0.47599447** at c2, **0.41653649** at max. |
 
-The tolerance is explicitly **model discrepancy + sampling allowance**.
-The dissipative formula follows from `W₁≈A μt`,
-`E_diss≈t√(a μρ)`, and `μ/a=tanh(ρ/2)`. Transient excess EP and finite ε
-make a finite-t test of exact equality inappropriate. The fitted inverse-δ
-law approximates the integrated transient lead by a constant; it is not
-a theorem, and h8 can falsify it without refitting C. The formal bound
-alone predicts neither tightness nor this approximate crossover law.
+Tolerances are **model discrepancy + sampling allowance**. The dissipative
+branch follows from `W₁≈A μt`, `E_diss≈t√(a μρ)`, and `μ/a=tanh(ρ/2)`;
+finite-t excess EP and ε require a discrepancy budget. The inverse-δ law
+approximates the integrated transient lead by a constant. Neither tightness
+nor this approximation follows from the bound; h8 tests it without refitting.
 
 ### Finite-size and finite-count sizing
 
@@ -176,6 +172,8 @@ For α=0.001 the sufficient η half-width is
 for a driven arm. The registered 0.001 / 0.0001 allowances exceed these,
 and exceed `4.12·sd` (more than 1.25× a 3.29σ band) on every arm.
 No normality, skew correction, or fitted variance is needed for size.
+At the actual allowances the bounds are 0.000193732 for calm and at
+most 1.15×10⁻¹¹ for a driven arm, before adding certificate risk.
 
 The same inequality for the 20,000-replicate MC mean gives a two-sided
 10⁻⁶ certificate radius
@@ -274,18 +272,30 @@ same inequality with b=1 applies. All half-widths exceed 1.25×3.29σ.
 | windXOR tally | 4,077,649,920 | 199,474 |
 | wind s=0 hop count | 8,388,608 | 8,438 |
 
-P centres are `(3.4401988985, 2.2425826092, 21.0661460650)`, with
-base half-widths `(0.045, 0.025, 0.015)`. Let `Z` be the maximum of
-the three absolute deviations divided by these widths. These widths
-are locked before a separate set of 4095 full-pool reference draws,
-seed 731906; the seed-731905 pilot is not reused to calibrate a score
-whose widths it informed. Reject if `Z > max(1,max Z_i)`. The
-independent reference maximum is recorded below when calculated.
-The rank proof gives size ≤1/4096 for this
-**whole box**, without assuming independence of its components or
-normality. Its widths exceed 4.12 times the measured full-pool sds
-`(0.00994413, 0.00523508, 0.00269516)`. Nonlinear bias is included in
-the reference law, not bounded by `2n/(Rm w)` or silently ignored.
+P centres (displayed rounded; evaluated from the recurrence) are
+`(3.4401988985, 2.2425826092, 21.0661460650)`, with
+base half-widths `(0.045, 0.025, 0.015)`. `Z` is the largest absolute
+deviation divided by its width. The widths were locked in `99687ae`
+before a separate 4095 full-pool reference draws, seed 731906; the
+seed-731905 pilot is not reused to calibrate a score it informed.
+The independent maximum is **0.75124912**; reject if
+`Z > max(1,max Z_i)=1`. Rank sizing applies to the **whole box**,
+without assuming independence of components or normality. Its widths
+exceed 4.12 times the independent full-pool sds
+`(0.00992825, 0.00519300, 0.00269495)`. Nonlinear bias is included in
+the reference law, not bounded by `2n/(Rm w)`.
+
+Calibration provenance: TypeScript scratch only, under
+`$TMPDIR/opencode/003-r3/` (the approved session temp directory);
+`sizing.ts` SHA-256
+`b45a2976ae0e21c4aeab16f9039bc741720c27b69fb684f7f0bc09d531b7e1d5`.
+MC uses Mulberry32 with the seeds above and BTRS/inversion; it is
+independent of the production Philox implementation. Independent
+integer-rational checks at t≤3 and 3591 arm/time bound checks at t≤512
+give mass error ≤1.78×10⁻¹⁵, zero rational-golden error, and agreement
+of median-W₁ with `A E[dist]` within 7.05×10⁻¹². Scripts and raw
+calibration draws remain outside Git; the frozen scoring thresholds,
+sampling laws, seeds, counts and sizes are specified here.
 
 ### Enumeration, scope and review contract
 
@@ -343,13 +353,12 @@ must match the Lean executable before the WebGPU result is reviewable.
 
 ## Result
 
-**Not run.** This is an experimental-design deliverable on `prereg/003`.
-The calculations and exact-law MC above size the criteria; they are not
-evidence from the proposed system simulation. Calibration negatives:
+**Not run.** The calculations and exact-law MC size the criteria;
+they are not system-simulation evidence. Calibration negatives:
 raw log-count EP has frequent infinities; fixed population cuts do not
 measure empirical circle W₁; the reduced frozen-log noise calculation
 does not size the nonlinear estimator. Those approaches are **refuted
-as sizing/measurement methods**. U1 is a separate negative theoretical
-result only for the own-trajectory in-cone-location reading.
+as sizing/measurement methods**. U1's negative result has only its stated
+own-trajectory scope.
 The frozen h8 prediction survives its exact-law sizing without refitting.
 Future measured outcomes go here without changing the predictions.
