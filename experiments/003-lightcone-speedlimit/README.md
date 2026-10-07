@@ -1,184 +1,247 @@
 # 003-lightcone-speedlimit
 
-**Can a causal cone and entropy production bound the same transport?**
-(issue #9; Q3). No published bound puts a causal cone and entropy
-production into one inequality (`docs/background.md`, "Cones and speed
-limits"); the candidate, from issue #9's exploration:
+**Does dissipation, not causality, limit transport — and where is the crossover?**
+(issue #9; Q3). The candidate bound from issue #9's exploration, with `v = 1`
+cell/step:
 
-> `W₁(p₀, p_t) ≤ min(v·t, ∫₀ᵗ √(σ(s)·a(s)) ds)`,  `v = 1` cell/step.
+> `W₁(p₀, p_t) ≤ min(v·t, ∫₀ᵗ √(σ(s)·a(s)) ds)`
 
 The two halves are derived separately: causality — mass displaces ≤ 1
 cell/step, so `W₁(p_s, p_{s+1}) ≤ 1` and `W₁ ≤ t` (001's L3, restated for
 the walker); dissipation — the net edge fluxes are a transport plan,
-`dW₁/ds ≤ Σ_e |J_e|`, the per-edge lemma
-`(F−R)·ln(F/R) ≥ (F−R)²/(F+R)` (traffic form; equality iff `F = R`),
-and Cauchy–Schwarz give `(Σ|J|)² ≤ a·σ` with the activity
-`a = Σ_e (F_e+R_e) = q_E+q_W`, the hop rate. This experiment measures
-the composite bound where both halves are live, and registers where each
-half is void. The dynamics kernel is 002's (`src/walk.ts`), shared
+`dW₁/ds ≤ Σ_e |J_e|`, the per-edge traffic inequality
+`(F−R)·ln(F/R) ≥ (F−R)²/(F+R)` and Cauchy–Schwarz give `(Σ|J|)² ≤ a·σ`
+with `a` the hop rate. No published bound puts a causal cone and entropy
+production into one inequality (`docs/background.md`, "Cones and speed
+limits"). This registration makes the core claim falsifiable: a torus large
+enough that `W₁` can approach either envelope, a drive sweep that places
+the envelope crossover at observable time with a registered scaling law,
+and a test of the cone-restricted-activity variant (#9 open problem 1),
+which closes. The dynamics kernel is 002's (`src/walk.ts`), shared
 one-source; the RNG stream is 002's hop draws, bit-exact.
 
 ## Setup (pre-registered)
 
-- `n = 16` torus (light-cone speed 1 cell/step, stated on the page),
-  `m = 32768` independent walkers per seed, `R = 256` seeds (16 blocks ×
-  16, seeds 1…256, all arms paired by seed and walker index), `T = 1024`
-  steps (S arms) / 64 (L arms).
-- Weights, dyadic in 256ths: **wind** `(125, 3, 0, 0, 128)` — drive
-  `ln(125/3) = 3.7297` nats/hop, `q_N = q_S = 0`; **calm** `(64, 64, 0, 0,
-  128)`. The calm differs from the wind in exactly one respect (the E/W
-  split): same stay rate, same hop rate `a = 1/2`, same frozen y. With
-  `q_N = q_S = 0` the y-marginal never moves (a bit-exact invariant) and
-  each walker's x-marginal is the exact 16-state lazy biased chain
-  (`q_E` east, `q_W` west, `1/2` stay) — the ensemble law is exactly
-  solvable, and every prediction below is exact calculation under it
-  (f64, error < 10⁻¹²; rational goldens at `t ∈ {1,2,3}` in the
-  contract). `σ_step = (122/256)·ln(125/3) = 1.7774` nats/walker-step,
-  `√(σ_step·a) = 0.943 < v = 1`.
-- Starts: **S** — deterministic profile, left half `x ∈ {0..7}` 255
-  walkers per site, right half 1 per site (`m = 128·(255+1)`; per-column
-  counts 4080 | 16; contrast ρ = 255; strictly positive support — any p₀
-  with an empty site makes the flux EP +∞, which is arm L's story);
-  **L** — all walkers at `(8,8)`. The constructor is deterministic (no
-  `t = 0` draw): walker `j < 32640` → left site `(q mod 8, ⌊q/8⌋)` with
-  `q = ⌊j/255⌋`; `j ≥ 32640` → right site `(8+(j' mod 8), ⌊j'/8⌋)`,
-  `j' = j−32640`. Arms: **S-wind, S-calm, L-wind, L-calm**, plus
-  **S-wind-XOR**: the same seed, the wind protocol with E↔W mirrored at
-  step 1 only.
+- `n = 1024` torus (light-cone speed 1 cell/step, stated on the page),
+  `m = 65536` walkers per seed, `R = 256` seeds (16 blocks × 16, seeds
+  1…256, all arms paired by seed and walker index), `T = 512` steps
+  (`n ≫ v·T`; the cone guarantees `|x_t − x₀| ≤ t`, so no walker ever
+  wraps). `q_N = q_S = 0` in every arm: no walker ever changes row — a
+  bit-exact invariant — and each walker's x-marginal is the exact
+  1024-state lazy biased chain. Every prediction below is exact
+  calculation under it (f64, chain error < 10⁻¹²; dyadic rational
+  goldens at `t ∈ {1, 2, 3}`).
+- **Start — localized but full support** (no `t = 0` draw, deterministic):
+  walker `j ≡ 0 (mod 64)` → the ε-column: `x₀ = (j/64) mod 1024`, exactly
+  one walker per column (1024 walkers); `j ≢ 0 (mod 64)` → the block at
+  `x₀ = 0` (63·1024 walkers). `y₀ = 0` for all. So
+  `p₀ = (63/64)δ₀ + (1/64)u`: full support keeps the flux EP finite at
+  every step (one empty site behind a front is enough for `+∞` — F1), the
+  ε-mass is exactly uniform at every `t` (translation-invariant kernel),
+  transports `u → u` at zero cost, and
+  `W₁(p₀, p_t) = (63/64)·W₁(δ₀, K_t)` exactly. The ε-cliffs at the block's
+  edges make `σ(0)` scale as `ln(1/ε)` — the `+∞` front of a δ-start in
+  ε-regularization (the table under F1).
+- **Arms — the drive sweep** (weights `(e, w, n, s, stay)` in 256ths;
+  `ρ = ln(e/w)`, `a = (e+w)/256`, `μ = (e−w)/256`, `σ_step = μρ`). All but
+  the last keep `stay = 128`, so the chain's parity mode is exactly dead
+  (eigenvalue `1−2a = 0`); a no-stay chain is period-2 and its empty-parity
+  sites put the flux EP on the ε-floor — the `max` arm uses that
+  deliberately. The sweep brackets the envelope crossover `√(σ_step·a) = 1`
+  between `wind` and `c2`; `max` is the causal-tightness anchor.
+
+  | arm | (e, w, stay) | ρ | a | μ | σ_step | √(σ_step·a) |
+  |---|---|---|---|---|---|---|
+  | calm | (64, 64, 128) | 0 | 1/2 | 0 | 0 | 0 |
+  | w5 | (123, 5, 128) | 3.2027 | 1/2 | 0.460938 | 1.4763 | 0.8591 |
+  | w4 | (124, 4, 128) | 3.4340 | 1/2 | 0.468750 | 1.6097 | 0.8971 |
+  | wind | (125, 3, 128) | 3.7297 | 1/2 | 0.476563 | 1.7774 | 0.9427 |
+  | c2 | (126, 2, 128) | 4.1431 | 1/2 | 0.484375 | 2.0068 | 1.0017 |
+  | max | (255, 1, 0) | 5.5413 | 1 | 0.992188 | 5.4980 | 2.3448 |
+
+  plus **windXOR**: the wind protocol with E↔W mirrored at step 1 only
+  (the damage arm), same seeds.
 - Kernel: `hop`, the Philox layout `(walker, step)` and the thresholds of
-  `src/walk.ts` are untouched (single dynamics source, goldens as in
-  002). 003 adds measurement passes to the same WGSL module:
-  `initProfile` (the constructor above), `colCount` (per-(seed, t, x)
-  column occupancy) and a windowed `edges` readback (zero between
-  windows). Tallies (per-step `n_E − n_W`) are 002's buffer.
-- **Observables, exact.** `W₁^circle` of the x-marginal: the min-cost
-  flow on the cycle `= min over cuts c of Σ_i |cumulative difference|,
-  starting the accumulation at c` — integer counts throughout, one
-  division by `m` (verified against an independent flow computation on
-  3000 random integer pairs, 0 mismatches; pinned as goldens — the
-  L-calm's exact values at `t ∈ {1,2,3}` are dyadic: 1/2, 3/4, 15/16). `σ̂` per
-  window: pooled over all R seeds, `F̂_e, R̂_e` = E/W-crossing counts of
-  edge e divided by `R·m·w`; `σ̂ = Σ_e (F̂−R̂)·ln(F̂/R̂) ≥ 0` in
-  nats/walker-step; a one-sided edge (`F̂ = 0 ≠ R̂` or vice versa) gives
-  `σ̂ = +∞`. `â` = total hops `/ (R·m·w)`. Envelopes: causal `t`;
-  dissipative `E_diss(t) = Σ_{s<t} √(σ(s)·a)` (exact chain), estimated
-  at the 32-step window boundaries by `Ê(32j) = Σ_{k<j} 32·√(σ̂_k â_k)`
-  (the windowed plug-in is biased low by smearing — the calm's by 13% —
-  so all registered targets are the windowed-exact centers). σ̂ windows:
-  single-step `s = 0…15` (fine) and `w = 32` (coarse, `k = 0…31`).
-  Sample grid (S arms): `t = 0…8`, then 12, 16, 20, 24, 32, 40, 48, 64,
-  96, 128, then every 32 to 1024. Damage: XOR of paired positions.
+  `src/walk.ts` untouched (single dynamics source, the 002 goldens). 003
+  adds measurement passes to the same WGSL module: `initProfile` (the
+  constructor above), `colCount` (per-`(seed, t, x)` column occupancy) and
+  the windowed `edges` readback (zeroed between windows; per-step tallies
+  are 002's buffer).
+- **Observables.** `W₁^circle` of the x-marginal: the integer min-cut
+  cumulative formula (cycle min-cost flow), one division by `m`; dyadic at
+  `t ≤ 3` for every arm (the calm: `63/128`, `189/256`, `945/1024` at
+  `t = 1, 2, 3`; the per-arm values are pinned as rational goldens in the
+  contract). `σ̂` per window: pooled over all `R`
+  seeds, `F̂_e, R̂_e` = the pooled E/W-crossing counts of edge `e` divided
+  by `R·m·w`; `σ̂ = Σ_e (F̂−R̂)·ln(F̂/R̂) ≥ 0` in nats/walker-step. The
+  window partition is pinned: single-step `s = 0…23`, then `[24, 32)`, then
+  32-step chunks to 512. `â = total hops / (R·m·w) ≡ a` exactly (bit-exact:
+  `â ≡ 1` for `max`). `Ê(t) = Σ` over the partition's full pieces `≤ t` of
+  `w_k·√(σ̂_k·â_k)`. **η's denominator is pinned**: every η centre and band
+  below uses `E_diss(t) ≡ Σ_{s<t} √(σ(s)·a)` — the exact per-step envelope
+  under the exact chain, the quantity the bound is a claim about; the
+  windowed `Ê` is a pipeline estimator (the P row) and the basis of the
+  `t̂×` statistic. Sample grid: `t ∈ {0, 1, 2, 3, 4, 8, 16, 24, 32, 64,
+  128, 256, 384, 512}`. Damage: XOR of the paired wind/windXOR positions.
 - Sweep: headless (`scripts/headless.ts`), hardware-adapter-guarded,
   provenance JSON (commit, parameters, seeds, adapter), probe on
   `window`, batched readbacks, `device.lost` checked; every parameter in
-  the page URL; page shows hypothesis, live W₁ vs both envelopes, the
-  crossover, the assumptions panel and each claim's refuter. All tier 0
-  (the sweep is ~10¹⁰ walker-steps).
+  the page URL; the page shows the hypothesis, live `W₁` against both
+  envelopes, the crossover, the assumptions panel and each claim's
+  refuter. All tier 0: the sweep is ~6×10¹⁰ walker-steps — minutes on
+  Artemis at 000's measured rate.
 
 ## Hypothesis (pre-registered)
 
-Exact-chain predictions (the 16-state chain; all values per walker):
-`W₁` limits to `W₁(p₀, u) = 1.984375 = 32·254/4096` (both S arms);
-key points — S-wind: `W₁(1) = 0.4757`, `W₁(16) = 3.4672`,
-`W₁(32) = 1.0572`, `W₁(1024) = 1.9844`; S-calm: `W₁(32) = 1.3928`,
-`W₁(1024) = 1.9844`. `σ(0)·a = 1.0605 > 1` (wind, step 0), `σ(1)·a =
-0.9714 < 1`; the naive crossover `t× = σ_step·a/v² = 0.889 ≈ 1`; the
-cumulative envelope crossing `t_c = 3` (`E_diss(3) = 2.9837`); calm:
-`σ(0)·a = 0.172` — dissipative at every step. The **composite bound
-holds at every step of both S arms in the exact chain** (min slack
-0.524 at wind `t = 1`, 0.353 at calm `t = 1`) — this pre-registered
-calculation is the candidate's first test: had it failed anywhere, the
-bound would be refuted by exact calculation before any run.
+Exact-chain predictions, all per walker (`f64`; the scratch sizing scripts
+stay out of Git):
+
+- **The shape law:** `σ(s) = σ_step + 1/(2s) + O(s^{−3/2})` for every arm
+  from the localized start — the packet's own spreading dissipation,
+  verified in the exact chain: the wind at `s = 256` within 9×10⁻⁴ relative
+  (`1.78094` vs `σ_step + 1/512 = 1.77939`), the calm within 5×10⁻³
+  (`0.00191` vs `0.00192` — the `O(s⁻²)` block corrections sit on a
+  `1/(2s)` that is itself heading to zero).
+- **Binding envelope:** dissipative for `{calm, w5, w4, wind}`
+  (`√(σ_step·a) < 1`), causal for `{c2, max}` (causal at every `t ≥ 1`).
+  The sweep crossover `√(σ_step·a) = 1` lies between `wind` (0.9427) and
+  `c2` (1.0017).
+- **The time crossover** `t×` — where the binding envelope switches from
+  causal to dissipative inside one arm — solves
+  `∫₀^{t×} √(σ(s)·a) ds = v·t×`; it exists because the localized start's
+  `σ(s)` rides above `σ_step` (the ε-cliff spike, then the `1/(2s)` shape
+  law), and obeys
+  **`t× ≈ C/(1 − √(σ_step·a))`** with `C = t×·(1 − √(σ_step·a))` the
+  ε-cliff lead. Exact values (`E_diss` crossing; the estimator's own
+  windowed value in brackets, used as the centre of `t̂×`):
+  calm `2.821`, w5 `17.167`, w4 `23.935`, wind `44.74 [43.58]`;
+  `C ∈ [2.42, 2.82]` across a 16× range of `1 − √(σ_step·a)`; `c2`, `max`:
+  no crossing within `T`. (The exploration report's `t× = σa/v²` is the
+  constant-σ heuristic; two constant-slope rays cross only at 0, and only
+  the crossing equation above is registerable. Both say the same thing:
+  the crossover is set by the drive's `σa` relative to `v²`.)
+- **Tightness — where transport approaches an envelope.** The calm's
+  `η_d(512) = E[W̄₁]/E_diss = 0.5309` against the continuum `1/√π =
+  0.5642`: the Cauchy–Schwarz √π slack is all that separates relaxation
+  transport from the dissipative envelope. The sweep at `t = 512`:
+  w5 `0.5243`, w4 `0.5107`, wind `0.4944` (dissipative branch
+  `(63/64)√(tanh(ρ/2)/ρ)`), c2 `0.4769`, max `0.9767` (causal branch
+  `(63/64)μ`). Causal saturation is paid for in dissipation: `η_c → 1`
+  needs `μ → 1`, i.e. `q_W → 0` and `σ_step → ∞`. **Dissipation, not
+  causality, is the fundamental limit; the causal envelope binds only
+  where dissipation is void (fronts) or so abundant that the cone is the
+  tighter statement (near-max drive).**
+- `t×`, `C` and the tightness values are model numbers of the registered
+  start (the ε-cliff); the scaling in the drive — the `δ^{-1}` law and the
+  two tightness branches — is the physics.
 
 | # | Claim | Prediction and criterion (size) | Falsified if | Label it earns |
 |---|---|---|---|---|
-| M1 | The model fits the library and the harness is exact: weights, profile constructor, colCount, windowed edges, XOR pairing reproduce the Lean reference bit for bit; differential tests vs `timesarrow` pass; y invariant (no walker changes row, every arm, every step) | Goldens and differential tests pass (bit-exact, size 0) | Any golden, differential test or the y-invariant fails: implementation error; nothing is promoted until fixed | structure **conjecture** (round-1 model lemmas) + **verified** (bit-exact) |
-| C1 | The causal envelope: `W₁^circle(p₀, p_t) ≤ t` (each hop displaces ≤ 1 cell; proved for HPP as 001 L3, here for the walker) | L arms: columns outside `[8−s, 8+s] mod 16` empty at every sampled `s ≤ 7` — bit-exact, and `W₁^L ≤ s` follows exactly (max ratio 1/2 at `s = 1`). S arms: `Ŵ₁(seed, t) ≤ t` at every sample; tightest margin `(1−0.4757)/0.0132 = 39.7σ` (size ≈ 0) | Any support escape or any `Ŵ₁ > t`: implementation error | cone lemma **conjecture** (round-1 Lean target; **proved** when it lands) + **verified** (L, bit-exact) + **supported** (S, size ≈ 0) |
-| C2 | The composite bound is never violated, and the measured windowed envelope agrees with the exact chain | (i) Exact chain: no violation `t ≤ 1024`, both S arms (the pre-registered calculation above); (ii) measured: `W̄₁(32j) ≤ Ê(32j)` at all 32 window boundaries, both arms — tightest margin 1072σ (calm, j = 1; 86σ per seed), size ≈ 0; (iii) `Ê(1024) ∈ 965.35 ± 0.015` (wind), `3.4748 ± 0.0040` (calm) (size 0.001 each); (iv) `W̄₁` landmarks — wind `t ∈ {16,128,1024}`: 3.4672, 1.9534, 1.9844; calm `t ∈ {64,128,1024}`: 1.8135, 1.9701, 1.9844; all `± 0.0027` (size 0.001 each) | Any violation (implementation error, or a refutation of the bound); any band escape | bound **conjecture** (Lean round 2) + exact-chain check **verified** (f64 + rational goldens) + **supported** (statistical) |
-| C3 | The crossover: the drive lifts the dissipative envelope above the causal one for exactly the first step; the naive `t× = σa/v²` gets the scale | Measured slope classification `σ̂(s)·â(s)` vs 1, fine windows: wind — causal at `s = 0` (`σ(0)·a = 1.0605`, z = 12.5σ; size < 10⁻³⁰), dissipative at `s ∈ {1,2,3}` (z = 12.1, 42, 66); calm — dissipative at `s ∈ {0..3}` (z ≥ 1100). Measured `t̂× = 1` vs naive `0.889`. Cumulative `t_c = 3` is an exact-chain statement (its 0.016 margin sits at the σ̂-path noise floor: `t̂_c` reported, predicted 2 or 3, `P(2) = 0.002`, not a falsifier) | Any classification flips where the margin is ≥ 12σ (8 sub-tests, composite size < 10⁻²⁹) | **supported** (statistical) |
-| C4 | The null transports by relaxation alone: no drive, no causal phase, `W₁` rises to the same limit under a dissipative-only envelope with O(1) slack | `W̄₁` landmarks (above); `η̂_N(1024) = W̄₁^N/Ê^N ∈ 0.4988 ± 0.0015` (size 0.001); the measured classification is dissipative at every step (C3's calm subs) | Any band escape — η̂ plus the calm landmarks of C2(iv) (sizes 0.001 each) | **supported** (statistical) |
-| C5 | Drive vs calm, paired: the wind laps the torus at 0.477 cells/step (Péclet 15) — `W₁^D` peaks at half-lap and dips **below** the diffusing calm at full-lap realignment: the sign sequence `{+,+,+,−,−,−}` at `t ∈ {4,8,16,32,64,128}` | Paired wins `≥ k` of 256 seeds per t: `k = 256` for `t ≤ 64` (z ≥ 28, sizes ~10⁻¹⁷⁰), `k = 245` at `t = 128` (`p_win = 0.9855`, size 2 × 10⁻⁴; a single seed goes against the trend with probability 1.45% — stated on the page) | Any `t`'s wins fall below its `k` (6 sub-tests, composite size ≤ 0.002) | **supported** (statistical) |
-| F1 | A strict cone voids the EP bound: the flux EP is `+∞` while the support grows (sharp front ⇒ one-sided edges), so the composite degenerates to the causal bound at every `t` for localized starts — the halves are complementary *because* the cone is sharp | Exact law: `σ = +∞` for `s ≤ 7` (both L arms; Lean round 1). Measured: `σ̂(s) = +∞` for `s = 0…7`, both L arms — deterministic, bit-exact. Resolution boundary: the wind's behind-the-drift columns stay empty until the packet laps around — expected pooled counts at `s = 8…11`: 10⁻⁶…0.73, so `σ̂ = +∞` there with `P ≈ 1−10⁻¹², 1−2·10⁻⁶, 0.99, 0.61` (reported, not falsifiers); finite from `s = 12` (count 1540): `σ̂ ∈ 1.8554, 1.8490, 1.8437, 1.8391 ± 0.0072` at `s = 12…15` (wind). Calm: finite from `s = 8` (far-column count 127): `σ̂ ∈ 0.0628 ± 0.00083, 0.04955 ± 0.00073` at `s ∈ {8,10}` (sizes 0.001) | `σ̂(s) < ∞` at any `s ≤ 7` (bit-exact: implementation error); any finite-era band escape (6 sub-tests) | front lemma **conjecture** (round-1 Lean target; **proved** when it lands) + **verified** (bit-exact) + **supported** (statistical) |
-| X1 | Damage: XOR of the step-1-mirrored pair. Damaged = exactly the step-1 east-drawers (`u < 125/256`), displaced `|Δx| = 2` at every later step, undamaged walkers bit-identical — damage neither grows nor heals (the butterfly velocity of the independent model is degenerate; 001's interacting gas spread one flipped slot to 2.4% of slots) | Per seed: `#damaged = n_E(1)` (bit-exact identity); ensemble `4.096 × 10⁶ ± 4778` (size 0.001); `|Δx|_circle = 2` and y-equality at every sampled `t ≥ 1` (bit-exact) | Any mismatch of the identity, any `|Δx| ≠ 2` among damaged, any bit-difference among undamaged: implementation error | **verified** (bit-exact) + difference lemma **conjecture** (round-1 Lean target; **proved** when it lands) |
-| T1 | Second-law linearity at the new weights: per-seed pathwise `σ = (n_E−n_W)·ln(125/3)` (integer tallies), `⟨σ⟩ = m·t·σ_step` with iid increments | R-mean tallies `∈ 999424 ± 156` (t = 64), `3997696 ± 312` (256), `15990784 ± 624` (1024); per-seed std `756.5 ∈ [646, 867]` at t = 64; ≥ 15/16 block means in band (5 sub-tests, size 0.001 each) | Any band escape | **supported** (statistical); `EP = T·σ_step` **proved** (faec5f1), instantiated conditionally on 002's round-3 per-walker stationarity lemma (**conjecture**) |
-| — | Pipeline: the pooled σ̂/â estimators match the exact chain where resolution allows | `σ̂(0) ∈ 2.1219 ± 0.032` (wind, fine; center includes the plug-in bias +0.0008, sd 9.7 × 10⁻³ by pooled-count MC); `σ̂ ∈ 1.77787 ± 3.1 × 10⁻⁴, 1.77750 ± 3.1 × 10⁻⁴` (wind coarse k = 0, 1); `σ̂ ∈ 0.01250 ± 2.1 × 10⁻⁵` (calm k = 0); `â(0) ∈ 0.5 ± 5.7 × 10⁻⁴`; `W̄₁^L-calm(16) ∈ 2.2337 ± 0.0027` — the δ-null's √t law, ratio 0.5584 vs the continuum `√(1/π) = 0.5642` of #9's 1D check (6 sub-tests, size 0.001 each) | Any escape: a pooled-count pipeline error | **supported** (statistical) |
+| M1 | The harness is exact: the 002 kernel goldens, the new `initProfile`/`colCount`/windowed-edges goldens, the dyadic `W₁` at `t ∈ {1,2,3}`, the `t = 0` column counts (64513 \| 1 per column), differential tests vs `timesarrow`, the y-invariant, `â ≡ a` (`â ≡ 1` for max) | Goldens and differential tests pass bit for bit (size 0) | Any failure: implementation error; nothing is promoted until fixed | structure **conjecture** (round-1 model lemmas) + **verified** (bit-exact) |
+| C1 | The causal cone: `W₁^circle(p₀, p_t) ≤ t` (each hop displaces ≤ 1 cell) | Exact chain: holds at every sampled (arm, t), all arms — the registration-time check (tightest margin: max at `t = 512`, 11.94). Measured: `max_j \|x_t − x₀\|_circle ≤ t` at every sampled t, every arm, and `W̄₁ ≤ t` everywhere — bit-exact; the max margin 11.93 ± 0.00095 (z ≈ 1.3×10⁴) | Any support escape or `W̄₁ > t`: implementation error | cone lemma **conjecture** (Lean round 1; **proved** when it lands) + **verified** (exact-chain + bit-exact) |
+| C2 | The composite bound is never violated: `W₁^circle ≤ min(t, E_diss(t))` | Exact chain: no violation at any sampled (arm, t), all six arms (f64 + the dyadic goldens); the run's envelope agreement is the P row's `Ê` checks | Any exact-chain violation (the bound refuted by calculation before any run); a run violation is an implementation error | bound **conjecture** (Lean round 2) + **verified** (exact-chain check) |
+| C3 | The crossover. (i) The sweep: the binding envelope switches between `wind` and `c2` — exact: `√(σ_step·a) = 1` lies between 0.9427 and 1.0017; measured: `Ê(512) − 512 = −26.44` (wind) and `+3.67` (c2) against `sd(Ê) ≈ 6.3×10⁻³` (z ≈ 4200, 580) — the classifications are exact-de-facto. (ii) The time crossover: `t̂×` = the interpolated crossing of `Ê(t) − t` on the pinned grid: calm `2.821 ± 0.004`, w5 `17.167 ± 0.036`, w4 `23.935 ± 0.058`, wind `43.58 ± 0.124` (bands ±3.29 sd, sd ∈ [0.0012, 0.038] steps; 4 sub-tests, size 0.001 each); `c2`, `max`: no crossing within `T`. (iii) The scaling law `t× = C/(1−√(σ_step·a))`, `C ∈ [2.42, 2.82]` — the exact centres' pattern across a 16× range of `δ`; tested by (ii) | Any `t̂×` outside its band; any crossing appearing in `c2`/`max` | **supported** (statistical) |
+| C4 | Dissipation-limited relaxation (the calm): the cone applies (C1) but the causal envelope binds only in the ε-cliff transient `t ≤ t× = 2.82` (exact), never again (the causal slack `t − E_diss(t)` grows to 488, 20×, by `t = 512`); transport tracks the dissipative envelope | `η̂_d(t) = W̄₁(t)/E_diss(t)`: `0.48170 ± 3.29×1.16×10⁻⁴` (t=64), `0.51918 ± 1.10×10⁻⁴` (256), `0.53087 ± 1.07×10⁻⁴` (512) — centres are `E[W̄₁]/E_diss` (the ε-empirical bias `+0.030…+0.045` included; 3 sub-tests, size 0.001 each) | Any band escape | **supported** (statistical) |
+| C5 | The sweep's tightness law at `t = 512`: `η̂ = W̄₁/min(t, E_diss)` per arm against the two branches | w5 `η_d = 0.52434 ± 2.32×10⁻⁵`, w4 `0.51072 ± 2.20×10⁻⁵`, wind `0.49443 ± 2.07×10⁻⁵` (branch `(63/64)√(tanh(ρ/2)/ρ)`), c2 `η_c = 0.47687 ± 1.92×10⁻⁵`, max `η_c = 0.97670 ± 6.4×10⁻⁶` (branch `(63/64)μ`; the max band uses the Cornish–Fisher quantile — its R-level skew is −0.10, the packet's west tail) (5 sub-tests, size 0.001 each) | Any band escape | **supported** (statistical) |
+| U1 | The cone-restricted-activity variant (#9 open problem 1) is vacuous: for any speed-≤v dynamics every trajectory stays within distance `v·s` of its start (the trajectory-cone lemma), so `a_cone(s) = a(s)` identically and `W₁ ≤ ∫√(σ·a_cone)` **is** the plain dissipative bound — the `min(vt, ·)` cannot be improved by restriction | Lean: the trajectory-cone lemma (round 1). Measured: the cone of C1 holds bit-exact, so the in-cone activity share is 1 at every step — and the bound is near-tight exactly where the variant was hoped to help (the calm's `η_d = 0.53`, C4): there is nothing to restrict | The lemma fails in Lean (it will not); a measured cone escape (implementation error) | **conjecture → proved** (Lean round 1) + **verified** (the cone). Negative result, reported prominently: open problem 1 is closed for this family and for every finite-speed system under the stated reading; a non-vacuous unification must restrict something other than activity's location |
+| F1 | The front: `σ_flux = +∞` whenever some edge is one-sided (an empty site behind a moving front) — the front lemma. The registered start's ∞-set is **empty by construction** (full support: every edge carries both flux directions from step 0). The ε-continuity: `σ(0) = α + β·ln(1/ε)` — the `+∞` front in ε-regularization: wind `{6.30, 7.23, 7.99}`, max `{14.54, 16.40, 17.92}` at `ε = {1/16, 1/64, 1/256}` (exact chain). The `max` arm (period-2, stay = 0) holds its flux EP on the ε-floor at every step (`σ(s) ≈ 16.4`; its coarse-window estimator launders the oscillation, centres ≈ 5.5–6.4 — both exact, both registered; its dissipative envelope is a page diagnostic only) | Measured: no `+∞` σ̂ window in any arm — bit-exact | Any `+∞` window: implementation error | front lemma **conjecture** (Lean round 1) + **verified** (the empty ∞-set, bit-exact) |
+| X1 | Damage: `damaged ≡ {step-1 draw ∈ [3, 125)}` (122/256 — the draws `u < 3` hop E in both arms; the n = 16 draft's "damaged = the east-drawers `u < 125/256`" was wrong and is corrected here): per damaged walker `\|Δx\|_circle = 2` (west) at every later step, undamaged bit-identical, `x^XOR = x^wind − 2·I[damaged]`, `#damaged = n_E(1) − n_E^XOR(1)` per seed — all bit-exact; damage neither grows nor heals (the independent model's butterfly velocity is degenerate; 001's interacting gas spread one flipped slot to 2.4%) | `#damaged_total ∈ 7,995,392 ± 3.29×2046` (Binomial(R·m, 122/256); size 0.001) | Any identity mismatch (implementation error); the count outside its band | **verified** (bit-exact) + difference lemma **conjecture** (Lean round 1) + the count **supported** (statistical) |
+| T1 | The hop-draw statistics: the cumulative tally `Σ(n_E − n_W)` over all (seed, step) at `T = 512` — the `σ_step` leg of the EP (the transient excess `σ(s) − σ_step`, the `1/(2s)` shape law, is the P row's business) | Exact binomial bands (iid draws, position-independent): calm `0 ± 215,613`; w5 `3,959,422,976 ± 163,507`; w4 `4,026,531,840 ± 161,429`; wind `4,093,640,704 ± 159,288`; c2 `4,160,749,568 ± 157,082`; max `8,522,825,728 ± 38,041`; windXOR `4,077,649,920 ± 159,288` (7 sub-tests, size 0.001 each); ≥ 111 of 112 block means inside `±3.89σ_block` (1 composite, size 6×10⁻⁵) | Any band escape | **supported** (statistical) |
+| P | Pipeline (statistical, not physics): the pooled estimators against the exact chain | σ̂ fine windows `s ∈ {0, 1, 2}`: calm `{5.4508, 1.2774, 0.4083} ± 3.29×{1.4, 0.77, 0.39}×10⁻³`; wind `{7.2282, 4.2153, 2.9657} ± {1.7, 1.4, 1.0}×10⁻³`; max `{16.400, 16.374, 16.355} ± {0.37, 0.39, 0.39}×10⁻³` (9); `â(0) = 0.5 ± 3.29×1.22×10⁻⁴` (1); `Ê(512)`: `{23.697, 442.90, 462.29, 485.56, 515.67, 1251.02} ± 3.29×{3.0, 6.2, 6.2, 6.3, 6.3, 3.4}×10⁻³` (6); the calm's last coarse window `σ̄ = 9.8×10⁻⁴ ± 3.29×1.9×10⁻⁶` — the `1/(2s)` law at the floor's edge (1). 17 sub-tests, size 0.001 each | Any escape: a pooled-count pipeline error | **pipeline** (statistical) |
 
 ### Sizing method (pre-registered, no kernel run)
 
-Every size above is exact calculation or exact-law Monte Carlo under the
-16-state chain, before any run: `Ŵ₁`'s law from multinomial column
-counts (2000 reps at `m = 32768`: sd 0.0122–0.0132, |skew| ≤ 0.06 —
-`W̄₁` sd 8.3 × 10⁻⁴); `σ̂(0)`'s law by pooled-count MC (1500 reps at
-quarter pooled scale, min frontier count 12; sd scales as `(R·m)^(−1/2)`
-→ 9.7 × 10⁻³, mean 2.1243, skew +0.66 — the relevant left tail is
-lighter than Gaussian; the s = 0 classification also carries a
-Poisson-excursion bound: the frontier edge's pooled count is Poisson(48),
-needing an e²-fold excursion, ~10⁻¹⁵); windowed σ̂ sds from exact
-per-walker covariances (2-point functions of the chain); the paired
-D−N law from the exact joint `(x^D, x^N)` chain (256 states, shared
-draws) by the delta method; C5's binomial `k` from those p_win's.
-The scratch scripts stay out of Git.
+Every centre and size above is exact calculation or exact-law Monte Carlo
+under the 1024-state chain, before any run. `W̄₁`'s law by direct MC of the
+constructor and the kernel (20 000 reps per (arm, t), alias-sampled exact
+kernel): `E[Ŵ₁] − W₁ = +0.009…+0.045` — the ε-empirical's transport noise,
+10–18× `sd(W̄₁)`, included in every centre; `sd(W̄₁) = sd(Ŵ₁)/√256 ∈
+[0.4, 3.1]×10⁻³`; per-seed skews |≤ 0.51| except `max` (−1.6: the packet's
+west tail) — its band uses the Cornish–Fisher quantile, every other
+R-level skew is ≤ 0.05 and the normal 3.29σ applies. The `σ̂/Ê/t̂×` laws by a
+reduced-pool trajectory MC (4096 walkers × 512 steps × 200 reps, the
+delta-linearized `σ̂` at the frozen true log-ratios, arc-sum contributions;
+sds scale as `(R·m)^{−1/2}`, cross-checked against the closed form for `â`:
+1.14 vs 1.22 ×10⁻⁴): `sd(σ̂) ∈ [1.9×10⁻⁶, 1.7×10⁻³]` across windows,
+`sd(Ê(512)) ∈ [3.0, 6.3]×10⁻³`, `sd(t̂×) ∈ [0.0012, 0.038]` steps. The
+windowed estimator's count-nonlinear bias ≤ `2n/(R·m·w)` = 1.2×10⁻⁴ at `w = 1`
+— below 4% of every band. The `t̂×` centres are the same pinned interpolation
+applied to the windowed-exact `E_w` (the estimator's own grid); the drift
+smearing inside the `[32, 64)` window shifts the wind's centre from the
+`E_diss` crossing 44.74 to 43.58 — registered, not corrected away. The
+centres' own MC uncertainty ≤ 0.15 band-sd. The scratch scripts stay out of
+Git.
 
 ### Assumptions, artefacts, α
 
-- **Family-wise error:** 43 registered statistical sub-tests; per-test
-  α = 0.001 (≈ 3.3σ two-sided; exact quantiles where the law is not
-  normal); Bonferroni FWER ≤ 4.3%. Per-sample W̄₁ bands are conservative
-  (samples share seeds). Nulls first: M1, T1 and the pipeline checks
-  certify the harness before any structured claim is read. 16 blocks;
-  paired seeds; the page states when a single run can go against the
-  trend (C5 at t = 128).
-- **Measurability boundaries** (002's `T*` tradition): (i) the flux EP of
-  a localized start is unmeasurable until the lightest tail column
-  carries ≥ 1/(R·m) mass — the calm's ∞-era ends at s = 8 (count 127),
-  the wind's at s = 12 (the lap refills the starved columns; count 1540):
-  the drive *stretches* the measured ∞-era from 8 to 12 steps; (ii) the
-  calm's coarse σ̂ beyond k ≈ 4 sits at the plug-in noise floor
-  (floor ≈ 10⁻⁷ ≫ true σ̄): those windows are page diagnostics only;
-  (iii) the cumulative envelope crossing t_c = 3 is below the σ̂-path
-  noise floor (3σ): registered as exact-chain statement, not a run
-  criterion.
-- **Plug-in bias:** +0.0008 at the wind's fine s = 0 window (exact-law
-  MC), included in the center; below 1% of value elsewhere (delta).
+- **Family-wise error:** 38 registered statistical sub-tests — 37 at
+  per-test α = 0.001 (the normal ±3.29σ, or the Cornish–Fisher quantile
+  where the R-level skew exceeds 0.1) plus T1's block composite at
+  6×10⁻⁵: Bonferroni FWER ≤ 3.8%. The bit-exact and exact-chain checks
+  (M1, C1, C2, the binding-envelope classifications of C3(i), F1's empty
+  ∞-set, X1's identities, `â`) carry no α: they cannot fail under a correct
+  implementation and are labelled verified/proved, not supported. Nulls
+  first: M1 and T1 certify the harness, the P row the pooled estimators,
+  before any structured claim is read. 16 blocks; paired seeds; every band
+  is an interval on a pooled or 256-seed mean — no single-seed sub-test
+  survives, and the page says so.
+- **One denominator, one centre pipeline** (the review's P1-1): η uses the
+  exact `E_diss`; `t̂×` uses the windowed `Ê` with its own exact centres;
+  `W̄₁`'s centres are `E[W̄₁]`, not `W₁`. Every number in the table comes
+  from the same exact chain and the same MC, so the centres are mutually
+  consistent by construction.
+- **Measurability boundaries:** (i) the calm's `σ̄(s) ~ 1/(2s)` stays above
+  the plug-in noise floor `2n/(R·m·w)` through `T` (9.8×10⁻⁴ vs
+  3.8×10⁻⁶ at the last coarse window — SNR 257); (ii) the `max` arm's
+  flux EP is ε-scale at every step (F1) — its `σ̂` centres are exact for the
+  registered ε but its dissipative envelope is a page diagnostic; (iii)
+  `t̂×`'s bands are hair-thin (0.001–0.04 steps): they are simultaneously
+  the sharpest pipeline checks — a failure means a pipeline error with
+  probability 1 − α.
 - **Lattice artefact or physics?** C1: a finite causal speed is physics;
-  the diamond/circle geometry is the lattice. C2: the transport
-  inequality is finite-chain physics (lattice-free in content); η ≈ ½
-  slack is a model number (the δ-null's √t ratio 0.5584 vs continuum
-  √(1/π) = 0.5642: the ~1% is lattice + circle). C3: the crossover scale
-  σa/v² is physics; `t_c = 3` is a lattice transient — the causal phase
-  is microscopic, and a long one would need σ_step·a tuned within ~2% of
-  v²: flagged, not run (no-tuning). C4: relaxation transport is physics.
-  C5: advection-vs-diffusion is physics; the 33.6-step lap is a model
-  number. F1: the `+∞` front is the signature of finite propagation
-  speed — it survives any continuum limit that keeps a causal speed and
-  is absent in parabolic (heat-kernel) dynamics; the general statement
-  ("strict cone ⇔ EP bound void at fronts") is **conjecture**, the
-  lattice instance proved. X1: the no-spread of damage is independence
-  (001's spread needed interactions), not the lattice. T1: finite-chain
-  physics. The 8-bit draw and the synchronous update are implementation
-  facts; all registered numbers are model numbers.
+  the circle metric is the lattice. C3: the envelope crossover
+  `√(σ_step·a) = 1` and the `δ^{-1}` scaling of `t×` are continuum physics
+  of the chain family; `C ∈ [2.42, 2.82]` is the registered start's cliff
+  lead — a model number (it grows as `ln(1/ε)` as ε → 0, lengthening the
+  δ-start's causal era without bound: the complementarity again). C4: the
+  `1/√π` tightness is the continuum Cauchy–Schwarz slack, lattice-free;
+  the calm's `t ≤ 2.82` causal transient is the ε-cliff artefact. C5: the
+  two tightness branches and the crossover drive `ρ* ≈ 4.18` (where
+  `σa = 1` at `a = 1/2`) are lattice-free; the `63/64` block factor is the
+  start; the sweep's ends (`ρ = 0`, `ρ = ln 255`) are model numbers. U1:
+  lattice-free — any finite-speed system. F1: the `+∞` front is
+  finite-propagation physics; the ε-regularization, the period-2 chain and
+  the 8-bit draw are lattice/implementation facts. X1: the no-spread of
+  damage is independence, not the lattice. The n = 16 draft's wind-laps-
+  calm dip is a torus artefact whose time is the lap `t = N/μ ∝ N`: it
+  survives `N → ∞` only in the scaling window `t ∝ N` and vanishes at
+  fixed `t`; this design (`N ≫ vT`) excludes the lap era by construction,
+  and the claim is not re-run.
 - **Float trust boundary:** positions, counts, tallies, goldens and all
-  bit-exact checks are integer-level; W₁, σ̂, â and the exact-chain
-  predictions are f64 from exact integers (chain error < 10⁻¹² ≪ the
-  tightest registered band 2 × 10⁻⁵); rational goldens at `t ∈ {1,2,3}`.
+  bit-exact checks are integer-level; `W₁`, `σ̂`, `â`, `E_diss` and the
+  exact-chain predictions are f64 from exact integers (chain error
+  < 10⁻¹² ≪ the tightest registered band 6×10⁻⁶); dyadic rational goldens
+  at `t ∈ {1, 2, 3}`.
 
 ### Lean lane (round 1, cheap)
 
-Per-step displacement ≤ 1 in each coordinate and the diamond support
-lemma (induction); `W₁^circle(p₀, p_t) ≤ t` (per-step coupling cost ≤ 1
-+ W₁ triangle; search Mathlib's `Wasserstein` first); the front lemma
-(σ_flux = +∞ while support grows; needs `fluxEP` for the walker chain,
-Σ_e (F−R)·ln(F/R) in ℝ≥0 ∪ {∞}); the XOR-difference lemma (|Δ| ≤ 2 per
-differing draw, constant thereafter); the per-edge traffic inequality;
-support symmetry generalized to `w d = 0 ↔ w (opp d) = 0` (003's weights
-have `q_N = q_S = 0`, so 002's all-positive `walkerK_support` does not
-apply). Round 2: `W₁^circle` = the min-cut cumulative formula (cycle
-min-cost flow); the net-flux transport lemma; the composite bound —
-mirrored in `Challenge.lean`. T1 inherits 002's round-3 conditioning
-(per-walker doubly-stochastic stationarity).
+The trajectory-cone lemma (`dist(x_s, x₀) ≤ s`, induction on steps) →
+`a_cone = a` for any speed-≤v dynamics (U1's vacuity, in the generality
+that makes the negative result stick); the per-step displacement lemma and
+`W₁^circle ≤ t` (C1; search Mathlib's `Wasserstein` first); the front lemma
+(`σ_flux = +∞` while an edge is one-sided; needs `fluxEP` for the walker
+chain, `Σ_e (F−R)·ln(F/R)` in `ℝ≥0 ∪ {∞}`); the XOR-difference lemma
+(`|Δ| ≤ 2` per differing draw, constant thereafter); the per-edge traffic
+inequality; support symmetry generalized to `w d = 0 ↔ w (opp d) = 0`
+(003's weights have `q_N = q_S = 0`, so 002's all-positive
+`walkerK_support` does not apply). Round 2: `W₁^circle` = the min-cut
+cumulative formula (cycle min-cost flow); the net-flux transport lemma;
+the composite bound `W₁ ≤ min(vt, ∫√(σa))` for the walker — mirrored in
+`Challenge.lean`.
 
 ## Result
 
-Not run. Pre-registered 2026-10-07 on `prereg/003`; the outcome will be
+Not run. Pre-registered 2026-10-07 on `prereg/003`, replacing the rejected
+`n = 16` draft (317f822) after cross-family review; the outcome will be
 filled in a separate section after the sweep, without editing any
 prediction above.
