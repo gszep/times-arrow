@@ -230,8 +230,10 @@ The core framing: relativity gives the cone, thermodynamics picks the half.
   Van Vu & Saito, PRX 13, 011013 (2023); Langevin, Sabbagh, Movilla
   Miangolarra & Georgiou, PRR 6, 033308 (2024); general activities,
   Nagayama, Yoshimura & Ito, PRR 7, 013307 (2025).
-- No published bound combines a causal cone with entropy production (checked
-  2026-10-07). Candidate composition for 003, issue #9:
+- **Conjecture (literature absence):** no published bound combining a causal
+  cone with entropy production was found in the 2026-10-07 exploration.
+  This is not an established novelty claim. Candidate composition for 003,
+  issue #9 (a concatenation of two inequalities, not an empirical conjecture):
   `W₁(p₀, p_t) ≤ min(v t, ∫√(σ a) dt)` with σ the entropy-production rate
   and a the edge-length-squared-weighted dynamical activity.
 
