@@ -409,12 +409,83 @@ must match the Lean executable before the WebGPU result is reviewable.
 
 ## Result
 
-**Not run.** The calculations and exact-law MC size the criteria;
-they are not system-simulation evidence. Calibration negatives:
-raw log-count EP has frequent infinities; fixed population cuts do not
-measure empirical circle W₁; the reduced frozen-log noise calculation
-does not size the nonlinear estimator. Those approaches are **refuted
-as sizing/measurement methods**. U1's negative result has only its stated
-own-trajectory scope.
-The frozen h8 prediction survives its exact-law sizing without refitting.
-Future measured outcomes go here without changing the predictions.
+**Run.** The registered ensemble ran once, headless on Artemis at commit
+`7db41a5` (clean tree): n = 1024, m = 65536, R = 256 seeds (16 blocks of
+16), T = 512, all arms paired by seed and walker, on the NVIDIA Lovelace
+hardware adapter (no fallback). The sweep's contract gate passed bit for
+bit — 52 checks, `contract.walk.profile` goldens included, no pending
+Lean keys (`goldens: true`). `npm run check:gpu` at the same tree:
+369/369 locally (with the Lean differential), 246/246 golden-only on
+Artemis, which has no Lean.
+
+**Nothing refuted.** All 19 registered statistical tests are
+**supported (statistical)**, every bit-exact check is **verified**, and
+the Lean-lane statements stand **proved**. No criterion was consumed
+beyond its registered budget, no seed was retried, no parameter tuned.
+The largest tolerance fraction is C5 h8's branch test at 0.77; the
+calibration negatives below remain refuted as methods.
+
+| claim | registered criterion | measured | label |
+|---|---|---|---|
+| C3 held-out h8 crossover | reject if \|t̂×−10.5938460336\| > 1.8390769050 | t̂× = 10.256986, \|Δ\| = 0.33686; the δ⁻² alternative (6.41967765) stays outside [8.75477, 12.43293] | supported (statistical) |
+| C4 calm finite size | reject if \|η̂_lin−0.5289774930939531\| > 0.0007 | η̂_lin(512) = 0.5290775, \|Δ\| = 0.00010001 (1.00 MC sd); L̂ = 12.56599, D = 23.75075 | supported (statistical) |
+| C5 w5 | \|η̂−0.52812328\| ≤ 0.0061 | 0.5242794, \|Δ\| = 0.0038439 ≤ certified 0.003856 | supported (statistical) |
+| C5 w4 | \|η̂−0.51433595\| ≤ 0.0061 | 0.5108120, \|Δ\| = 0.0035239 | supported (statistical) |
+| C5 wind | \|η̂−0.49762074\| ≤ 0.0061 | 0.4944488, \|Δ\| = 0.0031720 | supported (statistical) |
+| C5 h8 | \|η̂−0.55954658\| ≤ 0.0061 | 0.5548304, \|Δ\| = 0.0047162 ≤ certified 0.004727 | supported (statistical) |
+| C5 c2 | \|η̂−0.476806640625\| ≤ 0.0002 | 0.4768517, \|Δ\| = 0.0000451 | supported (statistical) |
+| C5 max | \|η̂−0.97668457\| ≤ 0.0002 | 0.9766851, \|Δ\| = 0.00000056 | supported (statistical) |
+| T1 nine totals | each inside its Bernstein band | worst wind +65196 of ±199474 (0.33 of band); hop-1 activity +1508 of ±8438 | supported (statistical) ×9 |
+| X1 damage | identity bit-exact; damaged 7995392 ± 8429 | identity on all 16777216 paired walkers; 7998503 (+3111, 0.37 of band) | identity verified; count supported (statistical) |
+| P pipeline | reject if Z > 1 | Z = 0.22368 (0.072, 0.224, 0.167 of the three widths) | supported (statistical) |
+| M1 | contract gate bit for bit | 52/52, no pending keys | verified |
+| C1 | circle displacement ≤ t; y = 0; Ŵ ≤ t | max displacement 512 = T (attained on max); y ≡ 0 | verified; proved in Lean |
+| C2 | population W₁ ≤ min(t, E_diss) on the grid | worst slack 0 (t = 0, calm) | verified; proved in Lean |
+| U1 | a_cone = a on each trajectory's own cone | no counterexample trajectory exists | proved — negative for this reading only |
+| F1 | one-sided population edge ⇒ +∞ flux EP | sampled zeros are statistical, not counterexamples | proved |
+
+**Read.** Every measured η̂(512) reproduces its registered MC mean
+within 1.4 sd (w5 +0.58, w4 +0.82, wind +1.39, c2 +1.30, max +0.49,
+h8 +0.20), so the branch deviations are the registered finite-start
+discrepancies — each inside its certified bound — not new structure.
+The measured h8 crossing sits 0.01250 from the exact-chain population
+crossing 10.2694847413 and 1.00 sd from the full-pool reference mean
+10.270180; its distance to the locked t_h (0.33686) is almost entirely
+the exact chain's own registered offset (−0.32436). Diagnostics (no
+criteria): measured windowed crossings calm 2.82425 (population
+2.820997), w5 17.15518 (17.16748), w4 23.91630 (23.93471), wind 43.55982
+(windowed population 43.57940), h8 10.25699 (10.26948); c2 and max have
+no crossing within T — the cone binds, D(512) = 512.
+
+**FWER.** 19/19 supported; the family size is
+0.01749428125 < 1.75% < 5% by Bonferroni, independence-free, with the
+six 10⁻⁶ C5 certificate risks included. A single run can still go
+against the trend.
+
+**Lattice artefact or physics?** Finite speed is imposed by synchronous
+hopping, so every value here belongs to this lattice family (2+1,
+periodic 1024², q_N = q_S = 0): C3's inverse-δ crossover fit approximates
+this family's transient lead at T = n/2 (no lap); C4 passes a finite-size
+law whose interval excludes the continuum 1/√π at this size — it does
+not establish a continuum coefficient; C5's branch relation
+μ/a = tanh(ρ/2) and the ε-cliff are lattice facts, and the causal branch
+b_c = Aμ is the cone kinematics of speed 1, not a Lorentz-invariant
+statement. M1/C1/C2/T1/P are bit-exact identities of this kernel and
+lattice; U1's own-trajectory induction extends to other finite-speed
+systems as stated; X1's damage no-spread is an independence fact, not a
+claim about interacting systems; F1 is a population-level front lemma.
+
+**Calibration negatives (unchanged).** Raw log-count EP has frequent
+infinities; fixed population cuts do not measure empirical circle W₁;
+the reduced frozen-log noise calculation does not size the nonlinear
+estimator. Those approaches are **refuted as sizing/measurement
+methods**. U1's negative result keeps its stated own-trajectory scope.
+
+**Data.** Raw sweep output: [`results-003` release](https://github.com/gszep/times-arrow/releases/tag/results-003),
+`003-artemis.json` SHA-256 `eca36fd5ab9d2370afe4e48db07bad350ab82f4515d93b532b99ca3db015fdab`;
+the committed compact form is `results/artemis.json` with the verdict in
+`results/artemis.score.json`, and the review page scores it through the
+same functions. Regenerate with
+`node experiments/003-lightcone-speedlimit/sweep.ts` — deterministic
+(Philox keyed by seed); the run above is at `7db41a5` on Artemis,
+adapter recorded in the results.

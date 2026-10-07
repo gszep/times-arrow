@@ -1,14 +1,14 @@
 {
- "source": "experiments/003-lightcone-speedlimit/results/calcifer-smoke.json",
- "commit": "075ab2c74d5412b6a0eae2201db08ecc5cc5e28a",
+ "source": "experiments/003-lightcone-speedlimit/results/artemis.json",
+ "commit": "7db41a59c41eb7592e00be092d9fa7257d5ce1eb",
  "dirty": false,
- "registered": false,
- "note": "n/a: the contract gate has not fully passed (goldens or pending Lean keys)",
+ "registered": true,
+ "note": null,
  "M1": {
   "name": "M1",
-  "pass": false,
-  "verdict": "pending",
-  "detail": "gate passed; pending contract keys: contract.walk.profile (golden, occupancy, windows, circleW1 — the schema is documented in experiments/003-lightcone-speedlimit/check.ts)"
+  "pass": true,
+  "verdict": "verified",
+  "detail": "gate passed bit for bit"
  },
  "C1": {
   "rows": [
@@ -61,10 +61,10 @@
     "w1": true
    }
   ],
-  "maxCone": 64,
+  "maxCone": 512,
   "pass": true,
   "verdict": "verified",
-  "detail": "max displacement 64 ≤ T on 8 arms; y ≡ 0; Ŵ ≤ t on the grid"
+  "detail": "max displacement 512 ≤ T on 8 arms; y ≡ 0; Ŵ ≤ t on the grid"
  },
  "C2": {
   "worst": {
@@ -220,159 +220,212 @@
    "detail": "0.017494 vs 0.01749428125 (±0)"
   }
  ],
- "C3": null,
- "C4": null,
+ "C3": {
+  "tCross": 10.256986033833051,
+  "dev": 0.3368599997669488,
+  "pass": true,
+  "verdict": "supported",
+  "detail": "t̂× = 10.257 vs t_h = 10.5938460336 (|Δ| = 0.33686 ≤ 1.8391)"
+ },
+ "C4": {
+  "pooled": 16.56598949432373,
+  "d0": 4,
+  "L": 12.56598949432373,
+  "eta": 0.5290775035731362,
+  "dev": 0.00010001047918306583,
+  "pass": true,
+  "verdict": "supported",
+  "detail": "η̂_lin(512) = 0.52908 vs c₅₁₂ = 0.5289774930939531 (|Δ| = 1.000e-4 ≤ 0.0007); L̂ = 12.566, D = 23.751"
+ },
  "C5": [
   {
    "arm": "w5",
-   "verdict": "n/a",
+   "branch": 0.5281232844480608,
+   "eta": 0.5242793900884807,
+   "dev": 0.0038438943595801023,
+   "tol": 0.0061,
    "pass": true,
-   "detail": "n/a: the contract gate has not fully passed (goldens or pending Lean keys)"
+   "verdict": "supported",
+   "detail": "η̂(512) = 0.52428 vs the dissipative branch 0.52812 (|Δ| = 0.0038439 ≤ 0.0061)"
   },
   {
    "arm": "w4",
-   "verdict": "n/a",
+   "branch": 0.5143359459366258,
+   "eta": 0.5108120158100362,
+   "dev": 0.0035239301265895806,
+   "tol": 0.0061,
    "pass": true,
-   "detail": "n/a: the contract gate has not fully passed (goldens or pending Lean keys)"
+   "verdict": "supported",
+   "detail": "η̂(512) = 0.51081 vs the dissipative branch 0.51434 (|Δ| = 0.0035239 ≤ 0.0061)"
   },
   {
    "arm": "wind",
-   "verdict": "n/a",
+   "branch": 0.49762073843961013,
+   "eta": 0.49444877004213555,
+   "dev": 0.0031719683974745783,
+   "tol": 0.0061,
    "pass": true,
-   "detail": "n/a: the contract gate has not fully passed (goldens or pending Lean keys)"
+   "verdict": "supported",
+   "detail": "η̂(512) = 0.49445 vs the dissipative branch 0.49762 (|Δ| = 0.003172 ≤ 0.0061)"
   },
   {
    "arm": "c2",
-   "verdict": "n/a",
+   "branch": 0.476806640625,
+   "eta": 0.47685170103795826,
+   "dev": 0.00004506041295826435,
+   "tol": 0.0002,
    "pass": true,
-   "detail": "n/a: the contract gate has not fully passed (goldens or pending Lean keys)"
+   "verdict": "supported",
+   "detail": "η̂(512) = 0.47685 vs the causal branch 0.47681 (|Δ| = 4.506e-5 ≤ 0.0002)"
   },
   {
    "arm": "max",
-   "verdict": "n/a",
+   "branch": 0.9766845703125,
+   "eta": 0.9766851277090609,
+   "dev": 5.573965609073639e-7,
+   "tol": 0.0002,
    "pass": true,
-   "detail": "n/a: the contract gate has not fully passed (goldens or pending Lean keys)"
+   "verdict": "supported",
+   "detail": "η̂(512) = 0.97669 vs the causal branch 0.97668 (|Δ| = 5.574e-7 ≤ 0.0002)"
   },
   {
    "arm": "h8",
-   "verdict": "n/a",
+   "branch": 0.5595465811386834,
+   "eta": 0.5548303861149526,
+   "dev": 0.004716195023730774,
+   "tol": 0.0061,
    "pass": true,
-   "detail": "n/a: the contract gate has not fully passed (goldens or pending Lean keys)"
+   "verdict": "supported",
+   "detail": "η̂(512) = 0.55483 vs the dissipative branch 0.55955 (|Δ| = 0.0047162 ≤ 0.0061)"
   }
  ],
  "X1": {
   "identityOk": true,
-  "damaged": 125614,
-  "countPass": false,
-  "pass": false,
-  "verdict": "n/a",
-  "detail": "identity holds bit for bit; damaged 125614 vs 7995392 ± 8429 (not the registered configuration)"
+  "damaged": 7998503,
+  "countPass": true,
+  "pass": true,
+  "verdict": "supported",
+  "detail": "identity holds bit for bit; damaged 7998503 vs 7995392 ± 8429"
  },
  "T1": [
   {
    "name": "calm tally",
    "mean": 0,
    "half": 270009,
-   "total": -865,
-   "dev": -865,
+   "total": -20270,
+   "dev": -20270,
    "pass": true,
-   "verdict": "n/a",
-   "detail": "calm tally: -865 vs 0 ± 270009"
+   "verdict": "supported",
+   "detail": "calm tally: -20270 vs 0 ± 270009"
   },
   {
    "name": "w5 tally",
    "mean": 3959422976,
    "half": 204757,
-   "total": 7730643,
-   "dev": -3951692333,
-   "pass": false,
-   "verdict": "n/a",
-   "detail": "w5 tally: 7730643 vs 3959422976 ± 204757"
+   "total": 3959445554,
+   "dev": 22578,
+   "pass": true,
+   "verdict": "supported",
+   "detail": "w5 tally: 3959445554 vs 3959422976 ± 204757"
   },
   {
    "name": "w4 tally",
    "mean": 4026531840,
    "half": 202155,
-   "total": 7861863,
-   "dev": -4018669977,
-   "pass": false,
-   "verdict": "n/a",
-   "detail": "w4 tally: 7861863 vs 4026531840 ± 202155"
+   "total": 4026569352,
+   "dev": 37512,
+   "pass": true,
+   "verdict": "supported",
+   "detail": "w4 tally: 4026569352 vs 4026531840 ± 202155"
   },
   {
    "name": "wind tally",
    "mean": 4093640704,
    "half": 199474,
-   "total": 7993669,
-   "dev": -4085647035,
-   "pass": false,
-   "verdict": "n/a",
-   "detail": "wind tally: 7993669 vs 4093640704 ± 199474"
+   "total": 4093705900,
+   "dev": 65196,
+   "pass": true,
+   "verdict": "supported",
+   "detail": "wind tally: 4093705900 vs 4093640704 ± 199474"
   },
   {
    "name": "c2 tally",
    "mean": 4160749568,
    "half": 196711,
-   "total": 8123691,
-   "dev": -4152625877,
-   "pass": false,
-   "verdict": "n/a",
-   "detail": "c2 tally: 8123691 vs 4160749568 ± 196711"
+   "total": 4160804064,
+   "dev": 54496,
+   "pass": true,
+   "verdict": "supported",
+   "detail": "c2 tally: 4160804064 vs 4160749568 ± 196711"
   },
   {
    "name": "max tally",
    "mean": 8522825728,
    "half": 47638,
-   "total": 16646406,
-   "dev": -8506179322,
-   "pass": false,
-   "verdict": "n/a",
-   "detail": "max tally: 16646406 vs 8522825728 ± 47638"
+   "total": 8522825944,
+   "dev": 216,
+   "pass": true,
+   "verdict": "supported",
+   "detail": "max tally: 8522825944 vs 8522825728 ± 47638"
   },
   {
    "name": "h8 tally",
    "mean": 3758096384,
    "half": 212122,
-   "total": 7335887,
-   "dev": -3750760497,
-   "pass": false,
-   "verdict": "n/a",
-   "detail": "h8 tally: 7335887 vs 3758096384 ± 212122"
+   "total": 3758091608,
+   "dev": -4776,
+   "pass": true,
+   "verdict": "supported",
+   "detail": "h8 tally: 3758091608 vs 3758096384 ± 212122"
   },
   {
    "name": "windXOR tally",
    "mean": 4077649920,
    "half": 199474,
-   "total": 7742441,
-   "dev": -4069907479,
-   "pass": false,
-   "verdict": "n/a",
-   "detail": "windXOR tally: 7742441 vs 4077649920 ± 199474"
+   "total": 4077708894,
+   "dev": 58974,
+   "pass": true,
+   "verdict": "supported",
+   "detail": "windXOR tally: 4077708894 vs 4077649920 ± 199474"
   },
   {
    "name": "wind hop-1 activity",
    "mean": 8388608,
    "half": 8438,
-   "total": 131790,
-   "dev": -8256818,
-   "pass": false,
-   "verdict": "n/a",
-   "detail": "wind hop-1 activity: 131790 vs 8388608 ± 8438"
+   "total": 8390116,
+   "dev": 1508,
+   "pass": true,
+   "verdict": "supported",
+   "detail": "wind hop-1 activity: 8390116 vs 8388608 ± 8438"
   }
  ],
- "P": null,
+ "P": {
+  "s1": 3.4434281893571526,
+  "s2": 2.2369905799325522,
+  "E24": 21.063643004427366,
+  "devs": [
+   0.0032292908571527335,
+   -0.005592029267447618,
+   -0.002503060572635718
+  ],
+  "Z": 0.22368117069790472,
+  "zeroSite": false,
+  "pass": true,
+  "verdict": "supported",
+  "detail": "Z = 0.22368 ≤ 1 (deviations 0.0032293/0.045, -0.005592/0.025, -0.0025031/0.015)"
+ },
  "fwer": {
   "sum": 0.01749428125,
   "budget": 0.05,
   "pass": true
  },
  "diagnostics": [
-  "calm: t̂× = 2.5083, D(64) = 9.0515 (dissipation bound)",
-  "w5: t̂× = 15.418, D(64) = 57.512 (dissipation bound)",
-  "w4: t̂× = 21.576, D(64) = 59.899 (dissipation bound)",
-  "wind: t̂× = 39.633, D(64) = 62.762 (dissipation bound)",
-  "c2: t̂× = none, D(64) = 64 (cone bound)",
-  "max: t̂× = none, D(64) = 64 (cone bound)",
-  "h8: t̂× = 9.1758, D(64) = 51.883 (dissipation bound)"
+  "calm: t̂× = 2.8242, D(512) = 23.751 (dissipation bound)",
+  "w5: t̂× = 17.155, D(512) = 443.15 (dissipation bound)",
+  "w4: t̂× = 23.916, D(512) = 462.54 (dissipation bound)",
+  "wind: t̂× = 43.56, D(512) = 485.82 (dissipation bound)",
+  "c2: t̂× = none, D(512) = 512 (cone bound)",
+  "max: t̂× = none, D(512) = 512 (cone bound)",
+  "h8: t̂× = 10.257, D(512) = 397.46 (dissipation bound)"
  ]
 }
