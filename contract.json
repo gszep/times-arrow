@@ -6416,5 +6416,12 @@
    "name": "TimesArrow.Walker.uniform_stationary",
    "doc":
    "Every normalized walker weight vector preserves the uniform one-walker\ndistribution on a nonempty torus (the kernel is doubly stochastic).",
+   "axioms": ["propext", "Classical.choice", "Quot.sound"]},
+  {"status": "proved",
+   "statement":
+   "walker_lightcone (n : ℕ) [NeZero n] (start : ℕ → Site n) (ws : ℕ → Dir → ℕ) (seed : UInt32) (m t : ℕ) : zmodDist n (trajFrom n start ws seed t m).1 (start m).1 ≤ t",
+   "name": "TimesArrow.Walker.walker_lightcone",
+   "doc":
+   "**The walker light cone (003, C1).** From any start, a walker's circle\ndisplacement from where it began is at most `t` after `t` steps: the\nsynchronous-hop lattice speed, for every weights schedule and every draw\nstream. The deterministic profile start is the instance\n`start = profileStart n`; the uniform constructor of 002 is another.",
    "axioms": ["propext", "Classical.choice", "Quot.sound"]}],
  "allowedAxioms": ["propext", "Classical.choice", "Quot.sound"]}

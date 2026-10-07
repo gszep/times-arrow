@@ -1042,13 +1042,20 @@ def ctorPos (sh : ℕ) (word : UInt32) : Site (2 ^ sh) :=
   let y : ℕ := (word.toNat >>> sh) % 2 ^ sh
   ((x : ZMod (2 ^ sh)), (y : ZMod (2 ^ sh)))
 
+/-- The trajectory of walker `m` from an arbitrary start: the same draws as
+the uniform constructor (hop `s` uses the word at counter step `s`), with
+the initial position given by `start`. -/
+def trajFrom (n : ℕ) (start : ℕ → Site n) (ws : ℕ → Dir → ℕ) (seed : UInt32) :
+    ℕ → ℕ → Site n
+  | 0, m => start m
+  | t + 1, m =>
+    hop n (trajFrom n start ws seed t m)
+      (dirOf (ws (t + 1)) ((rand seed (t + 1).toUInt32 m.toUInt32).x0 >>> 24).toNat)
+
 /-- The position of walker `m` after `t` steps under the schedule `ws` (hop
 `s` uses the weights `ws s`); `sh = log₂ n`. -/
-def traj (sh : ℕ) (ws : ℕ → Dir → ℕ) (seed : UInt32) : ℕ → ℕ → Site (2 ^ sh)
-  | 0, m => ctorPos sh (rand seed 0 m.toUInt32).x0
-  | t + 1, m =>
-    hop (2 ^ sh) (traj sh ws seed t m)
-      (dirOf (ws (t + 1)) ((rand seed (t + 1).toUInt32 m.toUInt32).x0 >>> 24).toNat)
+def traj (sh : ℕ) (ws : ℕ → Dir → ℕ) (seed : UInt32) : ℕ → ℕ → Site (2 ^ sh) :=
+  trajFrom (2 ^ sh) (fun m => ctorPos sh (rand seed 0 m.toUInt32).x0) ws seed
 
 /-- The positions of all `M` walkers after `t` steps. -/
 def positions (sh : ℕ) (M : ℕ) (ws : ℕ → Dir → ℕ) (seed : UInt32) (t : ℕ) :

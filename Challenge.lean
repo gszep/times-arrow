@@ -2,6 +2,7 @@ import TimesArrow.Philox
 import TimesArrow.LatticeGas
 import TimesArrow.Selection
 import TimesArrow.Walker
+import TimesArrow.WalkerProfile
 import TimesArrow.Markov.Fluctuation
 
 namespace TimesArrow.Walker
@@ -62,6 +63,11 @@ theorem null_sigma_zero (n : ℕ) [NeZero n] (M T : ℕ)
     (ω : Fin (T + 1) → Fin M → Site n) :
     TimesArrow.Markov.pathEntropyProduction (uniformConfig n M)
         (prodK n M nullW nullW_sum) T ω = 0 := by
+  sorry
+
+theorem walker_lightcone (n : ℕ) [NeZero n] (start : ℕ → Site n)
+    (ws : ℕ → Dir → ℕ) (seed : UInt32) (m t : ℕ) :
+    zmodDist n (trajFrom n start ws seed t m).1 (start m).1 ≤ t := by
   sorry
 
 end TimesArrow.Walker

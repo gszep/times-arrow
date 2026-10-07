@@ -10,4 +10,5 @@ import TimesArrow.Markov.EntropyProduction
 import TimesArrow.Markov.Fluctuation
 import TimesArrow.Claims
 import TimesArrow.Claims.Walker
+import TimesArrow.Claims.WalkerProfile
 import TimesArrow.Claims.Markov
