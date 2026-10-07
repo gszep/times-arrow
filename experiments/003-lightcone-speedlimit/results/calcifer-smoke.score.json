@@ -1,6 +1,6 @@
 {
  "source": "experiments/003-lightcone-speedlimit/results/calcifer-smoke.json",
- "commit": "7df5898fdc03df414ea83344e4e105b7e35969ff",
+ "commit": "075ab2c74d5412b6a0eae2201db08ecc5cc5e28a",
  "dirty": false,
  "registered": false,
  "note": "n/a: not the registered configuration (n = 1024, m = 65536, R = 256, T = 512, 8 arms)",
