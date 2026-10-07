@@ -474,15 +474,16 @@ export class Walk {
     const acc = parts[0];
     const hist = parts[1];
     const histWords = this.batch * (this.winSlots + this.gridSlots) * this.n;
-    const off = 2 + (keep.pos ? 1 : 0) + (keep.pos1 ? 1 : 0);
+    const posIdx = 2;
+    const pos1Idx = 2 + (keep.pos ? 1 : 0);
     return {
       tallies: new Int32Array(acc.buffer, acc.byteOffset, this.batch * this.T),
       hops: acc.subarray(acc.byteOffset / 4 + this.batch * this.T, acc.byteOffset / 4 + 2 * this.batch * this.T),
       win: keep.win ? hist.subarray(0, this.batch * this.winSlots * this.n) : null,
       dhist: keep.grid ? hist.subarray(this.batch * this.winSlots * this.n, histWords) : null,
       chk: hist.subarray(histWords, histWords + 2 * this.batch),
-      posT: keep.pos ? parts[off - 1] : null,
-      pos1: keep.pos1 ? parts[off] : null,
+      posT: keep.pos ? parts[posIdx] : null,
+      pos1: keep.pos1 ? parts[pos1Idx] : null,
     };
   }
 
