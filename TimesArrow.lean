@@ -2,6 +2,7 @@ import TimesArrow.Philox
 import TimesArrow.LatticeGas
 import TimesArrow.Selection
 import TimesArrow.Reversible
+import TimesArrow.Divergence
 import TimesArrow.Walker
 import TimesArrow.WalkerProfile
 import TimesArrow.Markov.KlDiv
@@ -12,3 +13,4 @@ import TimesArrow.Claims
 import TimesArrow.Claims.Walker
 import TimesArrow.Claims.WalkerProfile
 import TimesArrow.Claims.Markov
+import TimesArrow.Claims.Divergence

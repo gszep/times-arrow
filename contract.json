@@ -6245,6 +6245,20 @@
  "claims":
  [{"status": "proved",
    "statement":
+   "lattice_clock_rate (n : ℕ) [NeZero n] (h3 : 3 ≤ n) (e u : Site n → ℝ) (V : Finset (Site n)) : ∑ p ∈ V, (e p - e (p - (1, 0)) + u p - u (p - (0, 1))) = outflux (nnFlux n e u) V",
+   "name": "TimesArrow.Divergence.lattice_clock_rate",
+   "doc":
+   "**A region's clock rate is its boundary flux** — the discrete\ndivergence theorem on the walker/billiard grid: for any east and north\nbond fluxes `e`, `u` on the `n × n` torus (`3 ≤ n`, so the four axial\nneighbours of a site are distinct) and any region `V` of sites, the sum\nover `V` of each site's east-out minus east-in plus north-out minus\nnorth-in equals the flux from `V` into its complement across the cut.\nBonds internal to `V` are counted at both ends and cancel; the four-term\nsite divergence is what the GPU kernels accumulate, and the boundary sum\nis what the shrinking-region limit of issue #13 reads: a partition's\nclock rate is a boundary flux.",
+   "axioms": ["propext", "Classical.choice", "Quot.sound"]},
+  {"status": "proved",
+   "statement":
+   "lattice_sigma_decomposition (n : ℕ) [NeZero n] (h3 : 3 ≤ n) (e u ε ν : Site n → ℝ) (V : Finset (Site n)) : ∑ p ∈ V, ∑ q, nnFlux n e u p q * nnFlux n ε ν p q = (∑ p ∈ V, ∑ q ∈ V, nnFlux n e u p q * nnFlux n ε ν p q) + outflux (nnProd n e u ε ν) V ∧ outflux (nnProd n e u ε ν) Vᶜ = outflux (nnProd n e u ε ν) V",
+   "name": "TimesArrow.Divergence.lattice_sigma_decomposition",
+   "doc":
+   "**A region's entropy production is interior bonds plus a boundary\nterm** — the σ-weighted divergence identity on the walker grid: with\nbond-field currents `e`, `u` and bond-field affinities `ε`, `ν` (the\ndriven walker's are the constants `ε = ln 3`, `ν = 0`), the entropy\nproduction gathered by a region's sites counts every interior bond twice,\nonce per end, and each cut bond once; the boundary term is the same\nwhether it is summed from inside or from outside the region.",
+   "axioms": ["propext", "Classical.choice", "Quot.sound"]},
+  {"status": "proved",
+   "statement":
    "checkerboard (n : ℕ) [NeZero n] (h2 : 2 ∣ n) (t : ℕ) (c : ZMod 2) (s : State n) : labelMass n h2 t c ((stepState n)^[t] s) = labelMass n h2 0 c s",
    "name": "TimesArrow.LatticeGas.checkerboard",
    "doc":

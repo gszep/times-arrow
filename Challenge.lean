@@ -4,6 +4,7 @@ import TimesArrow.Selection
 import TimesArrow.Walker
 import TimesArrow.WalkerProfile
 import TimesArrow.Markov.Fluctuation
+import TimesArrow.Divergence
 
 namespace TimesArrow.Walker
 
@@ -167,3 +168,23 @@ theorem loschmidt_echo (n : ℕ) [NeZero n] (t : ℕ) (s : State n) :
   sorry
 
 end TimesArrow.LatticeGas
+
+namespace TimesArrow.Divergence
+
+open TimesArrow.Walker
+
+theorem lattice_clock_rate (n : ℕ) [NeZero n] (h3 : 3 ≤ n)
+    (e u : Site n → ℝ) (V : Finset (Site n)) :
+    ∑ p ∈ V, (e p - e (p - (1, 0)) + u p - u (p - (0, 1)))
+      = outflux (nnFlux n e u) V := by
+  sorry
+
+theorem lattice_sigma_decomposition (n : ℕ) [NeZero n] (h3 : 3 ≤ n)
+    (e u ε ν : Site n → ℝ) (V : Finset (Site n)) :
+    ∑ p ∈ V, ∑ q, nnFlux n e u p q * nnFlux n ε ν p q
+      = (∑ p ∈ V, ∑ q ∈ V, nnFlux n e u p q * nnFlux n ε ν p q)
+        + outflux (nnProd n e u ε ν) V
+      ∧ outflux (nnProd n e u ε ν) Vᶜ = outflux (nnProd n e u ε ν) V := by
+  sorry
+
+end TimesArrow.Divergence
