@@ -1,22 +1,8 @@
-// Shared numeric analysis for the playground page and the protocol driver.
+// Shared numeric analysis for the playground page, the checks and the sweep
+// driver: the two-cell observational entropy, region areas clipped to the
+// table, the cell flux/occupancy fields, and Gaussian tail probabilities.
 
-/** The free table's geometric ringing periods, 100/√(m²+n²) steps, with the
- * m²+n² value each comes from (a particle conserves |v_x|, |v_y|, so its x
- * and y motions are periodic; the slowest is 2L/v = 100 steps on an axis). */
-export const TABLE_PERIODS = [1, 2, 4, 5, 8, 9, 10, 13].map((j) => ({ j, f: Math.sqrt(j) / 100, period: 100 / Math.sqrt(j) }));
-
-/** Number of exact-revival directions at t = 100k of a centre release: the
- * lattice points on the circle of radius k (both k·cosθ and k·sinθ integral). */
-export const dirsOnCircle = (k: number) => {
-  let c = 0;
-  for (let a = 0; a <= k; a++)
-    for (let b = 0; b <= k; b++)
-      if (a * a + b * b === k * k && (a > 0 || b > 0)) c += a === 0 || b === 0 ? 2 : 4;
-  return c;
-};
-
-/** Unweighted two-cell coarse entropy S(p) = −p ln p − (1−p) ln(1−p). */
-export const sUnw = (p: number) => (p <= 0 || p >= 1 ? 0 : -p * Math.log(p) - (1 - p) * Math.log(1 - p));
+import type { Surf } from "./billiard.ts";
 
 /** Volume-weighted (observational) coarse entropy per particle, in nats:
  * S_obs = −p ln(p/a) − (1−p) ln((1−p)/(1−a)) = ln A_table − D(p‖a); for the
@@ -26,6 +12,68 @@ export const sObs = (p: number, a: number) => {
   const t2 = p >= 1 ? 0 : (1 - p) * Math.log((1 - p) / (1 - a));
   return -(t1 + t2);
 };
+
+/** Region area as a fraction of the table. Squares: exact rectangle clip.
+ * Circles: πr² when the disc fits, else a 4096² cell-centre supersample
+ * (relative error ≲ 1e-3; only reachable by tapping a point near a wall). */
+export function areaOf(s: Surf): number {
+  const lo = { x: Math.max(0, s.x - s.r), y: Math.max(0, s.y - s.r) };
+  const hi = { x: Math.min(1, s.x + s.r), y: Math.min(1, s.y + s.r) };
+  if (s.square) return Math.max(0, hi.x - lo.x) * Math.max(0, hi.y - lo.y);
+  const unclipped = s.x - s.r >= 0 && s.x + s.r <= 1 && s.y - s.r >= 0 && s.y + s.r <= 1;
+  if (unclipped) return Math.PI * s.r * s.r;
+  const m = 4096;
+  let c = 0;
+  const r2 = s.r * s.r;
+  for (let j = 0; j < m; j++) {
+    const y = lo.y + ((j + 0.5) * (hi.y - lo.y)) / m;
+    const dy = y - s.y;
+    const w2 = r2 - dy * dy;
+    if (w2 <= 0) continue;
+    const w = Math.sqrt(w2);
+    const xa = Math.max(lo.x, s.x - w);
+    const xb = Math.min(hi.x, s.x + w);
+    if (xb > xa) c += Math.round(((xb - xa) * m) / (hi.x - lo.x));
+  }
+  return c / (m * m);
+}
+
+/** Equivalent radius of a region: √(area/π). Circles and equal-area squares
+ * share an x position on the r axis. */
+export const rEqOf = (s: Surf) => Math.sqrt(areaOf(s) / Math.PI);
+
+/** Directions of the per-cell crossing tallies in flux: R, L, up, down. */
+const DX = [1, -1, 0, 0];
+const DY = [0, 0, 1, -1];
+const OPP = [1, 0, 3, 2];
+
+/** The local fields of one window, from the directed edge tallies `flux`
+ * (crossings leaving each cell in each direction, accumulated over the
+ * window) and the window-start occupancy `occPrev`:
+ *  - sigma[c] = Σ_e (J_e/N)·ln((n_c+½)/(n_e+½)): the cell's entropy
+ *    production per particle over the window, edges to the four neighbours;
+ *    J_e is the net count leaving c through edge e and the +½ pseudo-count
+ *    keeps the log finite in empty cells (all cells have equal area).
+ *  - div[c] = Σ_e J_e: the raw net outflow, the discrete divergence of J. */
+export function cellFields(flux: Uint32Array, occPrev: Uint32Array, C: number, n: number) {
+  const sigma = new Float64Array(C * C);
+  const div = new Float64Array(C * C);
+  for (let j = 0; j < C; j++) {
+    for (let i = 0; i < C; i++) {
+      const c = j * C + i;
+      for (let d = 0; d < 4; d++) {
+        const ni = i + DX[d];
+        const nj = j + DY[d];
+        if (ni < 0 || ni >= C || nj < 0 || nj >= C) continue;
+        const e = nj * C + ni;
+        const J = flux[c * 4 + d] - flux[e * 4 + OPP[d]];
+        div[c] += J;
+        sigma[c] += (J / n) * Math.log((occPrev[c] + 0.5) / (occPrev[e] + 0.5));
+      }
+    }
+  }
+  return { sigma, div };
+}
 
 /** Ordinary least squares y = slope·x + intercept, with R². */
 export function linfit(xs: number[], ys: number[]) {
@@ -44,76 +92,17 @@ export function linfit(xs: number[], ys: number[]) {
   return { slope, intercept: my - slope * mx, r2: (sxy * sxy) / (sxx * syy) };
 }
 
-/** Amplitude spectrum of a uniformly sampled series (dt in steps): Hann
- * window, mean removed, zero-padded to a power of two. Returns frequencies
- * in cycles/step and amplitudes in the units of y. */
-export function spectrum(y: number[], dt: number) {
-  const m = y.length;
-  if (m < 4) return { f: [] as number[], a: [] as number[] };
-  const mean = y.reduce((s, v) => s + v, 0) / m;
-  const n = 2 ** Math.ceil(Math.log2(m));
-  const re = new Float64Array(n);
-  const im = new Float64Array(n);
-  let wsum = 0;
-  for (let i = 0; i < m; i++) {
-    const w = m > 1 ? 0.5 - 0.5 * Math.cos((2 * Math.PI * i) / (m - 1)) : 1;
-    wsum += w;
-    re[i] = (y[i] - mean) * w;
-  }
-  for (let i = 1, j = 0; i < n; i++) {
-    let bit = n >> 1;
-    for (; j & bit; bit >>= 1) j ^= bit;
-    j ^= bit;
-    if (i < j) {
-      [re[i], re[j]] = [re[j], re[i]];
-      [im[i], im[j]] = [im[j], im[i]];
-    }
-  }
-  for (let len = 2; len <= n; len <<= 1) {
-    const ang = (-2 * Math.PI) / len;
-    for (let i = 0; i < n; i += len) {
-      for (let k = 0; k < len / 2; k++) {
-        const wr = Math.cos(ang * k);
-        const wi = Math.sin(ang * k);
-        const ur = re[i + k];
-        const ui = im[i + k];
-        const vr = re[i + k + len / 2] * wr - im[i + k + len / 2] * wi;
-        const vi = re[i + k + len / 2] * wi + im[i + k + len / 2] * wr;
-        re[i + k] = ur + vr;
-        im[i + k] = ui + vi;
-        re[i + k + len / 2] = ur - vr;
-        im[i + k + len / 2] = ui - vi;
-      }
-    }
-  }
-  const f: number[] = [];
-  const a: number[] = [];
-  for (let j = 1; j <= n / 2; j++) {
-    f.push(j / (n * dt));
-    a.push((2 * Math.hypot(re[j], im[j])) / wsum);
-  }
-  return { f, a };
+/** Error function, Abramowitz–Stegun 7.1.26 (|ε| ≤ 1.5e-7). */
+export function erf(x: number) {
+  const s = x < 0 ? -1 : 1;
+  const z = Math.abs(x);
+  const t = 1 / (1 + 0.3275911 * z);
+  const y =
+    1 -
+    ((((1.061405429 * t - 1.453152027) * t + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-z * z);
+  return s * y;
 }
 
-/** Local maxima of a spectrum, strongest first. */
-export function peaks(f: number[], a: number[], top = 8) {
-  const out: { f: number; a: number }[] = [];
-  for (let j = 1; j < a.length - 1; j++) {
-    if (a[j] > a[j - 1] && a[j] >= a[j + 1]) out.push({ f: f[j], a: a[j] });
-  }
-  out.sort((x, y) => y.a - x.a);
-  return out.slice(0, top);
-}
-
-/** Non-overlapping RMS envelope of a uniformly sampled series (dt in steps),
- * one point per window of `win` steps. */
-export function rmsEnvelope(y: number[], win: number, dt: number) {
-  const per = Math.max(1, Math.round(win / dt));
-  const out: { t: number; r: number }[] = [];
-  for (let i = 0; i + per <= y.length; i += per) {
-    let s = 0;
-    for (let j = i; j < i + per; j++) s += y[j] * y[j];
-    out.push({ t: (i + per / 2) * dt, r: Math.sqrt(s / per) });
-  }
-  return out;
-}
+/** Gaussian tail probability P(X < 0) for X ~ N(mean, sd²). */
+export const pNegGauss = (mean: number, sd: number) =>
+  sd <= 0 ? (mean < 0 ? 1 : mean > 0 ? 0 : 0.5) : 0.5 * (1 - erf(mean / (Math.SQRT2 * sd)));

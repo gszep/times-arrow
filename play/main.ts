@@ -1,7 +1,7 @@
-import { Billiard, GRID, ROOM, SCATTERERS, SURF_A, SURF_B, scatR, tauOf, areaOf } from "./billiard.ts";
-import type { Config } from "./billiard.ts";
-import { gpu } from "../src/gpu.ts";
-import { sObs, sUnw, spectrum, peaks, TABLE_PERIODS } from "./analyze.ts";
+import { Billiard, ROOM, SCATTERERS, scatR, surfacesFor, GRIDS } from "./billiard.ts";
+import type { Config, Surf } from "./billiard.ts";
+import { gpu, watchDevice } from "../src/gpu.ts";
+import { sObs, areaOf, rEqOf, cellFields, pNegGauss } from "./analyze.ts";
 
 const $ = (id: string) => document.getElementById(id)!;
 const params = new URLSearchParams(location.search);
@@ -11,55 +11,100 @@ const num = (k: string, d: number) => {
 };
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
-const COLORS = ["#b91c1c", "#d97706", "#0d9488", "#64748b"];
+// A-family (point A) red, B-family teal; circles solid, squares dashed.
+const FAM = [
+  { label: "A circles", color: "#b91c1c" },
+  { label: "A squares", color: "#ef4444" },
+  { label: "B circles", color: "#0d9488" },
+  { label: "B squares", color: "#14b8a6" },
+];
 
-const A: Config = { n: 50000, seed: 1, door: 0.08, walls: true, scatm: 0, startIn: true, startDisc: 0, spread: 0, surfaces: SURF_A };
-const B: Config = { n: 50000, seed: 1, door: 0, walls: false, scatm: 0, startIn: false, startDisc: 0.01, spread: 0, surfaces: SURF_B };
-
-let proto: "a" | "b" = params.get("proto") === "b" ? "b" : "a";
-let knobs: Partial<Config> = {
+let proto: "door" | "release" = params.get("proto") === "release" ? "release" : "door";
+let knobs: Record<string, unknown> = {
   n: clamp(Math.round(num("n", 50000)), 1000, 200000),
   seed: clamp(Math.round(num("seed", 1)), 0, 2 ** 31 - 1),
   spread: num("spread", 0) === 0.25 ? 0.25 : 0,
   scatm: ([0, 1, 4, 9] as const).includes(Math.round(num("scatm", 0)) as 0 | 1 | 4 | 9) ? (Math.round(num("scatm", 0)) as 0 | 1 | 4 | 9) : 0,
+  spawn: (["room", "disc", "table"] as const).includes(params.get("spawn") as "room") ? (params.get("spawn") as "room" | "disc" | "table") : proto === "door" ? "room" : "disc",
+  startDisc: num("r0", 0.01) === 0 ? 0 : 0.01,
 };
-if (proto === "a") knobs.door = clamp(num("door", 0.08), 0, 2 * ROOM.h);
-else knobs.startDisc = params.get("r0") === "0" ? 0 : 0.01;
-let tOff = clamp(Math.round(num("toff", 600)), 50, 6000);
-let speed = clamp(Math.round(num("speed", 2)), 1, 16);
+let door = clamp(num("door", 0.08), 0, 2 * ROOM.h);
+let grid = (GRIDS as readonly number[]).includes(Math.round(num("c", 32))) ? Math.round(num("c", 32)) : 32;
+let W = clamp(Math.round(num("w", 25)), 1, 200);
+let pts = {
+  a: { x: clamp(num("ax", proto === "door" ? 0.5 : 0.5), 0, 1), y: clamp(num("ay", proto === "door" ? 0.82 : 0.5), 0, 1) },
+  b: { x: clamp(num("bx", proto === "door" ? 0.25 : 0.75), 0, 1), y: clamp(num("by", proto === "door" ? 0.25 : 0.25), 0, 1) },
+};
+let tap = params.get("tap") === "b" ? "b" : "a";
+let speed = clamp(Math.round(num("speed", 1)), 1, 4);
 let ensR = num("ens", 8) === 32 ? 32 : 8;
 let playing = params.get("play") !== "0";
 let view: "single" | "ensemble" = params.get("view") === "ensemble" ? "ensemble" : "single";
+let heatAvg = params.get("heat") === "avg";
 
-const mkcfg = (): Config => {
-  const base = { ...(proto === "a" ? A : B), ...knobs };
-  if (base.walls) base.scatm = base.scatm ? 1 : 0; // only the room-safe presets with walls on
-  return base;
+let customSurfaces: Surf[] | null = null;
+
+/** Default knobs and points when the protocol switches. */
+const setProto = (p: "door" | "release") => {
+  proto = p;
+  if (p === "door") {
+    knobs.spawn = "room";
+    pts = { a: { x: 0.5, y: 0.82 }, b: { x: 0.25, y: 0.25 } };
+  } else {
+    knobs.spawn = "disc";
+    pts = { a: { x: 0.5, y: 0.5 }, b: { x: 0.75, y: 0.25 } };
+  }
 };
 
+const mkcfg = (): Config => ({
+  n: knobs.n as number,
+  seed: knobs.seed as number,
+  door: proto === "door" ? door : 0,
+  walls: proto === "door",
+  scatm: (knobs.scatm as 0 | 1 | 4 | 9) && proto === "door" ? ((knobs.scatm as 0 | 1 | 4 | 9) === 1 ? 1 : 0) : (knobs.scatm as 0 | 1 | 4 | 9),
+  spawn: knobs.spawn as Config["spawn"],
+  startDisc: knobs.startDisc as number,
+  spread: knobs.spread as number,
+  grid,
+  surfaces: customSurfaces ?? surfacesFor([pts.a, pts.b], grid),
+});
+
 const url = () => {
-  const q = new URLSearchParams({ proto, ...Object.fromEntries(Object.entries(knobs).map(([k, v]) => [k, String(v)])) } as Record<string, string>);
-  q.set("toff", String(tOff));
-  q.set("speed", String(speed));
-  q.set("ens", String(ensR));
-  q.set("view", view);
+  const q = new URLSearchParams({
+    proto,
+    ...Object.fromEntries(Object.entries(knobs).map(([k, v]) => [k, String(v)])),
+    door: String(door),
+    c: String(grid),
+    w: String(W),
+    ax: pts.a.x.toFixed(3),
+    ay: pts.a.y.toFixed(3),
+    bx: pts.b.x.toFixed(3),
+    by: pts.b.y.toFixed(3),
+    tap,
+    speed: String(speed),
+    ens: String(ensR),
+    view,
+    heat: heatAvg ? "avg" : "last",
+  });
   if (!playing) q.set("play", "0");
   history.replaceState(null, "", `?${q.toString()}`);
 };
 
-type Sample = { t: number; pin: number[]; cin: number; cout: number };
-const samples: Sample[] = [];
-let grids: { gridIn: Uint32Array; gridOut: Uint32Array } | null = null;
-type Ens = { r: number; t: number[]; mean: number[][]; se: number[][] };
+type Win = { t: number; sig: number[]; sigma: Float64Array; div: Float64Array };
+const windows: Win[] = [];
+let lastOcc: Uint32Array | null = null;
+let lastField: { sigma: Float64Array; div: Float64Array; divInt: Float64Array } | null = null;
+let sigSum: Float64Array | null = null;
+let divSum: Float64Array | null = null;
+type Ens = { r: number; mean: number[]; se: number[]; pNeg: number[]; pNegSe: number[]; heat: Float64Array };
 let ens: Ens | null = null;
 let ensBusy = false;
 let probeBusy = false;
 
 type Series = { pts: [number, number][]; color: string; dash?: boolean; label?: string; lo?: number[]; hi?: number[] };
 type Mark = { y: number; color: string; label?: string };
-type VMark = { x: number; color: string; label?: string };
 
-function plot(canvas: HTMLCanvasElement, series: Series[], marks: Mark[] = [], vmarks: VMark[] = []) {
+function plot(canvas: HTMLCanvasElement, series: Series[], marks: Mark[] = [], xLabel = "", yLabel = "") {
   const dpr = devicePixelRatio;
   const rect = canvas.getBoundingClientRect();
   const w = (canvas.width = Math.max(60, Math.round(rect.width * dpr)));
@@ -71,7 +116,7 @@ function plot(canvas: HTMLCanvasElement, series: Series[], marks: Mark[] = [], v
     ...marks.map((m) => [0, m.y] as [number, number]),
   ];
   if (!all.length) return;
-  const x1 = Math.max(1, ...all.map((p) => p[0]));
+  const x1 = Math.max(1e-9, ...all.map((p) => p[0]));
   const y0 = Math.min(0, ...all.map((p) => p[1]));
   const y1 = Math.max(...all.map((p) => p[1]));
   const m = 34 * dpr;
@@ -80,7 +125,7 @@ function plot(canvas: HTMLCanvasElement, series: Series[], marks: Mark[] = [], v
   ctx.strokeStyle = "#ddd";
   ctx.strokeRect(m, m, w - 2 * m, h - 2 * m);
   ctx.font = `${11 * dpr}px system-ui`;
-  const fmt = (v: number) => (Math.abs(v) >= 100 ? v.toExponential(0) : String(Math.round(v * 100) / 100));
+  const fmt = (v: number) => (Math.abs(v) >= 100 ? v.toExponential(0) : String(Math.round(v * 1000) / 1000));
   ctx.fillStyle = "#666";
   ctx.fillText(fmt(y1), 4 * dpr, m + 10 * dpr);
   ctx.fillText(fmt(y0), 4 * dpr, h - m);
@@ -97,19 +142,6 @@ function plot(canvas: HTMLCanvasElement, series: Series[], marks: Mark[] = [], v
       ctx.fillText(mk.label, m + 4 * dpr, py(mk.y) - 4 * dpr);
     }
   }
-  for (const vm of vmarks) {
-    ctx.strokeStyle = vm.color;
-    ctx.setLineDash([3, 5]);
-    ctx.beginPath();
-    ctx.moveTo(px(vm.x), m);
-    ctx.lineTo(px(vm.x), h - m);
-    ctx.stroke();
-    ctx.setLineDash([]);
-    if (vm.label) {
-      ctx.fillStyle = vm.color;
-      ctx.fillText(vm.label, px(vm.x) + 3 * dpr, m + 10 * dpr);
-    }
-  }
   let legend = m;
   for (const s of series) {
     if (s.lo && s.hi && s.pts.length) {
@@ -120,7 +152,7 @@ function plot(canvas: HTMLCanvasElement, series: Series[], marks: Mark[] = [], v
       ctx.closePath();
       ctx.fill();
     }
-    if (s.pts.length < 2) continue;
+    if (!s.pts.length) continue;
     ctx.strokeStyle = s.color;
     ctx.setLineDash(s.dash ? [5, 4] : []);
     ctx.lineWidth = s.dash ? 1 : 1.5;
@@ -135,77 +167,89 @@ function plot(canvas: HTMLCanvasElement, series: Series[], marks: Mark[] = [], v
       legend += ctx.measureText(s.label).width + 16 * dpr;
     }
   }
-  ctx.fillStyle = "#666";
-  ctx.fillText(proto === "a" ? "steps" : "cycles/step", w - m - 52 * dpr, h - 6 * dpr);
+  if (xLabel) {
+    ctx.fillStyle = "#666";
+    ctx.fillText(xLabel, w - m - ctx.measureText(xLabel).width, h - 6 * dpr);
+  }
+  if (yLabel) {
+    ctx.save();
+    ctx.translate(10 * dpr, m + 4 * dpr);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillText(yLabel, 0, 0);
+    ctx.restore();
+  }
 }
 
 const out = $("out");
 
 try {
   const { device, adapter } = await gpu();
+  const watch = watchDevice(device);
   const bill = await Billiard.create(device, mkcfg());
 
-  const advance = async (k: number, grid = true): Promise<Sample> => {
-    const r = await bill.advance(k, grid);
-    if (grid && r.gridIn) grids = { gridIn: r.gridIn, gridOut: r.gridOut! };
-    const sample = { t: bill.t, pin: r.counts.map((c) => c / bill.cfg.n), cin: r.cin, cout: r.cout };
-    samples.push(sample);
-    return sample;
+  // ── window machinery ──────────────────────────────────────────────────────
+  const areas = () => bill.cfg.surfaces.map(areaOf);
+
+  const advanceWindow = async (k: number, full = true) => {
+    const r = await watch.race(bill.advance(k, full));
+    const A = areas();
+    const sig = A.map((a, j) => sObs(r.ctr[j] / bill.cfg.n, a) - sObs(r.prevCtr[j] / bill.cfg.n, a));
+    let sigma: Float64Array | null = null;
+    let div: Float64Array | null = null;
+    if (full && r.flux) {
+      const f = cellFields(r.flux, r.prevOcc, bill.cfg.grid, bill.cfg.n);
+      sigma = f.sigma;
+      div = f.div;
+      lastOcc = r.occ!;
+      lastField = { sigma, div, divInt: div };
+      if (!sigSum || !divSum) {
+        sigSum = new Float64Array(sigma);
+        divSum = new Float64Array(div);
+      } else {
+        for (let i = 0; i < sigSum.length; i++) {
+          sigSum[i] += sigma[i];
+          divSum[i] += div[i];
+        }
+      }
+      windows.push({ t: r.t, sig, sigma, div });
+    }
+    return { t: r.t, sig, ctr: r.ctr, prevCtr: r.prevCtr, flux: r.flux, occ: r.occ, sigma, div };
+  };
+
+  const reinit = async (opts: { keepCustom?: boolean; keepEns?: boolean } = {}) => {
+    if (!opts.keepCustom) customSurfaces = null;
+    const s = await bill.reset(mkcfg());
+    windows.length = 0;
+    sigSum = null;
+    divSum = null;
+    lastOcc = s.occ;
+    lastField = null;
+    if (!opts.keepEns) ens = null;
+    view = "single";
+    url();
+    controls();
+    draw();
+    readout();
+    plots();
+    return s;
   };
 
   // ── drawing ────────────────────────────────────────────────────────────────
-  const canvas = $("table") as HTMLCanvasElement;
-  const ctx = canvas.getContext("2d")!;
+  const table = $("table") as HTMLCanvasElement;
+  const tctx = table.getContext("2d")!;
   const off = document.createElement("canvas");
-  off.width = GRID;
-  off.height = GRID;
-  const offctx = off.getContext("2d")!;
-  const img = offctx.createImageData(GRID, GRID);
+  const octx = off.getContext("2d")!;
 
-  const draw = () => {
-    const dpr = devicePixelRatio;
-    const px = Math.max(60, Math.round(canvas.clientWidth * dpr));
-    if (canvas.width !== px) {
-      canvas.width = px;
-      canvas.height = px;
-    }
-    ctx.clearRect(0, 0, px, px);
-    if (grids) {
-      const d = img.data;
-      const gi = grids.gridIn;
-      const go = grids.gridOut;
-      for (let r = 0; r < GRID; r++) {
-        const flip = (GRID - 1 - r) * GRID; // world y grows upward, image rows downward
-        for (let c = 0; c < GRID; c++) {
-          const i = r * GRID + c;
-          const nin = gi[i];
-          const nout = go[i];
-          const q = (flip + c) * 4;
-          if (nin + nout === 0) {
-            d[q + 3] = 0;
-            continue;
-          }
-          const f = nin / (nin + nout); // crimson inside surface 0, teal outside
-          d[q] = 13 + f * 177;
-          d[q + 1] = 148 - f * 130;
-          d[q + 2] = 136 - f * 76;
-          d[q + 3] = Math.round(255 * (1 - Math.exp(-(nin + nout) / 1.6)));
-        }
-      }
-      offctx.putImageData(img, 0, 0);
-      ctx.imageSmoothingEnabled = true;
-      ctx.drawImage(off, 0, 0, px, px);
-    }
+  const geometry = (ctx: CanvasRenderingContext2D, px: number, light: boolean) => {
     const X = (x: number) => x * px;
     const Y = (y: number) => (1 - y) * px;
-    const lw = Math.max(2, px / 200);
+    const lw = Math.max(1.5, px / 220);
     ctx.lineWidth = lw;
-    ctx.strokeStyle = "#333";
+    ctx.strokeStyle = light ? "#94a3b8" : "#1f2937";
     ctx.strokeRect(lw / 2, lw / 2, px - lw, px - lw);
     const sr = scatR(bill.cfg.scatm);
     for (const [sx, sy] of SCATTERERS[bill.cfg.scatm]) {
       ctx.fillStyle = "#cbd5e1";
-      ctx.strokeStyle = "#475569";
       ctx.beginPath();
       ctx.arc(X(sx), Y(sy), sr * px, 0, 2 * Math.PI);
       ctx.fill();
@@ -216,7 +260,6 @@ try {
     const rs = 2 * ROOM.h;
     const dw = bill.cfg.door / 2;
     if (bill.cfg.walls) {
-      ctx.strokeStyle = "#1f2937";
       ctx.beginPath();
       ctx.moveTo(X(rx), Y(rb));
       ctx.lineTo(X(rx), Y(rb + rs));
@@ -240,78 +283,179 @@ try {
         ctx.stroke();
       }
     }
+    ctx.strokeStyle = light ? "#cbd5e1" : "#333";
     for (const [k, s] of bill.cfg.surfaces.entries()) {
-      ctx.strokeStyle = COLORS[k] ?? "#7c3aed";
-      ctx.setLineDash(k === 0 ? [8, 6] : [3, 4]);
-      ctx.lineWidth = Math.max(1.5, px / (k === 0 ? 280 : 400));
+      const famA = Math.abs(s.x - pts.a.x) < 1e-9 && Math.abs(s.y - pts.a.y) < 1e-9;
+      ctx.strokeStyle = light ? "#cbd5e1" : famA ? "#b91c1c" : "#0d9488";
+      if (light) ctx.globalAlpha = 0.35;
+      ctx.setLineDash(s.square ? [4, 3] : []);
+      ctx.lineWidth = Math.max(1, px / 500);
       ctx.beginPath();
-      if (s.aligned) {
-        ctx.moveTo(X(rx), Y(rb));
-        ctx.lineTo(X(rx), Y(rb + rs));
-        ctx.lineTo(X(rx + rs), Y(rb + rs));
-        ctx.lineTo(X(rx + rs), Y(rb));
-        ctx.closePath();
+      if (s.square) {
+        ctx.rect(X(s.x - s.r), Y(s.y + s.r), 2 * s.r * px, 2 * s.r * px);
       } else {
         ctx.arc(X(s.x), Y(s.y), s.r * px, 0, 2 * Math.PI);
       }
       ctx.stroke();
       ctx.setLineDash([]);
+      ctx.globalAlpha = 1;
     }
-    if (!bill.cfg.startIn) {
-      ctx.strokeStyle = "#111827";
-      ctx.beginPath();
-      ctx.arc(X(0.5), Y(0.5), Math.max(2, bill.cfg.startDisc * px), 0, 2 * Math.PI);
-      ctx.stroke();
+  };
+
+  const drawTable = () => {
+    const dpr = devicePixelRatio;
+    const px = Math.max(60, Math.round(table.clientWidth * dpr));
+    if (table.width !== px) {
+      table.width = px;
+      table.height = px;
     }
+    tctx.clearRect(0, 0, px, px);
+    const C = bill.cfg.grid;
+    if (lastOcc && off.width !== C) {
+      off.width = C;
+      off.height = C;
+    }
+    if (lastOcc) {
+      const img = octx.createImageData(C, C);
+      const bar = bill.cfg.n / (C * C);
+      for (let r = 0; r < C; r++) {
+        for (let c = 0; c < C; c++) {
+          const i = r * C + c;
+          const q = ((C - 1 - r) * C + c) * 4;
+          const a = Math.min(1, (lastOcc[i] / bar) * 0.5);
+          img.data[q] = 30;
+          img.data[q + 1] = 41;
+          img.data[q + 2] = 59;
+          img.data[q + 3] = Math.round(255 * a);
+        }
+      }
+      octx.putImageData(img, 0, 0);
+      tctx.imageSmoothingEnabled = true;
+      tctx.drawImage(off, 0, 0, px, px);
+    }
+    geometry(tctx, px, false);
+    const mark = (p: { x: number; y: number }, color: string) => {
+      tctx.strokeStyle = color;
+      tctx.lineWidth = Math.max(2, px / 150);
+      const s = 0.012 * px;
+      tctx.beginPath();
+      tctx.moveTo(p.x * px - s, (1 - p.y) * px);
+      tctx.lineTo(p.x * px + s, (1 - p.y) * px);
+      tctx.moveTo(p.x * px, (1 - p.y) * px - s);
+      tctx.lineTo(p.x * px, (1 - p.y) * px + s);
+      tctx.stroke();
+    };
+    mark(pts.a, "#b91c1c");
+    mark(pts.b, "#0d9488");
+  };
+
+  const heat = (canvas: HTMLCanvasElement, field: Float64Array | null, sum: Float64Array | null) => {
+    const dpr = devicePixelRatio;
+    const rect = canvas.getBoundingClientRect();
+    const px = Math.max(60, Math.round(rect.width * dpr));
+    if (canvas.width !== px) {
+      canvas.width = px;
+      canvas.height = px;
+    }
+    const ctx = canvas.getContext("2d")!;
+    ctx.clearRect(0, 0, px, px);
+    const C = bill.cfg.grid;
+    const f = heatAvg && sum ? sum.map((v) => v / windows.length) : field;
+    if (!f) {
+      ctx.fillStyle = "#666";
+      ctx.fillText(playing ? "…" : "press ▶", 10 * dpr, 20 * dpr);
+      return;
+    }
+    if (off.width !== C) {
+      off.width = C;
+      off.height = C;
+    }
+    const abs = [...f].map(Math.abs).sort((x, y) => x - y);
+    const scale = (abs[abs.length - 1] ?? 0) <= 0 ? 1 : abs[Math.floor(abs.length * 0.98)] || abs[abs.length - 1];
+    const img = octx.createImageData(C, C);
+    for (let r = 0; r < C; r++) {
+      for (let c = 0; c < C; c++) {
+        const i = r * C + c;
+        const q = ((C - 1 - r) * C + c) * 4;
+        const t = Math.max(-1, Math.min(1, f[i] / scale));
+        img.data[q] = t > 0 ? 250 : 37;
+        img.data[q + 1] = t > 0 ? 128 + t * 70 : 99 + Math.abs(t) * 60;
+        img.data[q + 2] = t > 0 ? 114 - t * 60 : 235;
+        img.data[q + 3] = Math.round(255 * Math.min(1, Math.abs(t) * 3));
+      }
+    }
+    octx.putImageData(img, 0, 0);
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(off, 0, 0, px, px);
+    geometry(ctx, px, true);
+  };
+
+  const draw = () => {
+    drawTable();
+    heat($("sigmah") as HTMLCanvasElement, lastField?.sigma ?? null, sigSum);
+    heat($("divh") as HTMLCanvasElement, lastField?.div ?? null, divSum);
+  };
+
+  // ── stats ────────────────────────────────────────────────────────────────
+  const family = (s: Surf) =>
+    Math.abs(s.x - pts.a.x) < 1e-9 && Math.abs(s.y - pts.a.y) < 1e-9 ? 0 : Math.abs(s.x - pts.b.x) < 1e-9 && Math.abs(s.y - pts.b.y) < 1e-9 ? 2 : -1;
+
+  const surfStats = () => {
+    const K = bill.cfg.surfaces.length;
+    const n = windows.length;
+    const mean = new Array(K).fill(0);
+    const sd = new Array(K).fill(0);
+    const pNeg = new Array(K).fill(0);
+    for (const w of windows) for (let k = 0; k < K; k++) mean[k] += w.sig[k];
+    if (n) for (let k = 0; k < K; k++) mean[k] /= n;
+    if (n > 1) {
+      for (const w of windows) for (let k = 0; k < K; k++) sd[k] += (w.sig[k] - mean[k]) ** 2;
+      for (let k = 0; k < K; k++) sd[k] = Math.sqrt(sd[k] / (n - 1));
+    }
+    for (const w of windows) for (let k = 0; k < K; k++) if (w.sig[k] < 0) pNeg[k]++;
+    if (n) for (let k = 0; k < K; k++) pNeg[k] /= n;
+    return { n, mean, sd, pNeg };
   };
 
   // ── controls ──────────────────────────────────────────────────────────────
   const link = (text: string, data: string) => `<a href="#" ${data}>${text}</a>`;
   const controls = () => {
     $("parline").textContent =
-      proto === "a"
-        ? `walls on, off at t = ${tOff} · door ${bill.cfg.door.toFixed(3)} · scatterer ${bill.cfg.scatm ? "on" : "off"} · surfaces: room + 3 circles`
-        : `release from the centre (r₀ = ${bill.cfg.startDisc}) · walls off · scatterers ${bill.cfg.scatm} · surfaces: centred circles + far circle`;
-    $("toffrow").style.display = proto === "a" ? "" : "none";
-    $("doorrow").style.display = proto === "a" ? "" : "none";
-    $("r0row").style.display = proto === "b" ? "" : "none";
+      proto === "door"
+        ? `room full, door ${door.toFixed(3)} · walls stay on · A at the door mouth, B far · grid ${grid}², window ${W} steps`
+        : `released from the centre (r₀ = ${bill.cfg.startDisc}) · walls off · A at the centre, B far · grid ${grid}², window ${W} steps`;
+    $("doorrow").style.display = proto === "door" ? "" : "none";
+    $("r0row").style.display = proto === "release" ? "" : "none";
+    $("wlinks").innerHTML = [5, 10, 25, 50, 100]
+      .filter((v) => v >= 1)
+      .map((v) => (W === v ? String(v) : link(String(v), `data-w="${v}"`)))
+      .join(" · ");
+    $("clinks").innerHTML = GRIDS.map((v) => (grid === v ? `${v}²` : link(`${v}²`, `data-c="${v}"`))).join(" · ");
     $("nlinks").innerHTML = [12500, 50000, 200000]
       .map((v) => (bill.cfg.n === v ? `${v / 1000}k` : link(`${v / 1000}k`, `data-n="${v}"`)))
       .join(" · ");
     $("enslinks").innerHTML = [8, 32]
       .map((v) => (ensR === v ? String(v) : link(String(v), `data-ens="${v}"`)))
       .join(" · ");
-    $("speedlinks").innerHTML = [1, 2, 4, 8, 16]
+    $("speedlinks").innerHTML = [1, 2, 4]
       .map((v) => (speed === v ? String(v) : link(String(v), `data-speed="${v}"`)))
       .join(" · ");
     $("seedlinks").innerHTML = `${link("−", `data-seed="${bill.cfg.seed - 1}"`)} ${bill.cfg.seed} ${link("+", `data-seed="${bill.cfg.seed + 1}"`)}`;
     $("spreadlinks").innerHTML = [0, 0.25]
       .map((v) => (bill.cfg.spread === v ? (v ? "±25%" : "one speed") : link(v ? "±25%" : "one speed", `data-spread="${v}"`)))
       .join(" · ");
-    $("scatlinks").innerHTML = (proto === "a" ? [0, 1] : [0, 1, 4, 9])
+    $("scatlinks").innerHTML = (proto === "door" ? [0, 1] : [0, 1, 4, 9])
       .map((v) => (bill.cfg.scatm === v ? String(v) : link(String(v), `data-scatm="${v}"`)))
       .join(" · ");
     $("r0links").innerHTML = [0.01, 0]
       .map((v) => (bill.cfg.startDisc === v ? (v ? `disc r₀=${v}` : "point") : link(v ? `disc r₀=${v}` : "point", `data-r0="${v}"`)))
       .join(" · ");
-    $("tofflabel").textContent = String(tOff);
-    $("doorlabel").textContent = bill.cfg.door.toFixed(3);
+    $("taplinks").innerHTML = [tap === "a" ? "A (red)" : link("A (red)", 'data-tap="a"'), tap === "b" ? "B (teal)" : link("B (teal)", 'data-tap="b"')].join(" · ");
+    $("heatlinks").innerHTML = heatAvg ? link("latest window", 'data-heat="last"') : link("average so far", 'data-heat="avg"');
+    $("doorlabel").textContent = door.toFixed(3);
     ($("play") as HTMLButtonElement).textContent = playing ? "⏸" : "▶";
     ($("view") as HTMLButtonElement).textContent = `view: ${view === "single" ? "single run" : `ensemble of ${ens?.r ?? ensR}`}`;
-    if (!ensBusy) $("ensline").textContent = view === "ensemble" && !ens ? "computing ensemble…" : ens ? `ensemble of ${ens.r} seeds — mean, ±2·SE band` : "";
-  };
-
-  const reinit = () => {
-    bill.configure(mkcfg());
-    samples.length = 0;
-    grids = null;
-    ens = null;
-    view = "single";
-    url();
-    controls();
-    draw();
-    readout();
-    plots();
+    if (!ensBusy) $("ensline").textContent = view === "ensemble" && !ens ? "computing ensemble…" : "";
   };
 
   $("play").onclick = () => {
@@ -319,10 +463,15 @@ try {
     url();
     controls();
   };
-  $("reverse").onclick = () => bill.reverse();
-  $("reset").onclick = () => reinit();
-  $("protoA").onclick = () => setProto("a");
-  $("protoB").onclick = () => setProto("b");
+  $("reset").onclick = () => void reinit();
+  $("protoDoor").onclick = () => {
+    setProto("door");
+    void reinit();
+  };
+  $("protoRel").onclick = () => {
+    setProto("release");
+    void reinit();
+  };
   $("view").onclick = () => {
     view = view === "single" ? "ensemble" : "single";
     if (view === "ensemble" && !ens) void runEnsemble(ensR);
@@ -331,17 +480,11 @@ try {
     plots();
   };
   $("runens").onclick = () => void runEnsemble(ensR);
-  const toff = $("toff") as HTMLInputElement;
-  toff.value = String(tOff);
-  toff.oninput = () => {
-    tOff = Number(toff.value);
-    reinit();
-  };
-  const door = $("door") as HTMLInputElement;
-  door.value = String(bill.cfg.door);
-  door.oninput = () => {
-    knobs.door = Number(door.value);
-    reinit();
+  const doorEl = $("door") as HTMLInputElement;
+  doorEl.value = String(door);
+  doorEl.oninput = () => {
+    door = Number(doorEl.value);
+    void reinit();
   };
   const onlink = (id: string, fn: (a: HTMLElement) => void) =>
     $(id).addEventListener("click", (e) => {
@@ -351,9 +494,17 @@ try {
         fn(a);
       }
     });
+  onlink("wlinks", (a) => {
+    W = Number(a.dataset.w);
+    void reinit();
+  });
+  onlink("clinks", (a) => {
+    grid = Number(a.dataset.c);
+    void reinit();
+  });
   onlink("nlinks", (a) => {
     knobs.n = Number(a.dataset.n);
-    reinit();
+    void reinit();
   });
   onlink("enslinks", (a) => {
     ensR = Number(a.dataset.ens);
@@ -367,123 +518,110 @@ try {
   });
   onlink("seedlinks", (a) => {
     knobs.seed = clamp(Number(a.dataset.seed), 0, 2 ** 31 - 1);
-    reinit();
+    void reinit();
   });
   onlink("spreadlinks", (a) => {
     knobs.spread = Number(a.dataset.spread);
-    reinit();
+    void reinit();
   });
   onlink("scatlinks", (a) => {
-    knobs.scatm = Number(a.dataset.scatm) as 0 | 1 | 4 | 9;
-    reinit();
+    knobs.scatm = Number(a.dataset.scatm);
+    void reinit();
   });
   onlink("r0links", (a) => {
     knobs.startDisc = Number(a.dataset.r0);
-    reinit();
+    void reinit();
+  });
+  onlink("taplinks", (a) => {
+    tap = a.dataset.tap === "b" ? "b" : "a";
+    url();
+    controls();
+  });
+  onlink("heatlinks", (a) => {
+    heatAvg = a.dataset.heat === "avg";
+    url();
+    controls();
+    draw();
   });
 
-  const setProto = (p: "a" | "b") => {
-    const keep: Partial<Config> = {};
-    for (const k of ["n", "seed", "spread", "scatm"] as const) if (knobs[k] !== undefined) (keep as Record<string, unknown>)[k] = knobs[k];
-    knobs = keep;
-    proto = p;
-    reinit();
-  };
+  table.addEventListener("pointerdown", (e) => {
+    const rect = table.getBoundingClientRect();
+    const x = clamp((e.clientX - rect.left) / rect.width, 0.001, 0.999);
+    const y = clamp(1 - (e.clientY - rect.top) / rect.height, 0.001, 0.999);
+    if (tap === "b") pts.b = { x, y };
+    else pts.a = { x, y };
+    void reinit();
+  });
 
-  // ── readouts and plots ────────────────────────────────────────────────────
+  // ── readout and plots ────────────────────────────────────────────────────
   const readout = () => {
-    const last = samples[samples.length - 1];
-    $("live").textContent = last
-      ? `t = ${last.t} · walls ${bill.cfg.walls ? "on" : "off"} · p per surface: ${last.pin.map((p, k) => `S${k} ${p.toFixed(3)}`).join(" · ")} · crossings/step (S0): in ${last.cin.toFixed(2)} · out ${last.cout.toFixed(2)}`
+    const occSum = lastOcc ? lastOcc.reduce((s, v) => s + v, 0) : 0;
+    const divSum = lastField ? lastField.divInt.reduce((s, v) => s + v, 0) : 0;
+    const gross = lastField ? lastField.div.reduce((s, v) => s + Math.abs(v), 0) : 0;
+    $("live").textContent = lastField
+      ? `t = ${bill.t} · ${windows.length} windows of ${W} · census Σn = ${occSum} (n = ${bill.cfg.n}) · Σ ∇·J = ${divSum} (0 exactly) · mean |∇·J| = ${gross}`
       : playing
         ? "…"
         : "press ▶";
-    const a0 = areaOf(bill.cfg.surfaces[0]);
-    $("clockline").textContent = last
-      ? `S_obs(S0) = ${sObs(last.pin[0], a0).toFixed(3)} nats — volume-weighted, max 0 at p = a₀ = ${a0.toFixed(3)} · unweighted S(p₀) = ${sUnw(last.pin[0]).toFixed(3)}`
-      : "";
-    $("tauline").textContent =
-      proto === "b"
-        ? "released from the centre: each surface's count relaxes to its area fraction; the question is whether coherent echoes return (spectrum ticks = table periods)"
-        : bill.cfg.door > 0
-          ? `walls on: effusion τ = π·A_room/(door·⟨v⟩) ≈ ${Math.round(tauOf(bill.cfg.door))} steps, then the walls vanish at t = ${tOff} and the free table rings`
-          : "door shut: nothing crosses while the walls are on";
   };
 
-  const decimate = (pts: [number, number][]) =>
-    pts.length > 1500 ? pts.filter((_, i) => i % Math.ceil(pts.length / 1500) === 0 || i === pts.length - 1) : pts;
-
   const plots = () => {
-    const K = bill.cfg.surfaces.length;
-    const as = bill.cfg.surfaces.map(areaOf);
-    const ensv = view === "ensemble" && ens && ens.t.length ? ens : null;
-    const T = ensv ? ensv.t : samples.map((s) => s.t);
-    const pin = (k: number) => (ensv ? ensv.mean[k] : samples.map((s) => s.pin[k]));
-    const se = (k: number) => (ensv ? ensv.se[k] : null);
-    const band = (k: number) => (se(k) ? { lo: pin(k).map((v, i) => v - 2 * se(k)![i]), hi: pin(k).map((v, i) => v + 2 * se(k)![i]) } : {});
-    const pinSeries: Series[] = [];
-    for (let k = 0; k < K; k++)
-      pinSeries.push({
-        pts: decimate(T.map((t, i) => [t, pin(k)[i]] as [number, number])),
-        color: COLORS[k],
-        label: `S${k}`,
-        ...band(k),
-      });
-    const marks: Mark[] = [{ y: as[0], color: "#6b7280", label: `a₀ = ${as[0].toFixed(3)}` }];
-    const vmarks: VMark[] = [];
-    if (proto === "a") {
-      vmarks.push({ x: tOff, color: "#111827", label: "walls off" });
-      if (bill.cfg.door > 0) {
-        const tau = tauOf(bill.cfg.door);
-        const a0 = as[0];
-        pinSeries.push({
-          pts: Array.from({ length: 40 }, (_, i) => {
-            const t = (tOff * i) / 39;
-            return [t, a0 + (1 - a0) * Math.exp(-t / tau)] as [number, number];
-          }),
-          color: "#111827",
-          dash: true,
-          label: `exp(−t/τ), τ ≈ ${Math.round(tau)}`,
-        });
-      }
+    const st = surfStats();
+    if (!windows.length) {
+      plot($("phi") as HTMLCanvasElement, [], [], "r", "");
+      plot($("pneg") as HTMLCanvasElement, [], [], "r", "");
+      plot($("ft") as HTMLCanvasElement, [], [], "⟨σ⟩/sd", "");
+      return;
     }
-    plot($("nin") as HTMLCanvasElement, pinSeries, marks, vmarks);
-
-    const sSeries: Series[] = [];
-    const sBand = (k: number) => {
-      if (!se(k)) return {};
-      const a = as[k];
-      return {
-        lo: pin(k).map((v, i) => sObs(Math.max(0, v - 2 * se(k)![i]), a)),
-        hi: pin(k).map((v, i) => sObs(Math.min(1, v + 2 * se(k)![i]), a)),
+    const e = view === "ensemble" && ens ? ens : null;
+    const phiY = (k: number, s: Surf) => (e ? e.mean[k] / W / areaOf(s) : st.mean[k] / W / areaOf(s));
+    const phiSeries: Series[] = [];
+    const pnegSeries: Series[] = [];
+    for (let f = 0; f < 4; f++) {
+      const idx = bill.cfg.surfaces
+        .map((s, k) => ({ s, k }))
+        .filter(({ s }) => family(s) === f - (f % 2) && s.square === (f % 2 === 1))
+        .map(({ k }) => k)
+        .sort((k1, k2) => rEqOf(bill.cfg.surfaces[k1]) - rEqOf(bill.cfg.surfaces[k2]));
+      const mk = (y: (k: number) => number, se?: (k: number) => number): Series => {
+        const s: Series = {
+          pts: idx.map((k) => [rEqOf(bill.cfg.surfaces[k]), y(k)] as [number, number]),
+          color: FAM[f].color,
+          dash: f % 2 === 1,
+          label: FAM[f].label,
+        };
+        if (se) {
+          s.lo = s.pts.map((p, i) => p[1] - 2 * se(idx[i]));
+          s.hi = s.pts.map((p, i) => p[1] + 2 * se(idx[i]));
+        }
+        return s;
       };
-    };
-    for (let k = 0; k < K; k++) {
-      if (proto === "b" && k === 1) continue; // the tiny "near-centre" probe: shown in p only
-      sSeries.push({
-        pts: decimate(T.map((t, i) => [t, sObs(pin(k)[i], as[k])] as [number, number])),
-        color: COLORS[k],
-        label: `S_obs ${k}`,
-        ...sBand(k),
+      phiSeries.push(mk((k) => phiY(k, bill.cfg.surfaces[k]), e ? (k) => (e.se[k] / W) / areaOf(bill.cfg.surfaces[k]) : undefined));
+      pnegSeries.push(mk((k) => (e ? e.pNeg[k] : st.pNeg[k]), e ? (k) => e.pNegSe[k] : undefined));
+    }
+    plot($("phi") as HTMLCanvasElement, phiSeries, [], "r", "Φ/area");
+    plot($("pneg") as HTMLCanvasElement, pnegSeries, [{ y: 0.5, color: "#9ca3af", label: "½ (equilibrium)" }], "r", "P(σ<0)");
+
+    // fluctuation check: P(σ<0) against ⟨σ⟩/sd, one Gaussian tail curve over all
+    const ft: Series[] = [{ pts: Array.from({ length: 60 }, (_, i) => {
+      const x = (i * 3) / 59;
+      return [x, pNegGauss(x, 1)] as [number, number];
+    }), color: "#111827", dash: true, label: "½erfc(x/√2)" }];
+    for (let f = 0; f < 4; f++) {
+      const idx = bill.cfg.surfaces
+        .map((s, k) => ({ s, k }))
+        .filter(({ s }) => family(s) === f - (f % 2) && s.square === (f % 2 === 1))
+        .map(({ k }) => k);
+      ft.push({
+        pts: idx
+          .map((k) => [st.mean[k] / (st.sd[k] || 1e-9), st.pNeg[k]] as [number, number])
+          .filter((p) => p[0] >= 0),
+        color: FAM[f].color,
+        dash: f % 2 === 1,
+        label: f === 0 ? "measured" : undefined,
       });
     }
-    sSeries.push({ pts: decimate(T.map((t, i) => [t, sUnw(pin(0)[i]) as number] as [number, number])), color: "#9ca3af", dash: true, label: "unweighted S(p₀)" });
-    plot($("sent") as HTMLCanvasElement, sSeries, [], vmarks);
-
-    const dt = ensv ? (proto === "a" ? 5 : 10) : speed;
-    const idx = T.map((t, i) => i).filter((i) => (proto === "a" ? T[i] > tOff + 5 : T[i] > 20));
-    const y = idx.map((i) => pin(0)[i]);
-    if (y.length >= 8) {
-      const s = spectrum(y, dt);
-      const top = peaks(s.f, s.a, 4).filter((p) => p.f <= 0.05);
-      plot(
-        $("spec") as HTMLCanvasElement,
-        [{ pts: s.f.map((f, i) => [f, s.a[i]] as [number, number]), color: "#7c3aed", label: `|FFT| of p̄(S0), dt=${dt}` }],
-        [],
-        TABLE_PERIODS.map((p) => ({ x: p.f, color: "#d1d5db", label: String(Math.round(p.period)) })),
-      );
-      $("specline").textContent = `strongest peaks: ${top.map((p) => `period ≈ ${Math.round(1 / p.f)} steps (amp ${p.a.toExponential(1)})`).join(" · ") || "none"} — dashed ticks mark the geometric periods 100/√(m²+n²)`;
-    }
+    plot($("ft") as HTMLCanvasElement, ft, [], "⟨σ⟩/sd per window", "P(σ<0)");
   };
 
   // ── the ensemble ──────────────────────────────────────────────────────────
@@ -502,23 +640,8 @@ try {
       }
     }, 100);
   });
-  const runSeed = async (sd: number, T: number, chunk: number, prog: (t: number) => void) => {
-    bill.configure({ ...mkcfg(), seed: sd });
-    const t: number[] = [];
-    const pin: number[][] = bill.cfg.surfaces.map(() => []);
-    while (bill.t < T) {
-      const k = Math.min(chunk, T - bill.t);
-      if (proto === "a" && bill.cfg.walls && bill.t >= tOff) bill.setWalls(false);
-      const r = await bill.advance(k, false);
-      t.push(bill.t);
-      r.counts.forEach((c, i) => pin[i].push(c / bill.cfg.n));
-      if (t.length % 24 === 0) {
-        prog(bill.t);
-        await frameGap();
-      }
-    }
-    return { t, pin };
-  };
+
+  const T_ENS = 1200;
 
   const runEnsemble = async (R: number): Promise<Ens | null> => {
     if (ensBusy) return ens;
@@ -527,29 +650,47 @@ try {
     view = "ensemble";
     controls();
     url();
-    const T = proto === "a" ? tOff + 2000 : 4000;
-    const chunk = proto === "a" ? 5 : 10;
     const K = bill.cfg.surfaces.length;
-    const sum: number[][] = Array.from({ length: K }, () => []);
-    const sumsq: number[][] = Array.from({ length: K }, () => []);
-    let t: number[] | null = null;
+    const nWin = Math.floor(T_ENS / W);
+    const perSeedMean: number[][] = [];
+    const perSeedPNeg: number[][] = [];
+    const heatSum = new Float64Array(grid * grid);
     for (let s = 0; s < R; s++) {
-      const one = await runSeed((bill.cfg.seed + s) as number, T, chunk, (tt) => {
-        $("ensline").textContent = `ensemble: seed ${s + 1}/${R} · t = ${tt}`;
-      });
-      t = one.t;
-      for (let k = 0; k < K; k++)
-        for (let i = 0; i < one.t.length; i++) {
-          sum[k][i] = (sum[k][i] ?? 0) + one.pin[k][i];
-          sumsq[k][i] = (sumsq[k][i] ?? 0) + one.pin[k][i] ** 2;
+      await bill.reset({ ...mkcfg(), seed: (bill.cfg.seed + s) as number });
+      let sum = new Array(K).fill(0);
+      let neg = new Array(K).fill(0);
+      for (let j = 0; j < nWin; j++) {
+        const r = await watch.race(bill.advance(W, true));
+        const A = areas();
+        for (let k = 0; k < K; k++) {
+          const sg = sObs(r.ctr[k] / bill.cfg.n, A[k]) - sObs(r.prevCtr[k] / bill.cfg.n, A[k]);
+          sum[k] += sg;
+          if (sg < 0) neg[k]++;
         }
+        const f = cellFields(r.flux!, r.prevOcc, grid, bill.cfg.n);
+        f.sigma.forEach((v, i) => (heatSum[i] += v));
+      }
+      perSeedMean.push(sum.map((v) => v / nWin));
+      perSeedPNeg.push(neg.map((v) => v / nWin));
+      $("ensline").textContent = `ensemble: seed ${s + 1}/${R} done`;
+      await frameGap();
     }
-    const mean = sum.map((a) => a.map((v) => v / R));
-    const se = sum.map((a, k) => a.map((_, i) => Math.sqrt(Math.max(0, sumsq[k][i] / R - mean[k][i] ** 2) / (R - 1))));
-    ens = { r: R, t: t!, mean, se };
+    const mean = perSeedMean[0].map((_, k) => perSeedMean.reduce((s, a) => s + a[k], 0) / R);
+    const se = perSeedMean[0].map((_, k) => {
+      const v = perSeedMean.reduce((s, a) => s + (a[k] - mean[k]) ** 2, 0) / (R - 1);
+      return Math.sqrt(v / R);
+    });
+    const pNeg = perSeedPNeg[0].map((_, k) => perSeedPNeg.reduce((s, a) => s + a[k], 0) / R);
+    const pNegSe = perSeedPNeg[0].map((_, k) => {
+      const v = perSeedPNeg.reduce((s, a) => s + (a[k] - pNeg[k]) ** 2, 0) / (R - 1);
+      return Math.sqrt(v / R);
+    });
+    ens = { r: R, mean, se, pNeg, pNegSe, heat: heatSum.map((v) => v / (R * nWin)) };
     ensBusy = false;
+    await reinit({ keepCustom: true, keepEns: true });
+    view = "ensemble";
+    url();
     controls();
-    readout();
     plots();
     return ens;
   };
@@ -560,8 +701,7 @@ try {
     if (!probeBusy && !ensBusy) {
       if (playing && !busy) {
         busy = true;
-        if (proto === "a" && bill.cfg.walls && bill.t >= tOff) bill.setWalls(false);
-        void advance(speed)
+        void advanceWindow(W)
           .then(() => {
             draw();
             readout();
@@ -574,79 +714,149 @@ try {
           .finally(() => {
             busy = false;
           });
-      } else {
+      } else if (!busy) {
         draw();
       }
     }
     requestAnimationFrame(frame);
   };
 
-  controls();
-  url();
-  draw();
-  readout();
-  requestAnimationFrame(frame);
-
-  // ── the probe ──────────────────────────────────────────────────────────────
+  // ── the probe ─────────────────────────────────────────────────────────────
   Object.assign(window, {
     probe: {
       adapter,
-      config: () => ({ ...bill.cfg, proto, tOff, view, speed, ensR }),
-      run: async (k: number, grid?: boolean) => {
+      config: () => ({ ...bill.cfg, proto, W, view, speed, ensR, tap, points: { ...pts } }),
+      run: async (k?: number, full?: boolean) => {
         probeBusy = true;
         try {
-          return await advance(k, grid ?? true);
+          const n = k ?? W;
+          return await advanceWindow(n, full ?? true);
         } finally {
           probeBusy = false;
+          controls();
+          readout();
+          plots();
+          draw();
         }
       },
-      setWalls: (on: boolean) => bill.setWalls(on),
-      reverse: () => bill.reverse(),
-      reset: (patch: Record<string, unknown> = {}) => {
+      burst: async (w: number, full: boolean, count: number) => {
+        probeBusy = true;
+        try {
+          const K = bill.cfg.surfaces.length;
+          const A = areas();
+          if (!full) {
+            const K = bill.cfg.surfaces.length;
+            const ctrSeries: number[][] = [];
+            for (let j = 0; j < count; j++) {
+              const r = await watch.race(bill.advance(w, false));
+              ctrSeries.push([...r.ctr.subarray(0, K)]);
+            }
+            return { t0: bill.t - w * count, tEnd: bill.t, w, count, ctrSeries };
+          }
+          const sum = new Array(K).fill(0);
+          const sumsq = new Array(K).fill(0);
+          const neg = new Array(K).fill(0);
+          const heatSum = new Float64Array(grid * grid);
+          const divSum2 = new Float64Array(grid * grid);
+          const sigs: number[][] = Array.from({ length: K }, () => []);
+          let occLast: Uint32Array | null = null;
+          for (let j = 0; j < count; j++) {
+            const r = await watch.race(bill.advance(w, true));
+            occLast = r.occ!;
+            const f = cellFields(r.flux!, r.prevOcc, grid, bill.cfg.n);
+            f.sigma.forEach((v, i) => (heatSum[i] += v));
+            f.div.forEach((v, i) => (divSum2[i] += v));
+            for (let k = 0; k < K; k++) {
+              const sg = sObs(r.ctr[k] / bill.cfg.n, A[k]) - sObs(r.prevCtr[k] / bill.cfg.n, A[k]);
+              sum[k] += sg;
+              sumsq[k] += sg * sg;
+              if (sg < 0) neg[k]++;
+              sigs[k].push(sg);
+            }
+          }
+          lastOcc = occLast;
+          lastField = { sigma: heatSum.map((v) => v / count), div: divSum2.map((v) => v / count), divInt: divSum2 };
+          const mean = sum.map((v) => v / count);
+          const sd = sumsq.map((v, k) => Math.sqrt(Math.max(0, v / count - mean[k] * mean[k])));
+          return { t0: bill.t - w * count, tEnd: bill.t, w, count, mean, sd, pNeg: neg.map((v) => v / count), heat: lastField.sigma, div: lastField.div, sigs };
+        } finally {
+          probeBusy = false;
+          controls();
+          readout();
+          plots();
+          draw();
+        }
+      },
+      reset: async (patch: Record<string, unknown> = {}) => {
         probeBusy = true;
         playing = false;
+        let s: Awaited<ReturnType<typeof reinit>>;
         try {
-          Object.assign(knobs, patch);
-          bill.configure(mkcfg());
-          samples.length = 0;
-          grids = null;
-          ens = null;
-          view = "single";
+          if ("proto" in patch) setProto(patch.proto as "door" | "release");
+          customSurfaces = (patch.surfaces as Surf[] | undefined) ?? null;
+          if ("ax" in patch) pts.a = { x: patch.ax as number, y: (patch.ay as number) ?? pts.a.y };
+          if ("bx" in patch) pts.b = { x: patch.bx as number, y: (patch.by as number) ?? pts.b.y };
+          const skip = ["surfaces", "ax", "ay", "bx", "by", "proto"];
+          for (const [k, v] of Object.entries(patch)) if (!skip.includes(k)) knobs[k] = v;
+          if ("door" in patch) door = patch.door as number;
+          if ("grid" in patch) grid = patch.grid as number;
+          if ("w" in patch) W = patch.w as number;
+          s = await reinit({ keepCustom: true });
         } finally {
           probeBusy = false;
         }
-        controls();
-        readout();
-        plots();
+        return { t: s.t, ctr: [...s.ctr.subarray(0, bill.cfg.surfaces.length)] };
       },
-      series: () => {
-        const K = bill.cfg.surfaces.length;
-        const pin = Array.from({ length: K }, (_, k) => samples.map((s) => s.pin[k]));
+      summary: () => {
+        const st = surfStats();
         return {
-          t: samples.map((s) => s.t),
-          pin,
-          sObs: pin.map((a, k) => a.map((p) => sObs(p, areaOf(bill.cfg.surfaces[k])))),
-          sUnw0: pin[0].map(sUnw),
-          cin: samples.map((s) => s.cin),
-          cout: samples.map((s) => s.cout),
+          t: bill.t,
+          W,
+          nWin: st.n,
+          n: bill.cfg.n,
+          surfaces: bill.cfg.surfaces.map((s, k) => ({
+            x: s.x,
+            y: s.y,
+            r: s.r,
+            square: s.square,
+            rEq: rEqOf(s),
+            area: areaOf(s),
+            meanSig: st.mean[k],
+            sdSig: st.sd[k],
+            pNeg: st.pNeg[k],
+            phi: st.mean[k] / W,
+            phiPerArea: st.mean[k] / W / areaOf(s),
+          })),
           ens,
         };
       },
-      spectrum: () => {
-        const ensv = view === "ensemble" && ens;
-        const T = ensv ? ens!.t : samples.map((s) => s.t);
-        const p0 = ensv ? ens!.mean[0] : samples.map((s) => s.pin[0]);
-        const dt = ensv ? (proto === "a" ? 5 : 10) : speed;
-        const idx = T.map((t, i) => i).filter((i) => (proto === "a" ? T[i] > tOff + 5 : T[i] > 20));
-        const y = idx.map((i) => p0[i]);
-        const s = spectrum(y, dt);
-        return { f: s.f, a: s.a, dt, peaks: peaks(s.f, s.a, 8), predicted: TABLE_PERIODS, window: { from: idx.length ? T[idx[0]] : 0, n: y.length } };
+      windows: () => ({ W, t: windows.map((w) => w.t), sig: windows.map((w) => w.sig) }),
+      heatmap: () => {
+        const last = windows[windows.length - 1];
+        return {
+          C: grid,
+          mode: heatAvg ? "avg" : "last",
+          sigma: heatAvg && sigSum ? sigSum.map((v) => v / windows.length) : (last?.sigma ?? null),
+          div: heatAvg && divSum ? divSum.map((v) => v / windows.length) : (last?.div ?? null),
+          occ: lastOcc,
+          invariants: probeInvariants(),
+        };
       },
+      invariants: () => probeInvariants(),
       ensemble: (r?: number) => runEnsemble(r ?? ensR),
-      state: () => samples[samples.length - 1] ?? null,
       audit: (m?: number) => bill.audit(m),
     },
   });
+
+  function probeInvariants() {
+    const occSum = lastOcc ? lastOcc.reduce((s, v) => s + v, 0) : -1;
+    const divSum = lastField ? lastField.divInt.reduce((s, v) => s + v, 0) : null;
+    const gross = lastField ? lastField.div.reduce((s, v) => s + Math.abs(v), 0) : null;
+    return { t: bill.t, n: bill.cfg.n, occSum, divSum, grossDivPerWindow: gross, nWindows: windows.length };
+  }
+
+  await reinit();
+  requestAnimationFrame(frame);
 } catch (e) {
   out.textContent = String(e instanceof Error ? e.message : e);
   Object.assign(window, { probeError: out.textContent });
