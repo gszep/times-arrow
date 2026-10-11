@@ -251,6 +251,118 @@ The core framing: relativity gives the cone, thermodynamics picks the half.
   chosen subsystem, not for the whole universe. Castro-Ruiz & Oreshkov,
   arXiv:2110.13199.
 
+## Local arrow field (#13)
+
+Conjecture (issue #13): a partition's clock rate is the entropy flux through
+its surface; shrinking the surface around a point gives a thermodynamic time
+field, the local entropy-production density `σ = ∇·s` (divergence theorem).
+Valid only in a hydrodynamic window: below the microscopic scale the local
+arrow fluctuates (fluctuation theorem), above it geometry dominates. Frames
+enter through how the surface moves (`s^μ n_μ`); the local rate `∂_μ s^μ` is a
+Lorentz scalar. Nothing below establishes the whole claim; each line is prior
+art the pieces rest on.
+
+Entropy currents and the local second law (verified):
+
+- Eckart, Phys. Rev. **58**, 919 (1940), DOI 10.1103/physrev.58.919. First
+  relativistic dissipative fluid with an entropy 4-current `s^μ = s u^μ + q^μ/T`
+  and `σ = ∂_μ s^μ ≥ 0`; the source is a Lorentz scalar. The covariant origin
+  of "flux through a surface = local rate".
+- Israel & Stewart, Ann. Phys. **118**, 341 (1979), DOI
+  10.1016/0003-4916(79)90130-1. Already above; causal second-order entropy
+  current. The covariant entropy current `Σ^μ = s u^μ + Q^μ/T` is in
+  Barbachoux, Debbasch & Rivet, EPJ B **23**, 487 (2001) (§004 above).
+- de Groot & Mazur, *Non-Equilibrium Thermodynamics* (North-Holland, 1962;
+  Dover, 1984). Local-equilibrium entropy-production density as a sum of
+  fluxes times thermodynamic forces, `σ = Σ_i J_i X_i`; the non-relativistic
+  continuum local second law. Reviewed in *Science* **140**, 168 (1963).
+- Glansdorff & Prigogine, Phys. Lett. **7**, 243 (1963), DOI
+  10.1016/0031-9163(63)90313-5; Glansdorff, "The Second Law of Thermodynamics
+  and the Local Equilibrium Assumption" (1971), DOI
+  10.1007/978-3-7091-2844-2_3. The local-equilibrium assumption is what makes
+  `σ(x,t) ≥ 0` a pointwise field; it is an assumption, and it fails below the
+  hydrodynamic window.
+- Elze, Rafelski & Turko, Phys. Lett. B **506**, 123 (2001), DOI
+  10.1016/s0370-2693(01)00378-1. Entropy production in relativistic
+  hydrodynamics. Becattini, Daher & Sheng, Phys. Lett. B **850**, 138533
+  (2024), DOI 10.1016/j.physletb.2024.138533. Entropy current and scalar
+  entropy production for spin hydrodynamics.
+- Hohenberg & Halperin, Rev. Mod. Phys. **49**, 435 (1977), DOI
+  10.1103/revmodphys.49.435. Fluctuating hydrodynamics: Gaussian noise added
+  to the dissipative currents; the fields whose divergence is the fluctuating
+  local σ. (Relativistic form: Torrieri, JHEP **02** (2021) 175, DOI
+  10.1007/jhep02(2021)175; Mullins, Hippert & Noronha, PRL **134**, 232302
+  (2025), DOI 10.1103/physrevlett.134.232302.)
+
+Time functions (verified):
+
+- Hawking, Proc. R. Soc. A **308**, 433 (1969; commonly dated 1968), DOI
+  10.1098/rspa.1969.0018. A global time function exists: a scalar strictly
+  increasing on every future-directed causal curve. The closest prior object
+  to a "thermodynamic time field", but it is geometric and carries no entropy.
+- Bernal & Sánchez, Commun. Math. Phys. **243**, 461 (2003), DOI
+  10.1007/s00220-003-0982-6; smooth Cauchy time functions, Commun. Math. Phys.
+  **257**, 43 (2005), arXiv:gr-qc/0401112; Lett. Math. Phys. **77**, 183 (2006),
+  arXiv:gr-qc/0512095. Every globally hyperbolic spacetime admits a smooth
+  time function whose level sets are Cauchy surfaces — the basis for shrinking
+  a surface around a point. Review: Minguzzi, Living Rev. Relativ. **22**, 4
+  (2019), DOI 10.1007/s41114-019-0019-x.
+- **Conjecture (absence, checked 2026-10-11):** no work was found tying a time
+  function to an entropy current, or giving a scalar "thermodynamic time field"
+  whose level sets are the constant-time slices. Time functions are purely
+  causal; thermal time (below) is a modular flow, not a spatial field.
+
+Thermal time and local temperature as a clock rate (verified):
+
+- Tolman–Ehrenfest, Connes & Rovelli and Rovelli & Smerlak are already above
+  (Class. Quantum Grav. **28**, 075007 (2011), DOI
+  10.1088/0264-9381/28/7/075007, is "temperature as the speed of time").
+- Haggard & Rovelli, PRD **87**, 084001 (2013), arXiv:1302.0724, DOI
+  10.1103/physrevd.87.084001. Zeroth law in a general-covariant setting: when
+  the state is KMS for a flow, that flow defines the thermal time and its
+  rate is the temperature.
+- Chirco, Haggard & Rovelli, PRD **88**, 084027 (2013), arXiv:1309.0777, DOI
+  10.1103/physrevd.88.084027. Equilibrium from coupling a system to a clock;
+  a local temperature is the local rate of the thermal flow.
+
+Point limits of partitions in QFT (verified):
+
+- Jacobson, PRL **75**, 1260 (1995), and "Entanglement equilibrium and the
+  Einstein equation", PRL **116**, 201101 (2016), arXiv:1505.04753, DOI
+  10.1103/physrevlett.116.201101. For small geodesic balls, stationarity of
+  vacuum entanglement at fixed volume (a first law `δS = δ⟨H⟩`) is equivalent
+  to the Einstein equation: a local thermodynamic relation emerging from a
+  point limit of partitions.
+- Blanco, Casini, Hung & Myers, JHEP **08** (2013) 060, arXiv:1305.3182, DOI
+  10.1007/jhep08(2013)060. First law of entanglement `ΔS = ΔH` for spherical
+  regions, and relative entropy. Casini, Huerta & Myers (JHEP **05** (2011)
+  036) is already above. Caveat on the first-order argument: Casini, Galante &
+  Myers, JHEP **03** (2016) 194, DOI 10.1007/jhep03(2016)194.
+
+Spatially resolved fluctuation theorems (verified):
+
+- Ayton, Evans & Searles, "A local fluctuation theorem", J. Chem. Phys.
+  **115**, 2033 (2001), DOI 10.1063/1.1385158. An FT for the entropy produced
+  in a local subvolume; the small-region limit is where the local arrow is
+  undetermined.
+- Gradenigo, Puglisi & Sarracino, J. Chem. Phys. **137**, 014509 (2012), DOI
+  10.1063/1.4731633. Entropy production and its fluctuations in
+  non-equilibrium fluctuating hydrodynamics.
+- Bertini, De Sole, Gabrielli, Jona-Lasinio & Landim, "Macroscopic fluctuation
+  theory", Rev. Mod. Phys. **87**, 593 (2015), DOI 10.1103/revmodphys.87.593.
+  Large deviations of macroscopic fluctuations; `P(σ_region < 0) ∼ e^{−V t I}`
+  in the hydrodynamic limit — the quantitative form of "the arrow is
+  deterministic above the microscopic window". Speck, Engel & Seifert,
+  J. Stat. Mech. (2012) P12001, DOI 10.1088/1742-5468/2012/12/p12001.
+  Spatially extended version: Maes, cond-mat/0101064.
+
+Cosmological recurrence:
+
+- Dyson, Kleban & Susskind, "Disturbing implications of a cosmological
+  constant", JHEP **10** (2002) 011, arXiv:hep-th/0208013, DOI
+  10.1088/1126-6708/2002/10/011. De Sitter recurrence and its entropy
+  paradoxes: relevant to whether a global arrow is well-defined at late times.
+
 ## Entanglement Hamiltonians and modular flow (Q6, 007)
 
 - Modular flow is geometric for wedges in any Poincaré-covariant QFT
