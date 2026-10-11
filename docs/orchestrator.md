@@ -35,6 +35,11 @@ heartbeat names this file; edit the routine here, not in the heartbeat prompt.
     whether its assumptions hold for the specific initial condition — not
     only whether the algebra is right.
 
+## Compute
+
+- Every sweep or analysis longer than a few minutes runs on Artemis (`ssh artemis`), with independent cells in parallel and readbacks batched on the GPU. Calcifer is for page development and quick checks.
+- Check the GPU first: `ssh artemis nvidia-smi`. If it fails, tell the collaborator at once rather than falling back silently. The usual cause is an unattended kernel upgrade without the matching `linux-modules-nvidia-*` package, which needs sudo to fix.
+
 ## Steering
 
 - **Exploration and exploitation:** keep one exploratory lane (literature or maths) running beside the implementation lanes.
