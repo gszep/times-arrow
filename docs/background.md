@@ -355,3 +355,104 @@ The core framing: relativity gives the cone, thermodynamics picks the half.
   permitted-axiom list.
 - Hesper (`Verilean/hesper`): a Lean DSL that generates WGSL and CUDA
   kernels. Alpha.
+
+## Dephasing, mixing and recurrence (#12)
+
+Each citation below was checked against Crossref or arXiv on 2026-10-11.
+**literature** = published and verified; **conjecture** = a literature-absence
+or an unverified reading.
+
+**Integrable dephasing (phase mixing).**
+- Free motion on a rectangle conserves `|v_x|`, `|v_y|`, so a released
+  ensemble is a superposition of periodic modes; the direction average is a
+  stationary-phase/Bessel integral whose coarse observables fall as
+  `t^{−d/2}` in `d` dimensions. Textbook.
+- Phase mixing as collisionless dephasing: **Landau damping** in a Vlasov
+  plasma (exponential in time for analytic data) — Mouhot & Villani, *Acta
+  Math.* **207**, 29 (2011), DOI 10.1007/s11511-011-0068-9. **Violent
+  relaxation** of a collisionless stellar system and the coarse-grained
+  Lynden-Bell distribution — Lynden-Bell, *MNRAS* **136**, 101 (1967), DOI
+  10.1093/mnras/136.1.101; textbook in Binney & Tremaine, *Galactic
+  Dynamics* (2008), DOI 10.1515/9781400828722.
+- Algebraic relaxation of ideal classical particles in a **1D box**, from the
+  free-motion phases — Gebhard & zu Münster, *Ann. Phys. (Berlin)* **523**,
+  552 (2011), DOI 10.1002/andp.201100080.
+
+**Hyperbolic (dispersing) billiards and the Lorentz gas.**
+- Sinai billiard ergodicity — Sinai, *Russ. Math. Surveys* **25**, 137 (1970),
+  DOI 10.1070/rm1970v025n02abeh003794. Markov partitions for dispersed
+  billiards — Bunimovich & Sinai, *Commun. Math. Phys.* **78**, 247 (1980),
+  DOI 10.1007/bf01942372; for planar hyperbolic billiards — Bunimovich,
+  Sinai & Chernov, *Russ. Math. Surveys* **45**, 105 (1990), DOI
+  10.1070/rm1990v045n03abeh002355, and **46**, 47 (1991), DOI
+  10.1070/rm1991v046n04abeh002827.
+- **Finite horizon**: exponential decay of correlations in the periodic
+  Lorentz gas — Bunimovich & Sinai, *Commun. Math. Phys.* **78**, 479 (1981),
+  DOI 10.1007/bf02046760; general hyperbolic machinery — Young, *Ann. of
+  Math.* **147**, 585 (1998), DOI 10.2307/120960. Book: Chernov & Markarian,
+  *Chaotic Billiards*, Math. Surveys Monogr. **127**, AMS (2006), DOI
+  10.1090/surv/127.
+- **Infinite horizon** (corridors): correlations decay as a power law `~ 1/t`
+  and the gas is **superdiffusive** (displacement variance `~ t log t`) —
+  Bleher, *J. Stat. Phys.* **66**, 315 (1992), DOI 10.1007/bf01060071; limit
+  laws and recurrence — Szász & Varjú, *J. Stat. Phys.* **129**, 59 (2007),
+  DOI 10.1007/s10955-007-9367-0. Near-recurrence in infinite-horizon Lorentz
+  tubes — Lenci & Troubetzkoy, *Physica D* **240**, 1510 (2011), DOI
+  10.1016/j.physd.2011.06.020.
+- **Nowhere-dispersing** (focusing) billiards are still ergodic and mixing —
+  Bunimovich, *Commun. Math. Phys.* **65**, 295 (1979), DOI
+  10.1007/bf01197884. Mixing rate ↔ recurrence-time statistics — Young,
+  *Israel J. Math.* **110**, 153 (1999), DOI 10.1007/bf02808180.
+- **#12's "one scatterer halves the echo, nine kill the tail".** The
+  infinite-horizon mechanism (corridors ⇒ power-law, not exponential, tails)
+  is textbook and agrees with #12's power-law fits for 0/1/9 scatterers. The
+  specific amplitudes — one scatterer halving the `k = 1` revival while
+  near-axis channels survive, nine reducing the `t ≈ 8000` coherent tail to
+  the seed-noise floor — are **not** in the cited literature (conjecture: our
+  observation).
+
+**Revivals.**
+- Quantum wave-packet revivals and fractional revivals — Robinett, *Phys.
+  Rep.* **392**, 1 (2004), DOI 10.1016/j.physrep.2003.11.002; Averbukh &
+  Perelman, *Phys. Lett. A* **139**, 449 (1989), DOI
+  10.1016/0375-9601(89)90943-2.
+- Billiard revivals: circular billiard — Robinett & Heppelmann, *Phys. Rev.
+  A* **65**, 062103 (2002), DOI 10.1103/physreva.65.062103;
+  equilateral-triangle billiard — Doncheski & Robinett, *Ann. Phys.* **299**,
+  208 (2002), DOI 10.1006/aphy.2002.6276.
+- Classical revivals of a particle ensemble in a box: the per-direction period
+  `2L/v` is elementary, and the 1D-box revival/relaxation envelope is treated
+  by Gebhard & zu Münster (2011). The 2D **lattice-direction spike structure**
+  (`r₂ ∝ k^{−1/2}`) is **not** covered (conjecture).
+
+**Exact recurrence in discrete chaotic maps.**
+- Cat map mod `N` period — Dyson & Falk, *Amer. Math. Monthly* **99**, 603
+  (1992), DOI 10.1080/00029890.1992.11995900; original theory — Arnold &
+  Avez, *Ergodic Problems of Classical Mechanics* (1968); formula and
+  generalisations — Bao & Yang, *Nonlinear Dyn.* **70**, 1365 (2012), DOI
+  10.1007/s11071-012-0539-3; Nance, arXiv:1111.2984; Arnold/Euler-number
+  sequence — Ramassamy, *Arnold Math. J.* **3**, 519 (2017), DOI
+  10.1007/s40598-018-0079-0.
+- Quantum cat map — Hannay & Berry, *Physica D* **1**, 267 (1980), DOI
+  10.1016/0167-2789(80)90026-3.
+- Quantized baker map — Balazs & Voros, *Ann. Phys.* **190**, 1 (1989), DOI
+  10.1016/0003-4916(89)90259-5; classical structures — Saraceno, *Ann.
+  Phys.* **199**, 37 (1990), DOI 10.1016/0003-4916(90)90367-w;
+  coarse-grained entropy and its partition dependence — Schack & Caves,
+  *PRL* **69**, 3413 (1992), DOI 10.1103/physrevlett.69.3413, and *PRL*
+  **71**, 525 (1993), DOI 10.1103/physrevlett.71.525.
+- **Conjecture:** we did not verify a single canonical citation for the exact
+  period of the **discretized baker map** on an `N × N` grid; the cat-map
+  period formula above is the clean text.
+
+**Recurrence theorems.**
+- Poincaré's recurrence theorem and the Zermelo–Boltzmann recurrence
+  objection — review: Steckline, *Am. J. Phys.* **51**, 894 (1983), DOI
+  10.1119/1.13373. Mean return time: Kac's lemma — Kac, *Bull. Amer. Math.
+  Soc.* **53**, 1002 (1947), DOI 10.1090/s0002-9904-1947-08927-8.
+- Quantum recurrence theorem — Bocchieri & Loinger, *Phys. Rev.* **107**, 337
+  (1957), DOI 10.1103/physrev.107.337.
+- For `N` particles the mean recurrence time grows exponentially in `N`
+  (Kac's lemma; `~ e^{S}`), so it is unobservable for macroscopic `N`.
+  **#12**'s estimate `~(1/a)^N` is consistent (conjecture on the exact
+  scaling).
