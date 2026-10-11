@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>playground · a room with a door</title>
+    <title>playground · oscillation or noise?</title>
     <link rel="stylesheet" href="../src/page.css" />
     <style>
       canvas {
@@ -26,12 +26,9 @@
         width: 100%;
       }
       #nin,
-      #flux,
-      #sent {
+      #sent,
+      #spec {
         height: 11rem;
-      }
-      #legend span {
-        white-space: nowrap;
       }
       .try {
         font-size: 0.9rem;
@@ -39,72 +36,78 @@
     </style>
   </head>
   <body>
-    <h1>playground · a room with a door</h1>
+    <h1>playground · oscillation or noise?</h1>
     <p>
-      A room with a door sits in a billiard table. Tens of thousands of non-interacting point
-      particles (f32 on the GPU, specular walls, one speed) start packed inside and leak out. A
-      system/environment partition is just a closed surface you count across: when it lines up with
-      the room's walls the count relaxes cleanly and irreversibly (effusion); drawn anywhere else it
-      recrosses noisily and gives no arrow. <b>Exploratory playground — no claims, nothing
-      pre-registered.</b>
+      Billiard particles, one speed, and a counting surface you can put anywhere. Last session's
+      observation: switch the room's walls off and the two-cell entropy shows what looks like a
+      damped oscillation. One protocol at a time below — <b>walls on, then off at a time you
+      choose</b>, or <b>a release from the table's centre</b> — and the ensemble mean over R
+      seeds: what is phase-locked to the switch survives it, what is noise falls like 1/√R.
+      <b>Exploratory playground — no claims, nothing pre-registered.</b>
     </p>
-    <p class="try">
-      <b>Try:</b> shrink the door to 0 (nothing flows, the clock never starts) · remove the walls
-      (recrossing, and on this plain rectangle the gas keeps long memories) · switch to the circle
-      and drag it off the walls · add the scatterer (Sinai: the outer table turns chaotic and mixes)
-      · press reverse — every velocity negates and the whole history retraces, up to f32 rounding.
-      Watch N<sub>in</sub> fold back and the clock unwind: the arrow was in the initial condition,
-      not in the dynamics.
+    <p>
+      <button id="protoA">A · walls on → off</button>
+      <button id="protoB">B · release from centre</button>
     </p>
-    <p id="params"></p>
+    <p id="parline"></p>
     <p>
       <button id="play">▶</button>
       <button id="reverse">⇄ reverse</button>
       <button id="reset">↺ reset</button>
-      <button id="walls">walls</button>
-      <button id="scatterb">scatterer</button>
-      <button id="surfaceb">surface</button>
-      <button id="startb">start</button>
+      <button id="runens">⟳ run ensemble</button>
+      <button id="view">view: single run</button>
     </p>
-    <p>
-      <label>door width <span id="doorlabel"></span> (0 … 0.4)</label>
-      <input type="range" id="door" min="0" max="0.4" step="0.005" />
-    </p>
-    <p id="nrow">n: <span id="nlinks"></span></p>
-    <p id="speedrow">steps/frame: <span id="speedlinks"></span> · seed: <span id="seedlinks"></span></p>
+    <p id="toffrow"><label>walls off at t = <span id="tofflabel"></span> steps</label>
+      <input type="range" id="toff" min="100" max="2400" step="50" /></p>
+    <p id="doorrow"><label>door width <span id="doorlabel"></span> (0 … 0.4)</label>
+      <input type="range" id="door" min="0" max="0.4" step="0.005" /></p>
+    <p id="scatrow">scatterers: <span id="scatlinks"></span></p>
+    <p id="r0row">start: <span id="r0links"></span></p>
+    <p id="nrow">n: <span id="nlinks"></span> · ensemble R: <span id="enslinks"></span></p>
+    <p>steps/frame: <span id="speedlinks"></span> · seed: <span id="seedlinks"></span> · speed spread: <span id="spreadlinks"></span></p>
+    <p id="ensline"></p>
     <canvas id="table" width="640" height="640"></canvas>
     <p id="legend">
-      <span style="color: #b91c1c">■ inside the surface</span> ·
+      <span style="color: #b91c1c">■ inside surface 0</span> ·
       <span style="color: #0d9488">■ outside</span> · <span style="color: #1f2937">— walls</span> ·
       <span style="color: #d97706">— door</span> ·
-      <span style="color: #7c3aed">┄ counting surface</span>
+      <span style="color: #7c3aed">┄ counting surfaces</span>
     </p>
-    <p id="hint"></p>
     <p id="live"></p>
     <p id="clockline"></p>
     <section>
-      <h2>N_in/N against the rough effusion curve</h2>
+      <h2>N_in/N per counting surface</h2>
       <canvas id="nin"></canvas>
       <p id="tauline"></p>
     </section>
     <section>
-      <h2>Crossings per step (recrossing is the noise)</h2>
-      <canvas id="flux"></canvas>
+      <h2>Coarse entropy per surface — volume-weighted S_obs, faint unweighted S</h2>
+      <canvas id="sent"></canvas>
+      <p>
+        S_obs = −p ln(p/a) − (1−p) ln((1−p)/(1−a)) per particle (equivalently −D(p‖a) on the unit
+        table): maximal 0 exactly at equilibrium p = a. The faint grey dashed curve is the old
+        unweighted S(p) for surface 0 — it peaks at p = 1/2, which is not equilibrium when
+        a ≠ 1/2.
+      </p>
     </section>
     <section>
-      <h2>Coarse entropy of the two-cell partition</h2>
-      <canvas id="sent"></canvas>
-      <p>S = −p ln p − (1−p) ln(1−p) with p = N_in/N; the clock is the entropy produced since the start.</p>
+      <h2>Spectrum of surface 0 after the switch (or release)</h2>
+      <canvas id="spec"></canvas>
+      <p id="specline">
+        Dashed ticks: the table's geometric times, periods 100/√(m²+n²) steps for m²+n² = 1…8
+        (a particle conserves |v_x|, |v_y|, so its x and y motions are periodic with periods
+        2/|v_x| and 2/|v_y|; the slowest is 2L/v = 100 steps).
+      </p>
     </section>
     <details>
       <summary>Assumptions</summary>
       <ul>
-        <li>2D billiards in the unit square: continuous f32 positions, no lattice. Free flight speed 0.02 table widths per step; one speed for all particles; specular, infinitely thin walls.</li>
-        <li>N non-interacting point particles; initial condition drawn by Philox4x32-10 keyed (seed, step, site) — the seed is in the URL. Crossings are counted once per step, from which side of the surface a particle starts and ends the step on.</li>
+        <li>2D billiards in the unit square: continuous f32 positions, no lattice. Free-flight speed 0.02 table widths per step, one speed for all particles (or a ±spread toggle); specular, infinitely thin walls; up to 9 fixed circular scatterers of one total area.</li>
+        <li>N non-interacting point particles; initial condition drawn by Philox4x32-10 keyed (seed, step, site) — the seed is in the URL. Protocol A starts uniform inside the room; protocol B releases from a disc (or point) at the table centre with uniform directions. Counts are sampled once per chunk for every counting surface simultaneously.</li>
         <li>Reverse negates every velocity; specular reflection and the wall snap are time-symmetric, so the run retraces its own history up to f32 rounding.</li>
-        <li>The rough curve is leak-only effusion, τ = π·A_room/(door·⟨v⟩): return flux through the door, imperfect mixing in the outer rectangle and the scatterer all shift the real relaxation.</li>
-        <li>On the plain rectangle every reflection flips exactly one velocity component, so |v<sub>x</sub>| and |v<sub>y</sub>| are conserved: the outer gas spreads in columns, mixes poorly, and the count stays above the area-fraction line for a long time. The scatterer breaks both integrals (Sinai billiard) and the approach to the area fraction is roughly twice as fast — but the small chamber between door and table wall always returns particles quickly, so both relax more slowly than the rough curve.</li>
-        <li>What would kill the intuition shown here: wall tunnelling (watch N_in with the door shut), speed drift, or aligned counts that stop descending.</li>
+        <li>The ensemble mean over R seeds keeps the part of the signal phase-locked to the protocol (same switch time for every seed) and suppresses seed noise like 1/√R; the band is ±2 standard errors of the mean. A single run can go against the trend.</li>
+        <li>S_obs is a relative entropy, not a thermodynamic entropy: it is 0 at the observed p = a and negative away from it, and rises monotonically toward equilibrium only as long as |p − a| keeps shrinking.</li>
+        <li>What would kill the reading shown here: wall tunnelling (watch N_in with the door shut), speed drift outside the stated spread, or aligned counts that stop descending during the walls-on leak.</li>
         <li>Exploration only — no claims, no pre-registration, no Lean contract for this page.</li>
       </ul>
     </details>

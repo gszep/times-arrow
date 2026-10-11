@@ -3,30 +3,67 @@ import { philoxWgsl } from "../src/philox.ts";
 
 /** Fixed geometry, in units of the unit-square table. */
 export const ROOM = { x: 0.5, y: 0.6, h: 0.2 };
-export const SCAT = { x: 0.5, y: 0.19, r: 0.13 };
 /** One speed for every particle, in table widths per step. */
 export const SPEED = 0.02;
-/** Occupancy grids (one per side of the counting surface). */
+/** Occupancy grids (one per side of the drawn counting surface). */
 export const GRID = 160;
 export const MAXN = 200000;
+/** Scatterer presets: `scatm` equal circles of one total area π·0.13².
+ * The m = 9 grid crosses the room, so it is only used with the walls off. */
+const s9 = [1 / 7, 3 / 7, 5 / 7];
+export const SCATTERERS: Record<number, [number, number][]> = {
+  0: [],
+  1: [[0.5, 0.19]],
+  4: [
+    [0.22, 0.22],
+    [0.78, 0.22],
+    [0.22, 0.78],
+    [0.78, 0.78],
+  ],
+  9: s9.flatMap((x) => s9.map((y) => [x, y] as [number, number])),
+};
+export const scatR = (m: number) => 0.13 / Math.sqrt(m);
 
 /** Room area as a fraction of the table: the equilibrium of N_in/N. */
 export const roomFraction = (2 * ROOM.h) ** 2;
 
+/** The two protocol surface sets: A = wall switch (room + 3 circles),
+ * B = centre release (concentric circles + a far control circle). */
+export const SURF_A: Surface[] = [
+  { x: 0.5, y: 0.6, r: 0, aligned: true },
+  { x: 0.5, y: 0.6, r: 0.08, aligned: false },
+  { x: 0.25, y: 0.35, r: 0.12, aligned: false },
+  { x: 0.8, y: 0.15, r: 0.18, aligned: false },
+];
+export const SURF_B: Surface[] = [
+  { x: 0.5, y: 0.5, r: 0.12, aligned: false },
+  { x: 0.5, y: 0.5, r: 0.02, aligned: false },
+  { x: 0.5, y: 0.5, r: 0.05, aligned: false },
+  { x: 0.8, y: 0.15, r: 0.15, aligned: false },
+];
+
 /** Rough effusion time in steps: τ = π·A_room/(door·⟨v⟩). */
 export const tauOf = (door: number) => (Math.PI * (2 * ROOM.h) ** 2) / (door * SPEED);
+
+/** A counting surface: aligned with the room, or a circle. */
+export type Surface = { x: number; y: number; r: number; aligned: boolean };
+/** The area fraction of the table a surface encloses: the equilibrium of p. */
+export const areaOf = (s: Surface) => (s.aligned ? roomFraction : Math.PI * s.r * s.r);
 
 export type Config = {
   n: number;
   seed: number;
   door: number;
   walls: boolean;
-  scatter: boolean;
-  circle: boolean;
-  cx: number;
-  cy: number;
-  cr: number;
+  scatm: 0 | 1 | 4 | 9;
+  /** true: start uniform inside the room; false: release from a disc at the table centre. */
   startIn: boolean;
+  /** Release-disc radius for startIn = false (0 = exact point release). */
+  startDisc: number;
+  /** Speed spread s: uniform in SPEED·[1−s, 1+s]; 0 = one speed. */
+  spread: number;
+  /** 1–5 counting surfaces, all tallied every sampled step; [0] is drawn. */
+  surfaces: Surface[];
 };
 
 const wgsl = /* wgsl */ `
@@ -38,27 +75,29 @@ const SPEED = ${SPEED};
 const TOL = 1e-6;
 
 struct Params {
-  ctrl: vec4u,  // n, occupy, walls, scatter
-  cfg: vec4u,   // startInside, seed, gridDim, 0
-  room: vec4f,  // cx, cy, half, doorHalf
-  surf: vec4f,  // cx, cy, radius, mode (0 aligned, 1 circle)
-  scat: vec4f,  // cx, cy, radius, 0
+  ctrl: vec4u,   // n, occupy, walls, scatm
+  cfg: vec4u,    // startIn, seed, gridDim, nSurf
+  room: vec4f,   // cx, cy, half, doorHalf
+  spawn: vec4f,  // startDisc, spread, 0, 0
+  surf: array<vec4f, 5>,   // x, y, r, aligned
+  scats: array<vec4f, 9>,  // x, y, r, 0
 }
 @group(0) @binding(0) var<uniform> p: Params;
 @group(0) @binding(1) var<storage, read_write> particles: array<vec4f>;
-@group(0) @binding(2) var<storage, read_write> counters: array<atomic<u32>, 2>;
+@group(0) @binding(2) var<storage, read_write> counters: array<atomic<u32>, 8>;
 @group(0) @binding(3) var<storage, read_write> gridIn: array<atomic<u32>>;
 @group(0) @binding(4) var<storage, read_write> gridOut: array<atomic<u32>>;
 
-// The counting surface: the room rectangle (aligned) or the user circle.
+// Counting surface k: the room rectangle (aligned) or the user circle.
 // The boundary itself counts as inside: a particle caught touching a wall
 // (approaching, hit pending) must not be read as a crossing.
-fn insideSurface(pos: vec2f) -> u32 {
-  if (p.surf.w < 0.5) {
+fn insideK(pos: vec2f, k: u32) -> u32 {
+  let s = p.surf[k];
+  if (s.w > 0.5) {
     let d = abs(pos - p.room.xy);
     return u32(d.x <= p.room.z && d.y <= p.room.z);
   }
-  return u32(distance(pos, p.surf.xy) <= p.surf.z);
+  return u32(distance(pos, s.xy) <= s.z);
 }
 
 fn inRoom(pos: vec2f) -> u32 {
@@ -66,8 +105,12 @@ fn inRoom(pos: vec2f) -> u32 {
   return u32(d.x < p.room.z && d.y < p.room.z);
 }
 
-fn inScatterer(pos: vec2f) -> u32 {
-  return u32(p.ctrl.w == 1u && distance(pos, p.scat.xy) < p.scat.z);
+fn inAnyScat(pos: vec2f) -> u32 {
+  for (var j = 0u; j < p.ctrl.w; j++) {
+    let s = p.scats[j];
+    if (distance(pos, s.xy) < s.z) { return 1u; }
+  }
+  return 0u;
 }
 
 // Earliest crossing of a wall at x = X (horiz = false) or y = X (horiz = true)
@@ -88,10 +131,10 @@ fn wallHit(pos: vec2f, v: vec2f, rem: f32, horiz: bool, X: f32, lo: f32, hi: f32
   return -1.0;
 }
 
-fn circleHit(pos: vec2f, v: vec2f, rem: f32) -> f32 {
-  let d = pos - p.scat.xy;
+fn circleHit(pos: vec2f, v: vec2f, rem: f32, s: vec4f) -> f32 {
+  let d = pos - s.xy;
   let b = dot(d, v);
-  let c = dot(d, d) - p.scat.z * p.scat.z;
+  let c = dot(d, d) - s.z * s.z;
   if (c <= 0.0) { return -1.0; }
   let disc = b * b - dot(v, v) * c;
   if (disc <= 0.0) { return -1.0; }
@@ -113,25 +156,23 @@ fn spawn(@builtin(global_invocation_id) g: vec3u) {
     x = p.room.x + (x - 0.5) * 2.0 * h;
     y = p.room.y + (y - 0.5) * 2.0 * h;
   } else {
-    // rejection-sample the table outside the room (and the scatterer)
-    var tries = 0u;
-    while (tries < 16u && (inRoom(vec2f(x, y)) == 1u || inScatterer(vec2f(x, y)) == 1u)) {
-      r = rand(p.cfg.y, tries + 1u, i);
-      x = u01(r.x);
-      y = u01(r.y);
-      tries++;
-    }
+    // uniform in the release disc at the table centre (r = 0: a point)
+    let rad = p.spawn.x * sqrt(x);
+    let ang = 6.2831853 * y;
+    x = 0.5 + rad * cos(ang);
+    y = 0.5 + rad * sin(ang);
   }
   let th = 6.2831853 * u01(r.z);
-  particles[i] = vec4f(x, y, SPEED * cos(th), SPEED * sin(th));
+  let sp = SPEED * (1.0 + p.spawn.y * (2.0 * u01(r.w) - 1.0));
+  particles[i] = vec4f(x, y, sp * cos(th), sp * sin(th));
 }
 
 // One step of flight (dt = 1), up to 4 collisions. A particle that ends a
 // step exactly on a wall line is ambiguous (a t = 0 test cannot tell a
 // pending touch from a just-reflected state and can flip it through the
 // wall), so every reflection stands off the wall by a fixed gap on the side
-// the particle now moves toward. Under reversal the same push applies to the
-// same hit point, so a retraced path stays on the forward one to ~1e-5.
+// the particle now moves toward. Under reversal the same push applies to
+// the same hit point, so a retraced path stays on the forward one to ~1e-5.
 @compute @workgroup_size(64)
 fn fly(@builtin(global_invocation_id) g: vec3u) {
   let i = g.x;
@@ -139,7 +180,7 @@ fn fly(@builtin(global_invocation_id) g: vec3u) {
   let s = particles[i];
   var pos = s.xy;
   var v = s.zw;
-  let in0 = insideSurface(pos);
+  let in0 = insideK(pos, 0u);
   var rem = 1.0;
   for (var k = 0; k < 4; k++) {
     var best = rem + 1.0;
@@ -167,9 +208,9 @@ fn fly(@builtin(global_invocation_id) g: vec3u) {
       t = wallHit(pos, v, rem, true, rc.y + h, rc.x + dh, rc.x + h);
       if (t >= 0.0 && t < best) { best = t; kind = 9u; }
     }
-    if (p.ctrl.w == 1u) {
-      t = circleHit(pos, v, rem);
-      if (t >= 0.0 && t < best) { best = t; kind = 10u; }
+    for (var j = 0u; j < p.ctrl.w; j++) {
+      t = circleHit(pos, v, rem, p.scats[j]);
+      if (t >= 0.0 && t < best) { best = t; kind = 16u + j; }
     }
     if (kind == 0u) {
       pos = pos + v * rem;
@@ -187,9 +228,10 @@ fn fly(@builtin(global_invocation_id) g: vec3u) {
     else if (kind == 7u) { pos.y = p.room.y - p.room.z; v.y = -v.y; Y = pos.y; }
     else if (kind == 8u || kind == 9u) { pos.y = p.room.y + p.room.z; v.y = -v.y; Y = pos.y; }
     else {
-      let d = pos - p.scat.xy;
+      let sc = p.scats[kind - 16u];
+      let d = pos - sc.xy;
       let n = normalize(d);
-      pos = p.scat.xy + n * p.scat.z;
+      pos = sc.xy + n * sc.z;
       v = v - 2.0 * dot(v, n) * n;
     }
     // The stand-off: pure normal, into the side the reflected velocity
@@ -197,16 +239,22 @@ fn fly(@builtin(global_invocation_id) g: vec3u) {
     // past both walls, where no segment covers it).
     if (kind <= 2u || (kind >= 5u && kind <= 6u)) { pos.x = X + sign(v.x) * 1e-5; }
     else if (kind == 3u || kind == 4u || (kind >= 7u && kind <= 9u)) { pos.y = Y + sign(v.y) * 1e-5; }
-    else { pos = p.scat.xy + normalize(pos - p.scat.xy) * (p.scat.z + 1e-5); }
+    else {
+      let sc = p.scats[kind - 16u];
+      pos = sc.xy + normalize(pos - sc.xy) * (sc.z + 1e-5);
+    }
     rem = rem - best;
   }
   particles[i] = vec4f(pos, v);
-  let in1 = insideSurface(pos);
+  let in1 = insideK(pos, 0u);
   if (in1 != in0) {
     if (in1 == 1u) { atomicAdd(&counters[0], 1u); }
     else { atomicAdd(&counters[1], 1u); }
   }
   if (p.ctrl.y == 1u) {
+    for (var k = 0u; k < p.cfg.w; k++) {
+      if (insideK(pos, k) == 1u) { atomicAdd(&counters[2u + k], 1u); }
+    }
     let gdim = p.cfg.z;
     let c = min(u32(pos.x * f32(gdim)), gdim - 1u);
     let rr = min(u32(pos.y * f32(gdim)), gdim - 1u);
@@ -237,10 +285,10 @@ export class Billiard {
   private bind: GPUBindGroup;
   private pipelines: Record<"spawn" | "fly" | "reverse", GPUComputePipeline>;
   private groups = 1;
-  private ab = new ArrayBuffer(80);
+  private ab = new ArrayBuffer(288);
   private u32 = new Uint32Array(this.ab);
   private f32 = new Float32Array(this.ab);
-  private zeroCtr = new Uint32Array(2);
+  private zeroCtr = new Uint32Array(8);
   private zeroGrid = new Uint32Array(GRID * GRID);
   cfg: Config;
   t = 0;
@@ -275,9 +323,9 @@ export class Billiard {
       fly: device.createComputePipeline({ layout: pl, compute: { module, entryPoint: "fly" } }),
       reverse: device.createComputePipeline({ layout: pl, compute: { module, entryPoint: "reverse" } }),
     };
-    this.params = device.createBuffer({ size: 80, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+    this.params = device.createBuffer({ size: 288, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
     this.particles = device.createBuffer({ size: MAXN * 16, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC });
-    this.counters = blank(device, 8);
+    this.counters = blank(device, 32);
     this.grids = [blank(device, GRID * GRID * 4), blank(device, GRID * GRID * 4)];
     this.bind = device.createBindGroup({
       layout,
@@ -297,23 +345,32 @@ export class Billiard {
     this.u32[0] = c.n;
     this.u32[1] = occupy;
     this.u32[2] = c.walls ? 1 : 0;
-    this.u32[3] = c.scatter ? 1 : 0;
+    this.u32[3] = c.scatm;
     this.u32[4] = c.startIn ? 1 : 0;
     this.u32[5] = c.seed >>> 0;
     this.u32[6] = GRID;
-    this.u32[7] = 0;
+    this.u32[7] = c.surfaces.length;
     this.f32[8] = ROOM.x;
     this.f32[9] = ROOM.y;
     this.f32[10] = ROOM.h;
     this.f32[11] = c.door / 2;
-    this.f32[12] = c.cx;
-    this.f32[13] = c.cy;
-    this.f32[14] = c.cr;
-    this.f32[15] = c.circle ? 1 : 0;
-    this.f32[16] = SCAT.x;
-    this.f32[17] = SCAT.y;
-    this.f32[18] = SCAT.r;
-    this.f32[19] = 0;
+    this.f32[12] = c.startDisc;
+    this.f32[13] = c.spread;
+    this.f32[14] = 0;
+    this.f32[15] = 0;
+    c.surfaces.forEach((s, k) => {
+      this.f32[16 + 4 * k] = s.x;
+      this.f32[17 + 4 * k] = s.y;
+      this.f32[18 + 4 * k] = s.r;
+      this.f32[19 + 4 * k] = s.aligned ? 1 : 0;
+    });
+    this.f32.fill(0, 36, 72);
+    const r = scatR(c.scatm);
+    SCATTERERS[c.scatm].forEach(([x, y], j) => {
+      this.f32[36 + 4 * j] = x;
+      this.f32[37 + 4 * j] = y;
+      this.f32[38 + 4 * j] = r;
+    });
     this.device.queue.writeBuffer(this.params, 0, this.ab);
   }
 
@@ -329,6 +386,9 @@ export class Billiard {
 
   /** Reset to the initial condition drawn from the seed. */
   configure(cfg: Config) {
+    if (cfg.n < 1 || cfg.n > MAXN) throw new Error("n out of range");
+    if (cfg.surfaces.length < 1 || cfg.surfaces.length > 5) throw new Error("1–5 surfaces");
+    if (!(cfg.scatm in SCATTERERS)) throw new Error("scatm must be 0, 1, 4 or 9");
     this.cfg = cfg;
     this.groups = Math.ceil(cfg.n / 64);
     this.t = 0;
@@ -338,35 +398,47 @@ export class Billiard {
     for (const g of this.grids) this.device.queue.writeBuffer(g, 0, this.zeroGrid);
   }
 
+  /** Flip the room walls without touching the particles. */
+  setWalls(on: boolean) {
+    this.cfg.walls = on;
+    this.write(0);
+  }
+
   reverse() {
     this.dispatch(this.pipelines.reverse, 1);
   }
 
-  /** Advance k steps and read back one batched buffer: the inside count
-   * (summed from the occupancy grid painted on the last step), the
-   * per-step crossing rates in each direction, and the two grids. */
-  async advance(k: number): Promise<{ nin: number; nout: number; cin: number; cout: number; gridIn: Uint32Array; gridOut: Uint32Array }> {
+  /** Advance k steps and read back one batched buffer: the per-surface
+   * inside counts, the per-step crossing rates of surface [0] in each
+   * direction, and (optionally) the two occupancy grids. */
+  async advance(
+    k: number,
+    wantGrid = true,
+  ): Promise<{ nin: number; counts: number[]; cin: number; cout: number; gridIn?: Uint32Array; gridOut?: Uint32Array }> {
     if (k < 1) throw new Error("advance needs k ≥ 1");
     const q = this.device.queue;
     q.writeBuffer(this.counters, 0, this.zeroCtr);
-    q.writeBuffer(this.grids[0], 0, this.zeroGrid);
-    q.writeBuffer(this.grids[1], 0, this.zeroGrid);
+    if (wantGrid) {
+      q.writeBuffer(this.grids[0], 0, this.zeroGrid);
+      q.writeBuffer(this.grids[1], 0, this.zeroGrid);
+    }
     this.write(0);
     if (k > 1) this.dispatch(this.pipelines.fly, k - 1);
     this.write(1);
     this.dispatch(this.pipelines.fly, 1);
     this.t += k;
-    const [ctr, gridIn, gridOut] = await read(this.device, this.counters, this.grids[0], this.grids[1]);
-    let nin = 0;
-    let nout = 0;
-    for (let i = 0; i < gridIn.length; i++) {
-      nin += gridIn[i];
-      nout += gridOut[i];
-    }
-    return { nin, nout, cin: ctr[0] / k, cout: ctr[1] / k, gridIn, gridOut };
+    const bufs = await read(this.device, this.counters, ...(wantGrid ? this.grids : []));
+    const ctr = bufs[0];
+    return {
+      nin: ctr[2],
+      counts: [...ctr.subarray(2, 2 + this.cfg.surfaces.length)],
+      cin: ctr[0] / k,
+      cout: ctr[1] / k,
+      ...(wantGrid ? { gridIn: bufs[1], gridOut: bufs[2] } : {}),
+    };
   }
 
-  /** Sanity over the first m particles: NaN, escape, speed drift, scatterer. */
+  /** Sanity over the first m particles: NaN, escape, speed range, scatterers. */
   async audit(m = 4096) {
     const k = Math.min(m, this.cfg.n);
     const staging = this.device.createBuffer({ size: k * 16, usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ });
@@ -376,6 +448,9 @@ export class Billiard {
     await staging.mapAsync(GPUMapMode.READ);
     const f = new Float32Array(staging.getMappedRange().slice(0));
     staging.destroy();
+    const scats = SCATTERERS[this.cfg.scatm].map(([x, y]) => [x, y, scatR(this.cfg.scatm)]);
+    const lo = SPEED * (1 - this.cfg.spread) * (1 - 1e-4);
+    const hi = SPEED * (1 + this.cfg.spread) * (1 + 1e-4);
     let nan = 0;
     let escaped = 0;
     let inScat = 0;
@@ -390,8 +465,9 @@ export class Billiard {
         continue;
       }
       if (x < 0 || x > 1 || y < 0 || y > 1) escaped++;
-      speedErr = Math.max(speedErr, Math.abs(Math.hypot(vx, vy) - SPEED));
-      if (this.cfg.scatter && Math.hypot(x - SCAT.x, y - SCAT.y) < SCAT.r) inScat++;
+      const sp = Math.hypot(vx, vy);
+      speedErr = Math.max(speedErr, sp - hi, lo - sp);
+      if (scats.some(([sx, sy, sr]) => Math.hypot(x - sx, y - sy) < sr)) inScat++;
     }
     return { checked: k, nan, escaped, inScat, speedErr };
   }
