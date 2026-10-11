@@ -26,13 +26,13 @@ const W_LADDER = [5, 25, 50, 100];
 const log = (...a: unknown[]) => console.log(...a);
 
 const CELLS: Cell[] = [
-  { name: "door", knobs: { proto: "door", door: 0.08, spawn: "room", scatm: 0, spread: 0 } },
-  { name: "door-null", knobs: { proto: "door", door: 0.08, spawn: "table", scatm: 0, spread: 0 } },
-  { name: "door-sinai", knobs: { proto: "door", door: 0.08, spawn: "room", scatm: 1, spread: 0 } },
-  { name: "door-spread", knobs: { proto: "door", door: 0.08, spawn: "room", scatm: 0, spread: 0.25 } },
+  { name: "door", knobs: { proto: "door", door: 0.08, spawn: "room", scatm: 0, spread: 0, grid: 32 } },
+  { name: "door-null", knobs: { proto: "door", door: 0.08, spawn: "table", scatm: 0, spread: 0, grid: 32 } },
+  { name: "door-sinai", knobs: { proto: "door", door: 0.08, spawn: "room", scatm: 1, spread: 0, grid: 32 } },
+  { name: "door-spread", knobs: { proto: "door", door: 0.08, spawn: "room", scatm: 0, spread: 0.25, grid: 32 } },
   { name: "door-fine", knobs: { proto: "door", door: 0.08, spawn: "room", scatm: 0, spread: 0, grid: 64 } },
-  { name: "release", knobs: { proto: "release", spawn: "disc", startDisc: 0.01, scatm: 0, spread: 0 } },
-  { name: "release-null", knobs: { proto: "release", spawn: "table", scatm: 0, spread: 0 } },
+  { name: "release", knobs: { proto: "release", spawn: "disc", startDisc: 0.01, scatm: 0, spread: 0, grid: 32 } },
+  { name: "release-null", knobs: { proto: "release", spawn: "table", scatm: 0, spread: 0, grid: 32 } },
 ];
 
 const sigmaOf = (p0: number, p1: number, a: number) => sObs(p1, a) - sObs(p0, a);
