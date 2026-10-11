@@ -17,7 +17,8 @@ delivered.
    within the first hour of a lane's work — and proofs after; downstream
    lanes never wait on unpushed work. Update docs in
    the same commit as the code they describe. Run `git status` before ending a
-   turn. If a commit or push is blocked, say so immediately.
+   turn. Never end a turn to wait for a background job: nothing resumes you.
+   Block on it in the foreground with a timeout. Sweeps run on Artemis. If a commit or push is blocked, say so immediately.
 2. **Stay small.** Every line is a liability. Delete obsolete paths instead of
    keeping shims, flags or compatibility layers. Add no speculative surface:
    no options, parameters or abstractions without a current caller. Duplicate
