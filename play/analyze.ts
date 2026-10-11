@@ -35,7 +35,7 @@ export function areaOf(s: Surf): number {
     const xb = Math.min(hi.x, s.x + w);
     if (xb > xa) c += Math.round(((xb - xa) * m) / (hi.x - lo.x));
   }
-  return c / (m * m);
+  return (c * (hi.x - lo.x) * (hi.y - lo.y)) / (m * m);
 }
 
 /** Equivalent radius of a region: √(area/π). Circles and equal-area squares
