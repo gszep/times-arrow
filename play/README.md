@@ -36,16 +36,16 @@ Run `node play/check.ts` for hardware WebGPU model checks; `node play/sweep.ts`
 on Artemis for paired multi-seed exploration. Batch output records its commit,
 parameters and GPU. Read nulls before the dense-disc results.
 
-## Exploratory result (rerun required after Lean initialization sync)
+## Exploratory result
 
 No reliable positive plateau at either density: over seeds 1–16 and eight
 16-step windows through t=128, collisions on meets the display threshold in
 0/128 windows at both ρ=1 and ρ=3; off meets it in 3/128 and 0/128 respectively.
 The three off hits belong to three different seeds; windows within a seed
 are correlated. Uniform nulls give 0/128 hits in every arm. At ρ=1, t=48–64,
-mean per-seed log slopes are −0.955 (on) and −1.223 (off), with descriptive
-95% t intervals [−0.999,−0.912] and [−1.259,−1.186]. At ρ=3, on has slope
-−1.160 [−1.178,−1.142] at t=64–80; off has no all-positive band in that window.
+mean per-seed log slopes are −0.953 (on) and −1.223 (off), with descriptive
+95% t intervals [−0.996,−0.909] and [−1.260,−1.187]. At ρ=3, on has slope
+−1.160 [−1.177,−1.144] at t=64–80; off has no all-positive band in that window.
 These are finite-lattice, centre-observer, transient measurements, not a
 continuum result or a test of local equilibrium.
 
@@ -63,10 +63,12 @@ boundary. Seed 1 at both densities reproduces between NVIDIA/Artemis and
 Intel/Mac: identical initial/final state SHA-256 and all 400 plotted rates
 per run exactly equal. The raw includes state hashes for every run.
 
-Raw output: GitHub release `results-play`, asset `play-fhp-portable.json`; source
-commit `9a1d306`, clean Artemis checkout,
+Raw output: GitHub release `results-play`, asset `play-fhp-lean.json`; source
+commit `bdb0cf3`, clean Artemis checkout,
 NVIDIA Lovelace hardware adapter. SHA-256:
-`8ada4c7444757b7991c7ef45665c2c0917cbd92480814957558992eaff63934e`.
+`895e5f475f9b110c6d398af5458472c6c2e68a234ad3a1d0cdcc48af408304a6`.
 Regenerate at that commit on Artemis with `node play/sweep.ts`.
 `node play/check.ts` checks all 18 Lean FHP goldens. Set `FHP_LEAN` to a
 built `timesarrow` executable to add fresh random-seed CLI differentials.
+**Verified:** all 18 goldens on Intel and NVIDIA; eight fresh CLI cases on
+Intel (four initialization, four evolution), all bit-exact with exact rewind.
