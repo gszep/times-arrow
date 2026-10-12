@@ -112,6 +112,7 @@ An orchestrator agent delegates to subagents and reports to the collaborator
   - Reuse the downloaded Lean packages with `mkdir -p .lake && ln -s /Users/gszep/Documents/repos/times-arrow/.lake/packages .lake/packages`, and never run `lake update` there.
   - Run `npm ci` for your own `node_modules`.
 - **Credentials:** never run `gh auth login/logout/switch`, and never read credentials.
+- **Commit identity:** agents author and commit as `mochi-the-kitty <306965878+mochi-the-kitty@users.noreply.github.com>`, set per command (`git -c user.name=… -c user.email=… commit`), never in shared Git config. Pushes use the existing `gh` login.
 
 ## Conventions
 
