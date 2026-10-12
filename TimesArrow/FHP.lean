@@ -1,6 +1,8 @@
 import TimesArrow.Philox
 import Mathlib.Data.ZMod.Basic
 import TimesArrow.Reversible
+import Mathlib.Tactic.LinearCombination
+import Mathlib.Tactic.Ring
 
 /-!
 # Six-velocity hexagonal gas
@@ -103,5 +105,90 @@ def initial (seed : UInt32) (n radius : ℕ) (inside outside : ℕ × ℕ) : Arr
 def run (seed : UInt32) (n t radius : ℕ) (inside outside : ℕ × ℕ) : Array ℕ :=
   (List.range t).foldl (fun a time => step seed n time a)
     (initial seed n radius inside outside)
+
+theorem bits_assemble : ∀ (b : Dir → Bool) (k : Dir), bits k (assemble b) = b k := by
+  decide +kernel
+
+theorem assemble_bits : ∀ s : Cell, assemble (fun k => bits k s) = s := by
+  decide +kernel
+
+theorem collide_inverse : ∀ (b : Bool) (s : Cell), collide (!b) (collide b s) = s := by
+  decide +kernel
+
+theorem opposite_opposite : ∀ k : Dir, opposite (opposite k) = k := by
+  decide +kernel
+
+theorem parity_add_one (n : ℕ) [NeZero n] (h2 : 2 ∣ n) (y : ZMod n) :
+    (((y + 1).val % 2 : ℕ) : ZMod n) = 1 - (y.val % 2 : ℕ) := by
+  have hn : 1 < n := by have := NeZero.ne n; omega
+  rw [ZMod.val_add, ZMod.val_one'' (by omega), Nat.mod_mod_of_dvd _ h2]
+  have h : (y.val + 1) % 2 + y.val % 2 = 1 := by omega
+  have hc := congrArg (fun m : ℕ => (m : ZMod n)) h
+  push_cast at hc
+  linear_combination hc
+
+theorem parity_sub_one (n : ℕ) [NeZero n] (h2 : 2 ∣ n) (y : ZMod n) :
+    (((y - 1).val % 2 : ℕ) : ZMod n) = 1 - (y.val % 2 : ℕ) := by
+  have h := parity_add_one n h2 (y - 1)
+  simp only [sub_add_cancel] at h
+  linear_combination h
+
+theorem neighbour_inverse (n : ℕ) [NeZero n] (h2 : 2 ∣ n) (p : Site n) (k : Dir) :
+    neighbour n (neighbour n p k) (opposite k) = p := by
+  fin_cases k <;>
+    simp [neighbour, opposite, parity_add_one n h2, parity_sub_one n h2]
+
+theorem unstream_stream (n : ℕ) [NeZero n] (h2 : 2 ∣ n) (s : State n) :
+    unstream n (stream n s) = s := by
+  funext p
+  simp only [unstream, stream, bits_assemble, neighbour_inverse n h2, assemble_bits]
+
+theorem stream_unstream (n : ℕ) [NeZero n] (h2 : 2 ∣ n) (s : State n) :
+    stream n (unstream n s) = s := by
+  funext p
+  have hi (k : Dir) : neighbour n (neighbour n p (opposite k)) k = p := by
+    simpa only [opposite_opposite] using neighbour_inverse n h2 p (opposite k)
+  simp only [unstream, stream, bits_assemble, hi, assemble_bits]
+
+theorem neighbour_bijective (n : ℕ) [NeZero n] (h2 : 2 ∣ n) (k : Dir) :
+    Function.Bijective (fun p => neighbour n p k) := by
+  have left : Function.LeftInverse (fun p => neighbour n p (opposite k))
+      (fun p => neighbour n p k) := fun p => neighbour_inverse n h2 p k
+  have right : Function.RightInverse (fun p => neighbour n p (opposite k))
+      (fun p => neighbour n p k) := by
+    intro p
+    simpa only [opposite_opposite] using neighbour_inverse n h2 p (opposite k)
+  exact ⟨Function.LeftInverse.injective left, Function.RightInverse.surjective right⟩
+
+theorem stream_sum (n : ℕ) [NeZero n] (h2 : 2 ∣ n) (s : State n)
+    {A : Type*} [AddCommMonoid A] (f : Dir → Bool → A) :
+    ∑ p, ∑ k, f k (bits k (stream n s p)) = ∑ p, ∑ k, f k (bits k (s p)) := by
+  simp only [stream, bits_assemble]
+  rw [Finset.sum_comm, Finset.sum_comm (f := fun p k => f k (bits k (s p)))]
+  apply Finset.sum_congr rfl
+  intro k _
+  exact Finset.sum_bijective (fun p => neighbour n p (opposite k))
+    (neighbour_bijective n h2 (opposite k))
+    (fun _ => ⟨fun _ => Finset.mem_univ _, fun _ => Finset.mem_univ _⟩) (fun _ _ => rfl)
+
+/-- Sites within at most `t` edges of the hexagonal neighbour graph.
+This definition includes periodic paths across the lattice seams. -/
+def hexBall (n : ℕ) [NeZero n] : ℕ → Site n → Site n → Prop
+  | 0, p, q => p = q
+  | t + 1, p, q => hexBall n t p q ∨ ∃ k, hexBall n t (neighbour n p k) q
+
+/-- Time-dependent collision field, used in its forward order. -/
+def evolve (n : ℕ) [NeZero n] (b : ℕ → Site n → Bool) : ℕ → State n → State n
+  | 0, s => s
+  | t + 1, s => stepState n (b t) (evolve n b t s)
+
+/-- One NW mover: enough to test row transport and checkerboard mixing. -/
+def singleNW : State 4 := fun p => if p = (0, 0) then 4 else 0
+
+def labelMass (n : ℕ) [NeZero n] (t c : ℕ) (s : State n) : ℕ :=
+  ∑ p, if (p.1.val + p.2.val + t) % 2 = c then mass (s p) else 0
+
+def rowMomentum (n : ℕ) [NeZero n] (y : ZMod n) (s : State n) : ℤ × ℤ :=
+  ∑ x : ZMod n, momentum (s (x, y))
 
 end TimesArrow.FHP

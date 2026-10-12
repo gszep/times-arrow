@@ -18047,6 +18047,69 @@
    "axioms": ["propext", "Classical.choice", "Quot.sound"]},
   {"status": "proved",
    "statement":
+   "checkerboard_counterexample : labelMass 4 0 0 singleNW = 1 ∧ labelMass 4 1 0 (stepState 4 (fun _ => false) singleNW) = 0",
+   "name": "TimesArrow.FHP.checkerboard_counterexample",
+   "doc":
+   "Refutation of the HPP checkerboard population invariant for this gas:\none NW particle on a 4×4 torus changes its `(x+y+t) mod 2` label.",
+   "axioms": ["propext", "Classical.choice", "Quot.sound"]},
+  {"status": "proved",
+   "statement":
+   "collision_bijective (b : Bool) : Function.Bijective (collide b)",
+   "name": "TimesArrow.FHP.collision_bijective",
+   "doc":
+   "Each fixed chirality is a permutation of all 64 cells. Its inverse uses\nthe opposite chirality, including on the symmetric triples.",
+   "axioms": ["propext"]},
+  {"status": "proved",
+   "statement":
+   "collision_conserves : ∀ (b : Bool) (s : Cell), mass (collide b s) = mass s ∧ momentum (collide b s) = momentum s",
+   "name": "TimesArrow.FHP.collision_conserves",
+   "doc":
+   "Both collision chiralities conserve particle number and both integer\nmomentum components in the `(E, NE)` basis, at every cell.",
+   "axioms": ["propext", "Classical.choice", "Quot.sound"]},
+  {"status": "proved",
+   "statement":
+   "lightcone (n : ℕ) [NeZero n] (b : ℕ → Site n → Bool) (t : ℕ) (p : Site n) (s₁ s₂ : State n) (h : ∀ q, hexBall n t p q → s₁ q = s₂ q) : evolve n b t s₁ p = evolve n b t s₂ p",
+   "name": "TimesArrow.FHP.lightcone",
+   "doc":
+   "Strict hexagonal light cone: with the same time-dependent collision\nfield, agreement within `t` hex edges implies agreement at time `t`.\nThe propagation speed is at most one hex edge per step, including seams.",
+   "axioms": ["propext", "Quot.sound"]},
+  {"status": "proved",
+   "statement":
+   "no_alternating_coloring (color : Site 4 → Bool) : ¬ (∀ p k, color (neighbour 4 p k) = !(color p))",
+   "name": "TimesArrow.FHP.no_alternating_coloring",
+   "doc":
+   "The 4×4 hexagonal neighbour graph contains a triangle, so no binary\nsite colouring can flip on every hop. This excludes every HPP-style\nalternating two-sublattice label, not just the coordinate checkerboard.",
+   "axioms": ["propext", "Quot.sound"]},
+  {"status": "proved",
+   "statement":
+   "row_momentum_counterexample : rowMomentum 4 0 singleNW = (-1, 1) ∧ rowMomentum 4 0 (stepState 4 (fun _ => false) singleNW) = (0, 0)",
+   "name": "TimesArrow.FHP.row_momentum_counterexample",
+   "doc":
+   "Refutation of HPP-like row momentum conservation: a NW particle carries\nnonzero horizontal momentum from row 0 to row 1 in one hexagonal step.",
+   "axioms": ["propext", "Classical.choice", "Quot.sound"]},
+  {"status": "proved",
+   "statement":
+   "step_bijective (n : ℕ) [NeZero n] (h2 : 2 ∣ n) (b : Site n → Bool) : Function.Bijective (stepState n b)",
+   "name": "TimesArrow.FHP.step_bijective",
+   "doc":
+   "A fixed seed/time collision field gives a bijection of the whole lattice.\nRandomized collision does not lose information when that field is retained.",
+   "axioms": ["propext", "Classical.choice", "Quot.sound"]},
+  {"status": "proved",
+   "statement":
+   "step_conserves (n : ℕ) [NeZero n] (h2 : 2 ∣ n) (b : Site n → Bool) (s : State n) : (∑ p, mass (stepState n b s p)) = ∑ p, mass (s p) ∧ (∑ p, momentum (stepState n b s p)) = ∑ p, momentum (s p)",
+   "name": "TimesArrow.FHP.step_conserves",
+   "doc":
+   "Each full FHP step conserves total particle number and total momentum\non every positive even periodic lattice, for any chirality field.",
+   "axioms": ["propext", "Classical.choice", "Quot.sound"]},
+  {"status": "proved",
+   "statement":
+   "step_inverse (n : ℕ) [NeZero n] (h2 : 2 ∣ n) (b : Site n → Bool) (s : State n) : inverseState n b (stepState n b s) = s ∧ stepState n b (inverseState n b s) = s",
+   "name": "TimesArrow.FHP.step_inverse",
+   "doc":
+   "On every positive even periodic lattice, the exact two-sided inverse\nunstreams first, then collides with opposite chirality at the original site.\nThe field `b` must be replayed from the same seed and original time.",
+   "axioms": ["propext", "Classical.choice", "Quot.sound"]},
+  {"status": "proved",
+   "statement":
    "checkerboard (n : ℕ) [NeZero n] (h2 : 2 ∣ n) (t : ℕ) (c : ZMod 2) (s : State n) : labelMass n h2 t c ((stepState n)^[t] s) = labelMass n h2 0 c s",
    "name": "TimesArrow.LatticeGas.checkerboard",
    "doc":

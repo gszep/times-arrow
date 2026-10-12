@@ -4,7 +4,55 @@ import TimesArrow.Selection
 import TimesArrow.Walker
 import TimesArrow.WalkerProfile
 import TimesArrow.Markov.Fluctuation
+import TimesArrow.FHP
 import TimesArrow.Divergence
+
+namespace TimesArrow.FHP
+
+theorem collision_bijective (b : Bool) : Function.Bijective (collide b) := by
+  sorry
+
+theorem collision_conserves : ∀ (b : Bool) (s : Cell),
+    mass (collide b s) = mass s ∧ momentum (collide b s) = momentum s := by
+  sorry
+
+theorem step_inverse (n : ℕ) [NeZero n] (h2 : 2 ∣ n) (b : Site n → Bool)
+    (s : State n) :
+    inverseState n b (stepState n b s) = s ∧
+      stepState n b (inverseState n b s) = s := by
+  sorry
+
+theorem step_bijective (n : ℕ) [NeZero n] (h2 : 2 ∣ n) (b : Site n → Bool) :
+    Function.Bijective (stepState n b) := by
+  sorry
+
+theorem step_conserves (n : ℕ) [NeZero n] (h2 : 2 ∣ n) (b : Site n → Bool)
+    (s : State n) :
+    (∑ p, mass (stepState n b s p)) = ∑ p, mass (s p) ∧
+    (∑ p, momentum (stepState n b s p)) = ∑ p, momentum (s p) := by
+  sorry
+
+theorem lightcone (n : ℕ) [NeZero n] (b : ℕ → Site n → Bool) (t : ℕ)
+    (p : Site n) (s₁ s₂ : State n)
+    (h : ∀ q, hexBall n t p q → s₁ q = s₂ q) :
+    evolve n b t s₁ p = evolve n b t s₂ p := by
+  sorry
+
+theorem checkerboard_counterexample :
+    labelMass 4 0 0 singleNW = 1 ∧
+    labelMass 4 1 0 (stepState 4 (fun _ => false) singleNW) = 0 := by
+  sorry
+
+theorem row_momentum_counterexample :
+    rowMomentum 4 0 singleNW = (-1, 1) ∧
+    rowMomentum 4 0 (stepState 4 (fun _ => false) singleNW) = (0, 0) := by
+  sorry
+
+theorem no_alternating_coloring (color : Site 4 → Bool) :
+    ¬ (∀ p k, color (neighbour 4 p k) = !(color p)) := by
+  sorry
+
+end TimesArrow.FHP
 
 namespace TimesArrow.Walker
 

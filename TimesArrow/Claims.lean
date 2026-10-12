@@ -2,6 +2,7 @@ import TimesArrow.Philox
 import TimesArrow.LatticeGas
 import TimesArrow.Selection
 import TimesArrow.Reversible
+import TimesArrow.FHP
 
 /-!
 # Claims
@@ -13,6 +14,115 @@ and Comparator checks in CI that these proofs prove exactly those
 statements. Library lemmas elsewhere may carry docstrings; they are not
 claims.
 -/
+
+namespace TimesArrow.FHP
+
+/-- Each fixed chirality is a permutation of all 64 cells. Its inverse uses
+the opposite chirality, including on the symmetric triples. -/
+theorem collision_bijective (b : Bool) : Function.Bijective (collide b) := by
+  have left : Function.LeftInverse (collide (!b)) (collide b) := collide_inverse b
+  have right : Function.RightInverse (collide (!b)) (collide b) := by
+    intro s
+    simpa only [Bool.not_not] using collide_inverse (!b) s
+  exact ⟨left.injective, right.surjective⟩
+
+/-- Both collision chiralities conserve particle number and both integer
+momentum components in the `(E, NE)` basis, at every cell. -/
+theorem collision_conserves : ∀ (b : Bool) (s : Cell),
+    mass (collide b s) = mass s ∧ momentum (collide b s) = momentum s := by
+  decide +kernel
+
+/-- On every positive even periodic lattice, the exact two-sided inverse
+unstreams first, then collides with opposite chirality at the original site.
+The field `b` must be replayed from the same seed and original time. -/
+theorem step_inverse (n : ℕ) [NeZero n] (h2 : 2 ∣ n) (b : Site n → Bool)
+    (s : State n) :
+    inverseState n b (stepState n b s) = s ∧
+      stepState n b (inverseState n b s) = s := by
+  constructor
+  · unfold inverseState stepState
+    rw [unstream_stream n h2]
+    funext p
+    exact collide_inverse (b p) (s p)
+  · have hc : collision n b (collision n (fun p => !(b p)) (unstream n s)) =
+        unstream n s := by
+      funext p
+      simpa only [Bool.not_not, collision] using collide_inverse (!(b p)) (unstream n s p)
+    unfold stepState inverseState
+    rw [hc, stream_unstream n h2]
+
+/-- A fixed seed/time collision field gives a bijection of the whole lattice.
+Randomized collision does not lose information when that field is retained. -/
+theorem step_bijective (n : ℕ) [NeZero n] (h2 : 2 ∣ n) (b : Site n → Bool) :
+    Function.Bijective (stepState n b) := by
+  have left : Function.LeftInverse (inverseState n b) (stepState n b) :=
+    fun s => (step_inverse n h2 b s).1
+  have right : Function.RightInverse (inverseState n b) (stepState n b) :=
+    fun s => (step_inverse n h2 b s).2
+  exact ⟨left.injective, right.surjective⟩
+
+/-- Each full FHP step conserves total particle number and total momentum
+on every positive even periodic lattice, for any chirality field. -/
+theorem step_conserves (n : ℕ) [NeZero n] (h2 : 2 ∣ n) (b : Site n → Bool)
+    (s : State n) :
+    (∑ p, mass (stepState n b s p)) = ∑ p, mass (s p) ∧
+    (∑ p, momentum (stepState n b s p)) = ∑ p, momentum (s p) := by
+  constructor
+  · change (∑ p, ∑ k, (bits k (stream n (collision n b s) p)).toNat) = _
+    rw [stream_sum n h2 (collision n b s) (fun _ v => v.toNat)]
+    exact Finset.sum_congr rfl fun p _ => (collision_conserves (b p) (s p)).1
+  · change (∑ p, ∑ k, (bits k (stream n (collision n b s) p)).toNat • velocity k) = _
+    rw [stream_sum n h2 (collision n b s) (fun k v => v.toNat • velocity k)]
+    exact Finset.sum_congr rfl fun p _ => (collision_conserves (b p) (s p)).2
+
+/-- Strict hexagonal light cone: with the same time-dependent collision
+field, agreement within `t` hex edges implies agreement at time `t`.
+The propagation speed is at most one hex edge per step, including seams. -/
+theorem lightcone (n : ℕ) [NeZero n] (b : ℕ → Site n → Bool) (t : ℕ)
+    (p : Site n) (s₁ s₂ : State n)
+    (h : ∀ q, hexBall n t p q → s₁ q = s₂ q) :
+    evolve n b t s₁ p = evolve n b t s₂ p := by
+  induction t generalizing p with
+  | zero => exact h p rfl
+  | succ t ih =>
+    simp only [evolve, stepState, stream, collision]
+    apply congrArg assemble
+    funext k
+    have hh := ih (neighbour n p (opposite k)) (fun q hq => h q (Or.inr ⟨opposite k, hq⟩))
+    rw [hh]
+
+/-- Refutation of the HPP checkerboard population invariant for this gas:
+one NW particle on a 4×4 torus changes its `(x+y+t) mod 2` label. -/
+theorem checkerboard_counterexample :
+    labelMass 4 0 0 singleNW = 1 ∧
+    labelMass 4 1 0 (stepState 4 (fun _ => false) singleNW) = 0 := by
+  decide +kernel
+
+/-- Refutation of HPP-like row momentum conservation: a NW particle carries
+nonzero horizontal momentum from row 0 to row 1 in one hexagonal step. -/
+theorem row_momentum_counterexample :
+    rowMomentum 4 0 singleNW = (-1, 1) ∧
+    rowMomentum 4 0 (stepState 4 (fun _ => false) singleNW) = (0, 0) := by
+  decide +kernel
+
+/-- The 4×4 hexagonal neighbour graph contains a triangle, so no binary
+site colouring can flip on every hop. This excludes every HPP-style
+alternating two-sublattice label, not just the coordinate checkerboard. -/
+theorem no_alternating_coloring (color : Site 4 → Bool) :
+    ¬ (∀ p k, color (neighbour 4 p k) = !(color p)) := by
+  intro h
+  have h0 := h (0, 0) 0
+  have h1 := h (1, 0) 2
+  have h2 := h (0, 1) 4
+  have e0 : neighbour 4 (0, 0) 0 = (1, 0) := by decide +kernel
+  have e1 : neighbour 4 (1, 0) 2 = (0, 1) := by decide +kernel
+  have e2 : neighbour 4 (0, 1) 4 = (0, 0) := by decide +kernel
+  rw [e0] at h0
+  rw [e1, h0, Bool.not_not] at h1
+  rw [e2, h1] at h2
+  cases hc : color (0, 0) <;> simp [hc] at h2
+
+end TimesArrow.FHP
 
 namespace TimesArrow.Philox
 
