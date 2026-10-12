@@ -6,6 +6,9 @@ rewind the actual dynamics. Hexagonal FHP on an even periodic offset-row grid;
 speed is one nearest-neighbour cell per step. Integer states, Philox chirality,
 collision then streaming; inverse streaming then inverse collision at the
 original step/site. The paired buffers share their initial state bit for bit.
+Initialization follows the Lean `fhp` contract: inclusive disc boundary,
+centre `(n/2,n√3/4)`, high 24 Philox bits strictly less than
+`floor(ρ × 2²⁴ / 6)`, computed with exact rational decimal arithmetic.
 
 `S = −D((p,1−p) ‖ (a,1−a))`, where `p` is the particle fraction inside a
 circle and `a` its exact lattice-site fraction. The plot is
@@ -33,7 +36,7 @@ Run `node play/check.ts` for hardware WebGPU model checks; `node play/sweep.ts`
 on Artemis for paired multi-seed exploration. Batch output records its commit,
 parameters and GPU. Read nulls before the dense-disc results.
 
-## Exploratory result
+## Exploratory result (rerun required after Lean initialization sync)
 
 No reliable positive plateau at either density: over seeds 1–16 and eight
 16-step windows through t=128, collisions on meets the display threshold in
@@ -65,4 +68,5 @@ commit `9a1d306`, clean Artemis checkout,
 NVIDIA Lovelace hardware adapter. SHA-256:
 `8ada4c7444757b7991c7ef45665c2c0917cbd92480814957558992eaff63934e`.
 Regenerate at that commit on Artemis with `node play/sweep.ts`.
-Lean FHP golden-vector comparison is pending the Lean lane's `fhp` export.
+`node play/check.ts` checks all 18 Lean FHP goldens. Set `FHP_LEAN` to a
+built `timesarrow` executable to add fresh random-seed CLI differentials.

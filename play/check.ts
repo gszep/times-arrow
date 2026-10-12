@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
 import { headless } from "../scripts/headless.ts";
+import contract from "../contract.json" with { type: "json" };
+import { execFileSync } from "node:child_process";
+import { randomInt } from "node:crypto";
 
 await headless("play/?paused=1", async ev => {
   console.log("adapter", await ev("probe.adapter"));
@@ -9,7 +12,7 @@ await headless("play/?paused=1", async ev => {
     const row = Math.floor(i / 256), x = i % 256 + (row & 1) / 2 - 128, y = row - 128;
     // Physical embedding: x spacing 1, y spacing √3/2. Rational squared
     // distances avoid the square root without copying the shader arithmetic.
-    assert.equal(disc[i], x * x + 0.75 * y * y < 64 ** 2 ? 63 : 0, `disc boundary site ${i}`);
+    assert.equal(disc[i], x * x + 0.75 * y * y <= 64 ** 2 ? 63 : 0, `disc boundary site ${i}`);
   }
   console.log("PASS exact squared-distance disc membership, including boundary sites");
   for (const rho of [1, 3]) {
@@ -35,4 +38,23 @@ await headless("play/?paused=1", async ev => {
   assert.deepEqual(final.slice(4096), initial.slice(4096), "free-stream period 2n");
   assert.notDeepEqual(final.slice(0, 4096), final.slice(4096), "collisions change trajectories");
   console.log("PASS free-stream torus period; collision trajectory differs");
+  const compare = async (g: typeof contract.fhp.golden[number]) => {
+    await ev(`probe.reset(${JSON.stringify({ n: g.n, seed: g.seed, rho: g.rhoIn[0] / g.rhoIn[1], outside: g.rhoOut[0] / g.rhoOut[1], radius: g.radius, window: 16 })})`);
+    if (g.t) await ev(`probe.run(${g.t})`);
+    const state = await ev("probe.state()");
+    assert.equal(g.state.filter((v, i) => v !== state[i]).length, 0, `Lean n=${g.n} seed=${g.seed} t=${g.t}`);
+    assert.equal((await ev("probe.rewind()")).mismatch, 0);
+  };
+  for (const golden of contract.fhp.golden) await compare(golden);
+  console.log(`PASS ${contract.fhp.golden.length}/${contract.fhp.golden.length} Lean FHP goldens, including initialization and exact rewind`);
+  const binary = process.env.FHP_LEAN;
+  if (binary) {
+    for (let i = 0; i < 8; i++) {
+      const args = [randomInt(0x100000000), i % 2 ? 16 : 32, i % 2 ? randomInt(1, 51) : 0, i % 2 ? 4 : 8,
+        randomInt(1, 17), 4, randomInt(0, 10), 20];
+      const golden = JSON.parse(execFileSync(binary, ["fhp", ...args.map(String)], { encoding: "utf8", timeout: 30000 }));
+      await compare(golden);
+    }
+    console.log("PASS 8/8 fresh random-seed Lean CLI differentials (4 initialization, 4 evolution), exact rewind");
+  } else console.log("FHP_LEAN unset: CLI differentials not run");
 });

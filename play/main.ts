@@ -11,7 +11,7 @@ if (![64, 128, 256, 512].includes(c.n)) c.n = defaults.n;
 c.seed = c.seed >>> 0;
 c.rho = Math.min(4, Math.max(0.5, c.rho || defaults.rho));
 c.outside = Math.min(6, Math.max(0, Number.isFinite(c.outside) ? c.outside : defaults.outside));
-c.radius = Math.min(c.n / 3, Math.max(4, c.radius || c.n / 4));
+c.radius = Math.min(Math.floor(c.n / 3), Math.max(4, Math.round(c.radius || c.n / 4)));
 c.window = Math.min(128, Math.max(1, Math.round(c.window || 16)));
 c.x = Math.min(1, Math.max(0, Number.isFinite(c.x) ? c.x : 0.5)); c.y = Math.min(1, Math.max(0, Number.isFinite(c.y) ? c.y : 0.5));
 let on = url.searchParams.get("collisions") !== "off", playing = url.searchParams.get("paused") !== "1";

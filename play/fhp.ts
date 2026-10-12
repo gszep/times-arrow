@@ -3,9 +3,17 @@ import { philoxWgsl } from "../src/philox.ts";
 
 export type Config = { n: number; seed: number; rho: number; outside: number; radius: number; x: number; y: number; window: number };
 export const defaults: Config = { n: 256, seed: 1, rho: 3, outside: 0.15, radius: 64, x: 0.5, y: 0.5, window: 16 };
+/** Interpret the URL's decimal density as a rational, then floor exactly as Lean. */
+function threshold(rho: number): number {
+  const [decimal, exponent = "0"] = String(rho).split("e");
+  const [whole, fraction = ""] = decimal.split(".");
+  const power = Number(exponent) - fraction.length;
+  const numerator = BigInt(whole + fraction) * 16777216n * 10n ** BigInt(Math.max(0, power));
+  return Number(numerator / (6n * 10n ** BigInt(Math.max(0, -power))));
+}
 const shader = /* wgsl */ `
 ${philoxWgsl}
-struct Params { n: u32, seed: u32, time: u32, inverse: u32, rho: f32, outside: f32, radius: f32, pad: u32 }
+struct Params { n: u32, seed: u32, time: u32, inverse: u32, inside: u32, outside: u32, radius: f32, pad: u32 }
 @group(0) @binding(0) var<uniform> p: Params;
 @group(0) @binding(1) var<storage, read> src: array<u32>;
 @group(0) @binding(2) var<storage, read_write> dst: array<u32>;
@@ -29,10 +37,10 @@ fn collide(s: u32, site: u32, inverse: bool) -> u32 {
   // sqrt rounding moving boundary sites into/out of the initial disc.
   let dx = i32(2u * (site % p.n) + (y & 1u)) - i32(p.n);
   let dy = i32(y) - i32(p.n / 2u);
-  let rho = select(p.outside, p.rho, f32(dx * dx + 3 * dy * dy) < 4.0 * p.radius * p.radius);
+  let cutoff = select(p.outside, p.inside, f32(dx * dx + 3 * dy * dy) <= 4.0 * p.radius * p.radius);
   var s = 0u;
   for (var k = 0u; k < 6u; k++) {
-    if (u01(rand(p.seed, k >> 2u, site)[k & 3u]) < rho / 6.0) { s |= 1u << k; }
+    if ((rand(p.seed, k >> 2u, site)[k & 3u] >> 8u) < cutoff) { s |= 1u << k; }
   }
   dst[site] = s; dst[site + p.n * p.n] = s;
 }
@@ -85,7 +93,7 @@ export class Gas {
   dispatch(entry: string, inverse: boolean) {
     this.watch.check();
     const c = this.config, bytes = new ArrayBuffer(32), u = new Uint32Array(bytes), f = new Float32Array(bytes);
-    u.set([c.n, c.seed, this.time, +inverse]); f.set([c.rho, c.outside, c.radius], 4);
+    u.set([c.n, c.seed, this.time, +inverse, threshold(c.rho), threshold(c.outside)]); f[6] = c.radius;
     this.device.queue.writeBuffer(this.uniform, 0, bytes);
     const encoder = this.device.createCommandEncoder(), pass = encoder.beginComputePass();
     pass.setPipeline(this.pipelines[entry]); pass.setBindGroup(0, this.groups[this.current]);
