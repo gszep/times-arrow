@@ -12,6 +12,8 @@ state, and `hppinit <packed|null> <seed> <n>` prints a 001 initial state.
 `walkjson <seed> <arm> <n> <m> <t>` prints one 002 trajectory golden and
 `walkprofilejson <seed> <arm> <n> <m> <t>` the whole 003 profile vector
 (trajectory, per-time occupancies and window sums).
+`fhp SEED N T RADIUS IN_NUM IN_DEN OUT_NUM OUT_DEN` prints the full FHP
+trajectory golden as JSON; densities are rational particles per site.
 -/
 
 open Lean TimesArrow Philox LatticeGas TimesArrow.Walker
@@ -457,4 +459,4 @@ def main : List String → IO Unit
       | throw (IO.userError "invalid profile arm, lattice (a power of two ≤ 16) or horizon")
     IO.println (Json.mkObj fields).compress
   | _ => throw (IO.userError
-      "usage: timesarrow contract | rand SEED STEP SITE | hpp SEED N T | hppinv SEED N T | hppecho SEED N T | hppinit MODE SEED N | walk SEED ARM N M T | walktally SEED ARM M T | walkprofilejson SEED ARM N M T")
+      "usage: timesarrow contract | rand SEED STEP SITE | fhp SEED N T RADIUS IN_NUM IN_DEN OUT_NUM OUT_DEN | hpp SEED N T | hppinv SEED N T | hppecho SEED N T | hppinit MODE SEED N | walk SEED ARM N M T | walktally SEED ARM M T | walkprofilejson SEED ARM N M T")

@@ -1,8 +1,6 @@
 import TimesArrow.Philox
 import Mathlib.Data.ZMod.Basic
-import TimesArrow.Reversible
 import Mathlib.Tactic.LinearCombination
-import Mathlib.Tactic.Ring
 
 /-!
 # Six-velocity hexagonal gas
@@ -12,6 +10,12 @@ The executable uses the model collision and neighbour functions. The disc
 centre is `(n/2, n√3/4)`, with its boundary included. Density is a rational
 particle count per site; initialization compares the high 24 Philox bits
 against `floor(density * 2^24 / 6)`. Collision time starts at zero.
+
+Claims prove bijection, mass/momentum conservation and a one-hex-edge causal
+cone for the discrete periodic model. The inverse needs the original collision
+field: unstream, then apply opposite chirality (not an autonomous HPP echo).
+Decided counterexamples exclude alternating two-sublattice labels and row
+momentum conservation; they do not establish equilibration or a continuum limit.
 -/
 
 namespace TimesArrow.FHP
