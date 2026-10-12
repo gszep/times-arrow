@@ -3,7 +3,7 @@ import { philoxWgsl } from "../src/philox.ts";
 
 export type Config = { n: number; seed: number; rho: number; outside: number; radius: number; x: number; y: number; window: number };
 export const defaults: Config = { n: 256, seed: 1, rho: 3, outside: 0.15, radius: 64, x: 0.5, y: 0.5, window: 16 };
-export const shader = /* wgsl */ `
+const shader = /* wgsl */ `
 ${philoxWgsl}
 struct Params { n: u32, seed: u32, time: u32, inverse: u32, rho: f32, outside: f32, radius: f32, pad: u32 }
 @group(0) @binding(0) var<uniform> p: Params;
@@ -117,7 +117,7 @@ export function invariants(state: Uint32Array) {
   for (const s of state) { if (s > 63) invalid++; else { mass += pop[s]; x += px[s]; y += py[s]; } }
   return { mass, x, y, invalid };
 }
-export const entropy = (p: number, a: number) => -(p > 0 ? p * Math.log(p / a) : 0) - (p < 1 ? (1 - p) * Math.log((1 - p) / (1 - a)) : 0);
+const entropy = (p: number, a: number) => -(p > 0 ? p * Math.log(p / a) : 0) - (p < 1 ? (1 - p) * Math.log((1 - p) / (1 - a)) : 0);
 export type Sample = { time: number; entropy: number[][]; invariants: ReturnType<typeof invariants>[] };
 export type Curve = { time: number; from: number; rates: number[][]; slopes: (number | null)[]; spread: (number | null)[]; positive: number[] };
 

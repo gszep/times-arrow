@@ -122,7 +122,11 @@ async function main() {
     audit: () => ({ sample: previous, curve, radii: circles.radii, areas: circles.areas, scrollHeight: document.documentElement.scrollHeight, innerHeight, width: innerWidth }),
   };
   toggle.onclick = () => { on = !on; sync(); draw(); };
-  pause.onclick = () => { playing = !playing; sync(); };
+  pause.onclick = () => {
+    if (busy) return;
+    if (gas.time >= end) void exclusive(async () => { await reset(); playing = true; sync(); }).catch(fail);
+    else { playing = !playing; sync(); }
+  };
   slider.onchange = () => { playing = false; void exclusive(() => reset({ rho: Number(slider.value) })).catch(fail); };
   rewind.onclick = () => { playing = false; sync(); void exclusive(undo).catch(fail); };
   image.onpointerdown = event => {
@@ -133,8 +137,10 @@ async function main() {
     circles = new Circles(c); previous = circles.sample(state, gas.time); curve = null; sync(); draw();
   };
   new ResizeObserver(draw).observe(document.body);
+  let lastFrame = 0;
   async function frame() {
-    if (playing && !busy) {
+    if (playing && !busy && performance.now() - lastFrame >= 600) {
+      lastFrame = performance.now();
       await exclusive(async () => {
         if (gas.time >= end) { playing = false; sync(); return; }
         await run(Math.min(c.window, end - gas.time));
