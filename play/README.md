@@ -33,20 +33,16 @@ Run `node play/check.ts` for hardware WebGPU model checks; `node play/sweep.ts`
 on Artemis for paired multi-seed exploration. Batch output records its commit,
 parameters and GPU. Read nulls before the dense-disc results.
 
-## Exploratory result — portability check pending
+## Exploratory result
 
-The first Artemis sweep found no reliable positive plateau at either density,
-but its initial disc used floating-point distance: exact boundary sites can
-differ by adapter. Those numbers are not yet portable to the review page.
-The kernel now uses integral squared hex distance; the sweep must be rerun.
-The affected measurements were: over seeds 1–16 and eight
+No reliable positive plateau at either density: over seeds 1–16 and eight
 16-step windows through t=128, collisions on meets the display threshold in
 0/128 windows at both ρ=1 and ρ=3; off meets it in 3/128 and 0/128 respectively.
 The three off hits belong to three different seeds; windows within a seed
 are correlated. Uniform nulls give 0/128 hits in every arm. At ρ=1, t=48–64,
 mean per-seed log slopes are −0.955 (on) and −1.223 (off), with descriptive
-95% t intervals [−1.000,−0.911] and [−1.259,−1.186]. At ρ=3, on has slope
-−1.159 [−1.176,−1.141] at t=64–80; off has no all-positive band in that window.
+95% t intervals [−0.999,−0.912] and [−1.259,−1.186]. At ρ=3, on has slope
+−1.160 [−1.178,−1.142] at t=64–80; off has no all-positive band in that window.
 These are finite-lattice, centre-observer, transient measurements, not a
 continuum result or a test of local equilibrium.
 
@@ -59,9 +55,14 @@ site mass exactly: this spatial two-cell entropy changes through streaming,
 and omits velocity equilibration. Larger R and windows above the **measured**
 collision time would be a next exploration, not a guarantee of a plateau.
 
-Raw output: GitHub release `results-play`, asset `play-fhp.json`; source
-commit `4f6b1b78ca01c64f632902c4bb318786092b6d93`, clean Artemis checkout,
+Disc membership uses integral squared hex distance, including the exact
+boundary. Seed 1 at both densities reproduces between NVIDIA/Artemis and
+Intel/Mac: identical initial/final state SHA-256 and all 400 plotted rates
+per run exactly equal. The raw includes state hashes for every run.
+
+Raw output: GitHub release `results-play`, asset `play-fhp-portable.json`; source
+commit `9a1d306`, clean Artemis checkout,
 NVIDIA Lovelace hardware adapter. SHA-256:
-`2374164f6dbd3f0c1f8d8e264b918f26b9568b5988a3b45dff15c9c2ec351451`.
+`8ada4c7444757b7991c7ef45665c2c0917cbd92480814957558992eaff63934e`.
 Regenerate at that commit on Artemis with `node play/sweep.ts`.
 Lean FHP golden-vector comparison is pending the Lean lane's `fhp` export.
