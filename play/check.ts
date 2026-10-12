@@ -3,6 +3,13 @@ import { headless } from "../scripts/headless.ts";
 
 await headless("play/?paused=1", async ev => {
   console.log("adapter", await ev("probe.adapter"));
+  await ev("probe.reset({n:256,radius:64,rho:6,outside:0,seed:1})");
+  const disc = await ev("probe.state()");
+  for (let i = 0; i < 256 ** 2; i++) {
+    const y = Math.floor(i / 256), dx = 2 * (i % 256) + (y & 1) - 256, dy = 2 * y - 256;
+    assert.equal(disc[i], dx * dx + 3 * dy * dy < 4 * 64 ** 2 ? 63 : 0, `disc boundary site ${i}`);
+  }
+  console.log("PASS exact squared-distance disc membership, including boundary sites");
   for (const rho of [1, 3]) {
     const start = await ev(`probe.reset({n:64, radius:16, rho:${rho}, outside:0.15, seed:73, window:8})`);
     const initial = await ev("probe.state()");

@@ -25,9 +25,11 @@ fn collide(s: u32, site: u32, inverse: bool) -> u32 {
 @compute @workgroup_size(128) fn init(@builtin(global_invocation_id) id: vec3u) {
   let site = id.x; if (site >= p.n * p.n) { return; }
   let y = site / p.n;
-  let q = vec2f(f32(site % p.n) + 0.5 * f32(y & 1u), f32(y) * sqrt(3.0) / 2.0);
-  let centre = vec2f(f32(p.n) / 2.0, f32(p.n) * sqrt(3.0) / 4.0);
-  let rho = select(p.outside, p.rho, distance(q, centre) < p.radius);
+  // Four times squared hex distance is integral. Avoid adapter-dependent
+  // sqrt rounding moving boundary sites into/out of the initial disc.
+  let dx = i32(2u * (site % p.n) + (y & 1u)) - i32(p.n);
+  let dy = i32(2u * y) - i32(p.n);
+  let rho = select(p.outside, p.rho, f32(dx * dx + 3 * dy * dy) < 4.0 * p.radius * p.radius);
   var s = 0u;
   for (var k = 0u; k < 6u; k++) {
     if (u01(rand(p.seed, k >> 2u, site)[k & 3u]) < rho / 6.0) { s |= 1u << k; }

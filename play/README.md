@@ -33,9 +33,13 @@ Run `node play/check.ts` for hardware WebGPU model checks; `node play/sweep.ts`
 on Artemis for paired multi-seed exploration. Batch output records its commit,
 parameters and GPU. Read nulls before the dense-disc results.
 
-## Exploratory result
+## Exploratory result — portability check pending
 
-No reliable positive plateau at either density: over seeds 1–16 and eight
+The first Artemis sweep found no reliable positive plateau at either density,
+but its initial disc used floating-point distance: exact boundary sites can
+differ by adapter. Those numbers are not yet portable to the review page.
+The kernel now uses integral squared hex distance; the sweep must be rerun.
+The affected measurements were: over seeds 1–16 and eight
 16-step windows through t=128, collisions on meets the display threshold in
 0/128 windows at both ρ=1 and ρ=3; off meets it in 3/128 and 0/128 respectively.
 The three off hits belong to three different seeds; windows within a seed
