@@ -6,8 +6,10 @@ await headless("play/?paused=1", async ev => {
   await ev("probe.reset({n:256,radius:64,rho:6,outside:0,seed:1})");
   const disc = await ev("probe.state()");
   for (let i = 0; i < 256 ** 2; i++) {
-    const y = Math.floor(i / 256), dx = 2 * (i % 256) + (y & 1) - 256, dy = 2 * y - 256;
-    assert.equal(disc[i], dx * dx + 3 * dy * dy < 4 * 64 ** 2 ? 63 : 0, `disc boundary site ${i}`);
+    const row = Math.floor(i / 256), x = i % 256 + (row & 1) / 2 - 128, y = row - 128;
+    // Physical embedding: x spacing 1, y spacing √3/2. Rational squared
+    // distances avoid the square root without copying the shader arithmetic.
+    assert.equal(disc[i], x * x + 0.75 * y * y < 64 ** 2 ? 63 : 0, `disc boundary site ${i}`);
   }
   console.log("PASS exact squared-distance disc membership, including boundary sites");
   for (const rho of [1, 3]) {

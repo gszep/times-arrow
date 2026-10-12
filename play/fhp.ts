@@ -28,7 +28,7 @@ fn collide(s: u32, site: u32, inverse: bool) -> u32 {
   // Four times squared hex distance is integral. Avoid adapter-dependent
   // sqrt rounding moving boundary sites into/out of the initial disc.
   let dx = i32(2u * (site % p.n) + (y & 1u)) - i32(p.n);
-  let dy = i32(2u * y) - i32(p.n);
+  let dy = i32(y) - i32(p.n / 2u);
   let rho = select(p.outside, p.rho, f32(dx * dx + 3 * dy * dy) < 4.0 * p.radius * p.radius);
   var s = 0u;
   for (var k = 0u; k < 6u; k++) {
