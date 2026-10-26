@@ -47,7 +47,9 @@ delivered.
    against the Crossref or arXiv APIs over plain HTTP, which has no search
    quota. A literature claim that something is absent ("no X is conserved")
    is a conjecture until Lean or a written argument settles it; route it to
-   the Lean lane before anything depends on it.
+   the Lean lane before anything depends on it. Never cite from memory:
+   fetch the paper (arXiv PDF or publisher text) and record the passage that
+   supports each claim. Metadata alone verifies only that the paper exists.
 
 ## Experiment discipline
 
@@ -84,6 +86,10 @@ results that had to be retracted:
   `scripts/headless.ts`). Runs are deterministic (Philox keyed by seed), so
   a raw can always be re-derived. Results from code that has since changed
   are stale. Re-run them or delete them.
+- **Independent checks until convergence.** Before a result section or a
+  claimed derivation lands, at least two agents check it independently, with
+  different contexts and preferably different model families. Iterate until a
+  round finds no corrections, rather than applying one list of fixes.
 - **Retract loudly.** When a result turns out to be an artefact, mark it
   refuted in the experiment's README with the cause, delete the
   contaminated data and re-queue the runs.
@@ -264,6 +270,16 @@ but only one tier above what has been shown to be necessary. Experiment 000
   and RNG streams are bit-exact on every backend. Float models are compared
   against a tolerance, because FMA contraction and operation reordering
   differ between backends.
+- **Certified numerics** (adapted from BootLoops, <https://bootloops.ai>):
+  - Host-side float results that a claim depends on (f64 statistics,
+    eigendecompositions, closed-form evaluations) carry certified error bounds
+    from ball arithmetic (Arb, e.g. via `python-flint`). A ball can prove two
+    numbers differ, never that they are equal.
+  - Equalities come from exact arithmetic, or from an identity proposed by
+    integer-relation search (PSLQ, e.g. `mpmath.identify`/`mpmath.pslq`) and then
+    proved symbolically or in Lean.
+  - For random walkers on lattices, check the exact lattice Green-function
+    literature (the Watson integral) before estimating anything by sampling.
 
 ## Upstream contributions
 
