@@ -44,7 +44,7 @@ provenance). Hosts: this Mac (`calcifer`, Intel UHD 630 "gen-9") and Artemis
 
 | # | Trial | Result | Label | Decision |
 |---|---|---|---|---|
-| 1 | Philox in Lean, WGSL, CuPy, JAX | Bit-exact on every backend: 3/3 Random123 known-answer vectors and 30/30 stream words plus `u01` floats. WGSL also matches 8 fresh random `(seed, step, site)` triples from the Lean executable on every `check:gpu` run | proved (known-answer vectors, `philox_kat`, by `decide +kernel`); verified (WGSL, CuPy, JAX) | Philox4x32-10 as pinned. The WGSL 16-bit-halves `mulhilo` is exact |
+| 1 | Philox in Lean, WGSL, CuPy, JAX | Bit-exact on every backend: 3/3 Random123 known-answer vectors and 30/30 stream words plus `u01` floats. When `.lake/build/bin/timesarrow` is available, `check:gpu` also compares WGSL with the Lean executable on 8 fresh random `(seed, step, site)` triples; otherwise it explicitly skips these differential tests | proved (known-answer vectors, `philox_kat`, by `decide +kernel`); verified (WGSL, CuPy, JAX) | Philox4x32-10 as pinned. The WGSL 16-bit-halves `mulhilo` is exact |
 | 2 | HPP step throughput | At `N = 4096`, CuPy is 0.99× the best WGSL path; every path is DRAM-bound at about 61 × 10⁹ cell updates/s. Dawn is within 3% of Chrome on both hosts. Checksums agree across all five host/backend pairs at every size up to 8192² | supported (prediction held) | **No tier 1** for lattice kernels. Headless Chrome is the one sweep path; the Dawn path is deleted |
 | 3 | f64 `eigh` | At `N = 10⁴`, JAX on the GPU takes 9.5 s and CPU LAPACK (OpenBLAS, 32 threads) takes 90.8 s, so the GPU is 9.6× faster. The GPU is 4.6–9.6× faster at every `N`. Relative residuals are at most 7.6 × 10⁻¹⁵ on the GPU and 3.2 × 10⁻¹⁵ on the CPU. Eigenvalues agree to 3.3 × 10⁻¹³ | **refuted** | **Tier 2 is JAX on the GPU** for f64 `eigh` at `N ≥ 10³`. `jax_trial.py` stays: it holds the tier-2 Philox |
 | 4 | Contract and Comparator | `lake exe timesarrow contract` computes each claim's status from `collectAxioms`: a `sorry` probe came out as `conjecture`. CI regenerates the contract, and the Linux output is byte-identical to the macOS output. In CI, Comparator (tag v4.34.0, with lean4export built on v4.34.1) certifies all four proved claims against `Challenge.lean`. The Lean job takes 4 min | supported | **Adopt both.** Claim statements live in `Challenge.lean` |
@@ -94,7 +94,7 @@ These are all verified, by reproduction.
 - **physlib** has no cache that a downstream project can fetch. Its modules build from source on top of Mathlib's cache (the Lorentz group took 41 s).
 - **Comparator caveats.**
   - There is no tag for v4.34.1; v4.34.0 plus lean4export on v4.34.1 works.
-  - landrun runs with `--best-effort`, so on a kernel without Landlock the sandbox is silently off. CI does not yet check that the sandbox is actually engaged.
+  - landrun runs with `--best-effort`, so on a kernel without Landlock the sandbox can be silently off. Before Comparator runs, [CI](../../.github/workflows/ci.yml) requires a write inside the allowed `.lake` directory to succeed and a write outside it to fail; an ineffective sandbox fails the job.
 - **Lean exporter.** The pretty-printer segfaults in a compiled executable with environment extensions loaded. The contract quotes each statement's source text instead.
 
 ### Stack for 001
