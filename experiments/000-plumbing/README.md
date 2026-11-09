@@ -1,8 +1,25 @@
 # 000-plumbing
 
 Engineering trials that choose the stack before experiment 001. The results
-are measurements, not physics claims, so there is no review page beyond a
-probe page for the numbers.
+are measurements, not physics claims. The probe page also explains the
+formal↔numerical boundary without reopening these concluded trials.
+
+## Interactive proof boundary
+
+The page's known-answer selector displays the actual four Philox GPU words
+beside the exported Lean answer. `?vector=0&fault=0` selects the first vector;
+`fault=1` flips only bit 0 of a local copy of expected word 0. The same input
+and shader are used in both modes. A mismatch in this teaching control is
+expected, not a refutation of Lean. No contract data is modified.
+
+**Proved (existing):** `philox_kat` states agreement of Lean's integer Philox
+with the finite known-answer list, not every possible input. The page reads
+its statement, status and axioms from `contract.json` even without WebGPU.
+**Verified (device-local):** passing word comparisons cover only the selected
+input on that browser/GPU. The hand-written WGSL and browser stack are outside
+the proof; neither randomness quality nor a physics hypothesis follows.
+`npm run check:gpu` checks all three vectors, one-word mismatch under the
+teaching control, unchanged GPU output, and restoration of the original answer.
 
 ## Hypothesis (pre-registered)
 

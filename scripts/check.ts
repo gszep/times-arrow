@@ -2,6 +2,7 @@
 // reference, in headless Chrome. Exits non-zero on any mismatch.
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
+import leanContract from "../contract.json" with { type: "json" };
 import { f32Bits, same } from "../src/check.ts";
 import { damageDepths } from "../experiments/001-irreversibility/run.ts";
 import { ARMS, protocolOf, sigma } from "../experiments/002-arrow-kl/score.ts";
@@ -19,6 +20,16 @@ const failures = await headless("experiments/000-plumbing/", async (evaluate) =>
   console.log("adapter", await evaluate("probe.adapter"));
   const contract: { name: string; pass: boolean; detail: string }[] = await evaluate("probe.check()");
   results.push(...contract);
+  for (let index = 0; index < leanContract.philox.kat.length; index++) {
+    const clean = await evaluate(`probe.boundary(${index}, false)`);
+    const altered = await evaluate(`probe.boundary(${index}, true)`);
+    const restored = await evaluate(`probe.boundary(${index}, false)`);
+    check(`proof boundary vector ${index}: unmodified contract matches`, clean.pass && clean.differingWords === 0);
+    check(`proof boundary vector ${index}: one-bit teaching control fails`, !altered.pass && altered.differingWords === 1);
+    check(`proof boundary vector ${index}: GPU and contract unchanged`,
+      same(clean.actual, altered.actual) && same(clean.expected, restored.expected) && restored.pass &&
+      ((clean.expected[0] ^ altered.expected[0]) >>> 0) === 1);
+  }
   if (!existsSync(lean)) {
     console.log(`${lean} not built: skipping differential tests against Lean`);
   } else {

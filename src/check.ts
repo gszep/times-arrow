@@ -66,6 +66,13 @@ export async function philoxStream(device: GPUDevice, triples: number[][]): Prom
   return triples.map((_, i) => out.slice(8 * i, 8 * i + 8));
 }
 
+/** Actual GPU words for the contract's known-answer inputs, in contract order. */
+export async function philoxKnownAnswers(device: GPUDevice): Promise<number[][]> {
+  const { kat } = contract.philox;
+  const out = await runPhilox(device, "kat", kat.flatMap((v) => [...v.ctr, ...v.key, 0, 0]), kat.length);
+  return kat.map((_, i) => out.slice(4 * i, 4 * i + 4));
+}
+
 const hamming = (a: Uint32Array, b: Uint32Array) => {
   let d = 0;
   for (let i = 0; i < a.length; i++) d += mass4(a[i] ^ b[i]);
@@ -259,8 +266,8 @@ async function checkContractVectors(device: GPUDevice): Promise<Result[]> {
 /** Every golden vector in the contract, run on `device`. */
 export async function checkContract(device: GPUDevice): Promise<Result[]> {
   const { kat, stream } = contract.philox;
-  const katOut = await runPhilox(device, "kat", kat.flatMap((v) => [...v.ctr, ...v.key, 0, 0]), kat.length);
-  const katPass = kat.filter((v, i) => same(katOut.slice(4 * i, 4 * i + 4), v.out)).length;
+  const katOut = await philoxKnownAnswers(device);
+  const katPass = kat.filter((v, i) => same(katOut[i], v.out)).length;
   const sOut = await philoxStream(device, stream.map((v) => [v.seed, v.step, v.site]));
   const sPass = stream.filter((v, i) => same(sOut[i], [...v.out, ...v.u01.map(f32Bits)])).length;
   const results: Result[] = [

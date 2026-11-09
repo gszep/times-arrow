@@ -8,6 +8,25 @@
   </head>
   <body>
     <h1>000 · plumbing</h1>
+    <section aria-labelledby="boundary-title">
+      <h2 id="boundary-title">A proof is not a GPU test</h2>
+      <p>The Lean theorem below proves agreement on the finite list of known-answer inputs,
+        not on every possible input. Its status and axioms are read from the exported contract.
+        Lean does not execute in this browser.</p>
+      <details>
+        <summary>Lean statement and trust boundary</summary>
+        <pre id="claim" style="white-space: pre-wrap; overflow-wrap: anywhere"></pre>
+        <p>The proof concerns Lean's integer Philox definition. The hand-written WGSL,
+          shader compiler, GPU and readback are tested, not proved equivalent to Lean.
+          These checks do not establish randomness quality or any physics hypothesis.</p>
+      </details>
+      <p>Try changing one expected bit. The input and GPU calculation stay the same;
+        only a local copy of the expected answer changes. The contract and theorem are untouched.</p>
+      <label>Known-answer input <select id="vector" disabled></select></label>
+      <p><label><input id="fault" type="checkbox" disabled /> Flip bit 0 of expected word 0 (teaching control)</label></p>
+      <div id="boundary" role="status" aria-live="polite">Waiting for WebGPU…</div>
+    </section>
+    <h2>GPU checks and throughput</h2>
     <p>
       Checks this GPU against the Lean contract (Philox4x32-10 and the HPP lattice gas), then times the
       HPP step. Parameters: <code>?n=1024&amp;steps=200</code>. The lattice light-cone speed is one cell per
