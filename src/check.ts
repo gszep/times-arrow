@@ -60,6 +60,13 @@ export function f32Bits(m: number): number {
 
 export const same = (a: number[], b: number[]) => a.length === b.length && a.every((x, i) => x === b[i]);
 
+/** Exact comparison of one-hex-digit-per-site HPP states, including missing sites. */
+export function compareState(name: string, actual: string, expected: string): Result {
+  let diff = Math.abs(actual.length - expected.length);
+  for (let i = 0; i < Math.min(actual.length, expected.length); i++) diff += Number(actual[i] !== expected[i]);
+  return { name, pass: diff === 0, detail: `${diff} sites differ` };
+}
+
 /** `rand(seed, step, site)` words and `u01` bits for each triple, on the GPU. */
 export async function philoxStream(device: GPUDevice, triples: number[][]): Promise<number[][]> {
   const out = await runPhilox(device, "stream", triples.flatMap(([a, b, c]) => [a, b, c, 0]), 2 * triples.length);
@@ -213,57 +220,13 @@ async function checkInverse(device: GPUDevice): Promise<Result[]> {
   for (const v of contract.hpp.init) {
     const words = v.mode === "packed" ? await packedState(device, v.seed, v.n) : await nullState(device, v.seed, v.n);
     const got = Array.from(words, (w) => w.toString(16)).join("");
-    const diff = [...got].filter((c, i) => c !== v.state[i]).length;
-    results.push({
-      name: `Initial state ${v.mode} seed ${v.seed}, n ${v.n}`,
-      pass: diff === 0,
-      detail: `${diff} sites differ`,
-    });
+    results.push(compareState(`Initial state ${v.mode} seed ${v.seed}, n ${v.n}`, got, v.state));
   }
 
   return results;
 }
 
-/** The golden vectors the Lean lane exports for the inverse and the echo,
- * checked whenever present, under `hpp`: `inverse: [{seed, n, t, state}]` —
- * `inv`ᵗ applied to the t-step forward state (which equals the initial
- * state); `echo: [{seed, n, t, state}]` — the conjugated protocol
- * `rev ∘ stepᵗ ∘ rev` applied to the same forward state. */
-async function checkContractVectors(device: GPUDevice): Promise<Result[]> {
-  const hpp = contract.hpp as unknown as Record<string, unknown>;
-  const results: Result[] = [];
-  type Vec = { seed: number; n: number; t: number; state: string };
-  const check = async (key: string, states: (g: Vec, h: Hpp) => Promise<string>) => {
-    const vectors = hpp[key] as Vec[] | undefined;
-    if (!vectors) {
-      results.push({ name: `Contract ${key} vectors`, pass: true, detail: "not present, skipped" });
-      return;
-    }
-    for (const g of vectors) {
-      const h = new Hpp(device, g.n);
-      h.init(g.seed);
-      const got = await states(g, h);
-      h.destroy();
-      const diff = [...got].filter((c, i) => c !== g.state[i]).length;
-      results.push({ name: `Contract ${key} seed ${g.seed}, n ${g.n}, t ${g.t}`, pass: diff === 0, detail: `${diff} sites differ` });
-    }
-  };
-  await check("inverse", async (g, h) => {
-    h.step(g.t);
-    h.inv(g.t);
-    return h.state();
-  });
-  await check("echo", async (g, h) => {
-    h.step(g.t);
-    h.rev();
-    h.step(g.t);
-    h.rev();
-    return h.state();
-  });
-  return results;
-}
-
-/** Every golden vector in the contract, run on `device`. */
+/** Philox and HPP contract vectors plus HPP round-trip controls, run on `device`. */
 export async function checkContract(device: GPUDevice): Promise<Result[]> {
   const { kat, stream } = contract.philox;
   const katOut = await philoxKnownAnswers(device);
@@ -274,16 +237,21 @@ export async function checkContract(device: GPUDevice): Promise<Result[]> {
     { name: "Philox known-answer vectors", pass: katPass === kat.length, detail: `${katPass}/${kat.length}` },
     { name: "Philox stream and u01", pass: sPass === stream.length, detail: `${sPass}/${stream.length}` },
   ];
-  for (const g of contract.hpp.golden) {
-    const hpp = new Hpp(device, g.n);
-    hpp.init(g.seed);
-    hpp.step(g.t);
-    const s = await hpp.state();
-    hpp.destroy();
-    const diff = [...s].filter((c, i) => c !== g.state[i]).length;
-    results.push({ name: `HPP seed ${g.seed}, n ${g.n}, t ${g.t}`, pass: diff === 0, detail: `${diff} sites differ` });
+  for (const mode of ["golden", "inverse", "echo"] as const) {
+    for (const g of contract.hpp[mode]) {
+      const h = new Hpp(device, g.n);
+      try {
+        h.init(g.seed);
+        h.step(g.t);
+        if (mode === "inverse") h.inv(g.t);
+        if (mode === "echo") { h.rev(); h.step(g.t); h.rev(); }
+        const name = `${mode === "golden" ? "HPP" : `Contract ${mode}`} seed ${g.seed}, n ${g.n}, t ${g.t}`;
+        results.push(compareState(name, await h.state(), g.state));
+      } finally {
+        h.destroy();
+      }
+    }
   }
   results.push(...(await checkInverse(device)));
-  results.push(...(await checkContractVectors(device)));
   return results;
 }

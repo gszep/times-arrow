@@ -3,7 +3,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import leanContract from "../contract.json" with { type: "json" };
-import { f32Bits, same } from "../src/check.ts";
+import { compareState, f32Bits, same } from "../src/check.ts";
 import { damageDepths } from "../experiments/001-irreversibility/run.ts";
 import { ARMS, protocolOf, sigma } from "../experiments/002-arrow-kl/score.ts";
 import { compareWalk } from "../experiments/002-arrow-kl/check.ts";
@@ -16,10 +16,22 @@ const ref = (...args: (string | number)[]) => execFileSync(lean, args.map(String
 const results: { name: string; pass: boolean; detail: string }[] = [];
 const check = (name: string, pass: boolean, detail = "") => results.push({ name, pass, detail });
 
+for (const [actual, expected, differences] of [
+  ["01af", "01af", 0], ["01af", "01a0", 1], ["01a", "01af", 1],
+  ["01af", "01a", 1], ["", "01af", 4], ["01af", "", 4], ["0f", "01af", 3],
+] as const) {
+  const r = compareState(`HPP state comparison ${JSON.stringify([actual, expected])}`, actual, expected);
+  check(r.name, r.pass === (differences === 0) && r.detail === `${differences} sites differ`, r.detail);
+}
+
 const failures = await headless("experiments/000-plumbing/", async (evaluate) => {
   console.log("adapter", await evaluate("probe.adapter"));
   const contract: { name: string; pass: boolean; detail: string }[] = await evaluate("probe.check()");
   results.push(...contract);
+  for (const mode of ["golden", "inverse", "echo"] as const) {
+    check(`HPP ${mode}: every contract vector checked`, leanContract.hpp[mode].every((g) =>
+      contract.some((r) => r.name === `${mode === "golden" ? "HPP" : `Contract ${mode}`} seed ${g.seed}, n ${g.n}, t ${g.t}` && r.pass)));
+  }
   for (let index = 0; index < leanContract.philox.kat.length; index++) {
     const clean = await evaluate(`probe.boundary(${index}, false)`);
     const altered = await evaluate(`probe.boundary(${index}, true)`);

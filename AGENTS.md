@@ -90,6 +90,11 @@ results that had to be retracted:
   claimed derivation lands, at least two agents check it independently, with
   different contexts and preferably different model families. Iterate until a
   round finds no corrections, rather than applying one list of fixes.
+  Review pre-registrations before their configurations run, and simulation
+  code before reporting results;
+  check assumptions against the actual initial state and trajectory, not just
+  the algebra. Comparator checks statements and allowed axioms; it does not
+  replace this review of model assumptions.
 - **Retract loudly.** When a result turns out to be an artefact, mark it
   refuted in the experiment's README with the cause, delete the
   contaminated data and re-queue the runs.
@@ -103,8 +108,8 @@ results that had to be retracted:
 
 ## Agents and GitHub
 
-An orchestrator agent delegates to subagents and reports to the collaborator
-(playbook: `docs/orchestrator.md`). Work streams are issues on the
+One owner integrates, reviews and delivers each task; use bounded independent
+helpers, not an orchestrator hierarchy. Work streams are issues on the
 `times-arrow` project board (`gh project view 2 --owner gszep`).
 
 - **Issues:**
@@ -113,7 +118,7 @@ An orchestrator agent delegates to subagents and reports to the collaborator
 - **Promote** to an issue comment only what someone who wasn't here would need next week: decisions, results with their checks (commit, CI run, results JSON), negative results and blockers. Everything else stays in your scratch directory under the approved temp dir, never in Git.
 - **Evidence is links and counts.** An edited checkbox or status is not evidence. Close an issue with a comment that names the commits, the checks and what is still open.
 - **Sign-off:** agent-written issue, PR and comment text ends with `— <role> · <provider/model> · <agent or session id>`.
-- **No pinging the human:** never assign, request review from or @mention the collaborator. The orchestrator reports.
+- **No pinging the human:** never assign, request review from or @mention the collaborator. The task owner reports outcomes.
 - **Worktrees:** subagents work in their own worktree.
   - Reuse the downloaded Lean packages with `mkdir -p .lake && ln -s /Users/gszep/Documents/repos/times-arrow/.lake/packages .lake/packages`, and never run `lake update` there.
   - Run `npm ci` for your own `node_modules`.
@@ -145,7 +150,7 @@ Commands, run from the repo root with `~/.elan/bin` and
 | `lake exe timesarrow contract > contract.json` | Regenerates the contract. Run it after every Lean change and commit the result; CI fails when it is stale |
 | `npm ci`, then `npm run dev` | Starts the Vite dev server on the LAN. Pages live under `/times-arrow/` |
 | `npm run build` | Runs `tsc`, then `vite build` |
-| `npm run check:gpu` | Runs the golden vectors, plus randomised differential tests against `.lake/build/bin/timesarrow`, in headless Chrome. Run `lake build` first. Without the binary (as on Artemis) it runs the golden vectors only |
+| `npm run check:gpu` | Runs golden vectors and smoke/control checks in headless Chrome. With `.lake/build/bin/timesarrow` present, also runs fresh randomised differential tests against Lean; build it with `lake build` first for that coverage. Without it, differential tests are explicitly skipped |
 | `uv run <script>.py` | Runs a tier 1 or tier 2 script on Artemis. Dependencies are declared inline in a `# /// script` block |
 
 CI (`.github/workflows/ci.yml`):
@@ -207,6 +212,9 @@ Gotchas that each cost a debugging round:
 - **More compute: `ssh artemis`.** Artemis is a Linux machine with an
   NVIDIA RTX 5000 Ada GPU (16 GB), 32 cores and 188 GB of RAM. Use it for
   sweeps or lattices too large for this Mac.
+  - Check `ssh artemis nvidia-smi` before a sweep. Report a failure instead
+    of silently falling back. After a kernel upgrade, check for the matching
+    `linux-modules-nvidia-*` package; repairing that mismatch needs sudo.
   - WebGPU there gets the NVIDIA adapter (Lovelace, hardware, 2 GB
     storage-buffer bindings).
   - Run sweeps on Artemis itself: `git pull` in
@@ -325,7 +333,7 @@ compiles, matches Lean exactly, or proved.
   on the page.
 - **Checks fail the build if:**
   - a claim marked proved uses `sorry` or an axiom outside the allow-list;
-  - the contract or generated code is stale (`git diff --exit-code`);
+  - the contract is stale (`git diff --exit-code`);
   - a golden vector fails.
 - **Each page shows:** the hypothesis; the live simulation (with time
   reversal where the dynamics allow it); the measured observable plotted
@@ -335,7 +343,7 @@ compiles, matches Lean exactly, or proved.
 ## Layout
 
 ```
-docs/                     background.md, questions.md, orchestrator.md (orchestrator playbook)
+docs/                     background.md, questions.md
 TimesArrow/               Lean library: definitions (Philox, LatticeGas, Reversible, Selection, Walker, Markov/*) and the claims (Claims.lean, Claims/*)
 Challenge.lean            claim statements with `sorry`, for Comparator
 Main.lean                 `timesarrow` exe: `contract`, plus `rand`/`hpp`/`hppinv`/`hppecho`/`hppinit`/`walk`/`walktally`/`walkjson` for differential tests

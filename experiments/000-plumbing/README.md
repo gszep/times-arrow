@@ -20,6 +20,9 @@ input on that browser/GPU. The hand-written WGSL and browser stack are outside
 the proof; neither randomness quality nor a physics hypothesis follows.
 `npm run check:gpu` checks all three vectors, one-word mismatch under the
 teaching control, unchanged GPU output, and restoration of the original answer.
+The shared HPP checker requires the contract's forward, inverse and echo
+vectors and compares complete states, including their lengths; missing
+vector families are not reported as successful skipped checks.
 
 ## Hypothesis (pre-registered)
 
@@ -97,12 +100,6 @@ These are all verified, by reproduction.
   - landrun runs with `--best-effort`, so on a kernel without Landlock the sandbox can be silently off. Before Comparator runs, [CI](../../.github/workflows/ci.yml) requires a write inside the allowed `.lake` directory to succeed and a write outside it to fail; an ineffective sandbox fails the job.
 - **Lean exporter.** The pretty-printer segfaults in a compiled executable with environment extensions loaded. The contract quotes each statement's source text instead.
 
-### Stack for 001
-
-- **Lean** 4.34.1 with Mathlib (cached) and physlib (built from source for the modules we import), in the `TimesArrow` library. Claims go in `Claims.lean`, their statements in `Challenge.lean`, and `lake exe timesarrow contract` exports the contract.
-- **One simulation backend: WGSL.** It runs in the browser for review and in headless Chrome for sweeps, on Artemis for large lattices. Kernel constants come from `contract.json`. `npm run check:gpu` runs the golden vectors and the randomised differential tests against Lean.
-- **No tier 1.**
-- **Tier 2, JAX with x64 on Artemis,** for f64 dense linear algebra. At
-  `N ≥ 10³` it beats CPU LAPACK by 5–10×. Time CPU baselines in a separate
-  process, or before JAX starts.
-- **Hesper:** watch.
+Current build/check commands, conditional Lean differential coverage and
+backend choices live in [AGENTS.md](../../AGENTS.md#stack); the trial tables
+above record the measurements behind those choices.

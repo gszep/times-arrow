@@ -38,8 +38,9 @@ literature: [`docs/background.md`](docs/background.md).
 - **Results are interactive WebGPU pages** published at
   <https://gszep.github.io/times-arrow/>.
 - **Lean 4 is the specification.** Each experiment's model and claims are
-  written in Lean. The GPU code is generated from, and tested against, a
-  contract that Lean exports. See [`AGENTS.md`](AGENTS.md).
+  written in Lean. Hand-written GPU code consumes constants and is tested
+  against golden vectors from Lean's exported contract; that is not a proof
+  of GPU equivalence. See [`AGENTS.md`](AGENTS.md).
 - **Hypotheses are pre-registered** before any simulation is written.
 - **Batch sweeps** may run on faster backends (CUDA, JAX). Their results
   are promoted to a WebGPU page for review.
