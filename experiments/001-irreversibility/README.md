@@ -29,6 +29,24 @@ The Lean proofs cover the abstract model, not equivalence of the GPU code.
 Neither these examples nor reversibility alone settle Q4. Long provenance
 strings wrap on narrow screens rather than widening the page.
 
+### Delivery receipt
+
+- Source: `8dd6d6b`, readback audit `aabda7e`, narrow-screen fix `73726e8`.
+  [Live control](https://gszep.com/times-arrow/experiments/001-irreversibility/?lesson=separated#reversal-lesson).
+- Checked 12 November 2026: build and **277/277** golden/smoke/control checks
+  pass on Intel gen-9 hardware (`fallback: false`). On the deployed HTTPS page,
+  all ten 16-site states match explicit expectations; both controls retain two
+  particles and return differences are (0,0,0) and (0,4,0).
+- Headless Chrome at 320 × 844 and 390 × 844: toggle, URL, five cards and no
+  horizontal overflow checked; zero page errors. Screenshot inspected.
+- [CI and deployment](https://github.com/gszep/times-arrow/actions/runs/43065065110)
+  passed Lean build, fresh contract, sandbox and Comparator. The local Lean
+  executable is absent: local Lean build, contract regeneration and randomized
+  differential tests were **not run**. No Lean, kernel or contract changes.
+- Two independent source reviews converged without corrections after the
+  readback audit (`ses_e347ccf22ffe4XiU6i9bvtqzzN`, `ses_e347c61c4ffeaulpoIAdepDUL1`).
+  No new dependency or duplicate kernel. Task-owned browsers were closed.
+
 ## Setup (pre-registered)
 
 - `n = 1024` (power of two); seeds 1…16 (Philox key `(seed, 0)`); 16 paired
