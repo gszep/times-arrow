@@ -26,7 +26,8 @@ with zero differences for the separated control and four for the head-on pair.
 `probe.reversal(paired)` exposes all five GPU states, masses and bit distances.
 `npm run check:gpu` asserts every state against explicit 16-site expectations.
 The Lean proofs cover the abstract model, not equivalence of the GPU code.
-Neither these examples nor reversibility alone settle Q4.
+Neither these examples nor reversibility alone settle Q4. Long provenance
+strings wrap on narrow screens rather than widening the page.
 
 ## Setup (pre-registered)
 
