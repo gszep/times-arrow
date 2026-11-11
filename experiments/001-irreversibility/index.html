@@ -26,6 +26,10 @@
         background: #047857;
         color: #fff;
       }
+      #lesson-output { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; }
+      .lesson-grid { display: grid; grid-template-columns: repeat(4, 1fr); margin: .4rem 0; }
+      .lesson-grid span { text-align: center; border: 1px solid #ddd; min-height: 2rem; }
+      #lesson-toggle { min-height: 44px; }
     </style>
   </head>
   <body>
@@ -37,6 +41,30 @@
       bit destroys the reversal while the naive flip-only reversal fails to retrace.
       Pre-registration: <a href="https://github.com/gszep/times-arrow/blob/main/experiments/001-irreversibility/README.md">README</a>.
     </p>
+    <section id="reversal-lesson">
+      <h2>Why “reverse” needs an order</h2>
+      <p>A small teaching control for Q4: microscopic reversibility is not a preferred arrow of time.
+        Start with two particles on a periodic 4 × 4 square. Change only the west particle’s position;
+        every return recipe starts from the same forward state. The lattice speed limit is one cell per step.</p>
+      <p>Write collision as C, streaming as S, and velocity flip as R. A forward step is S ∘ C
+        (read right to left). Undo it in the opposite order: C ∘ S⁻¹.
+        Flipping velocities, stepping forward, and flipping again gives S⁻¹ ∘ C instead.
+        The corrected flip also collides: G = C ∘ R; then G ∘ step ∘ G is the exact inverse.</p>
+      <button id="lesson-toggle" disabled>Preparing GPU control…</button>
+      <p id="lesson-status" aria-live="polite">Waiting for WebGPU. The explanation remains readable without it.</p>
+      <div id="lesson-output"></div>
+      <details>
+        <summary>Existing proof and what this check means</summary>
+        <p><b>Proved:</b> <code>step_inverse</code> and <code>loschmidt_echo</code> in
+          <a href="https://github.com/gszep/times-arrow/blob/main/TimesArrow/Claims.lean">TimesArrow/Claims.lean</a>.
+          The echo proof applies <code>Function.involutive_conj_echo</code>: G applied twice is the identity,
+          and conjugating one forward step by G undoes it; induction extends this to any number of steps.</p>
+        <p><b>Verification:</b> the cards read back integer states from the existing GPU kernel, not an animation model.
+          Any nonzero bit difference for the exact or corrected return fails this teaching check.
+          The separated control predicts 0 differences for all recipes; the head-on pair predicts 4 for flip-only.
+          These two finite examples do not prove GPU equivalence or settle Q4, and make no continuum or entropy claim.</p>
+      </details>
+    </section>
     <section id="measured">
       <h2>Measured ensemble (Artemis, headless)</h2>
       <p id="mprov"></p>

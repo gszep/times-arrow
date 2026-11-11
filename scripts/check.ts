@@ -77,6 +77,23 @@ const failures = await headless("experiments/000-plumbing/", async (evaluate) =>
 // Lean executable present, the reverse step and the conjugated echo are also
 // differentially tested against it on fresh random states.
 const smokeFailures = await headless("experiments/001-irreversibility/", async (evaluate) => {
+  for (const paired of [false, true]) {
+    const r = await evaluate(`probe.reversal(${paired})`);
+    const initial = Array(16).fill(0);
+    initial[5] = paired ? 5 : 1;
+    if (!paired) initial[6] = 4;
+    const forward = Array(16).fill(0);
+    if (paired) { forward[1] = 8; forward[9] = 2; }
+    else { forward[5] = 4; forward[6] = 1; }
+    const flip = [...initial];
+    if (paired) flip[5] = 10;
+    for (const [stage, expected] of Object.entries({ initial, forward, inverse: initial, flip, echo: initial })) {
+      check(`001 reversal lesson ${paired ? "pair" : "control"}: ${stage} state`, same(r.states[stage], expected));
+    }
+    check(`001 reversal lesson ${paired}: mass and bit differences`,
+      Object.values(r.mass).every((m) => m === 2) && r.hamming.inverse === 0 &&
+      r.hamming.echo === 0 && r.hamming.flip === (paired ? 4 : 0));
+  }
   if (existsSync(lean)) {
     for (const n of [16, 32, 64]) {
       const seed = u32();

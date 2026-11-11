@@ -11,6 +11,23 @@ lane found none), so the entropy claims below are band-entry claims with a
 justified deadline, not functional forms; the approach curve itself is
 exploratory.
 
+## Reversal teaching control (Q4)
+
+The page’s “Why reverse needs an order” section explains the existing
+`step_inverse` and `loschmidt_echo` proofs. `?lesson=separated` (default)
+and `?lesson=pair` select two fixed 4 × 4 states: east at (1,1), west at
+(2,1) or (1,1). Only the west particle’s position changes. Each recipe
+starts from the same one-step forward state and uses `src/hpp.ts` unchanged.
+This is an illustration, not a pre-registered experiment or a new claim.
+
+**Verified teaching checks:** both states retain two particles; exact inverse
+and corrected conjugation return with zero differing bits. Flip-only returns
+with zero differences for the separated control and four for the head-on pair.
+`probe.reversal(paired)` exposes all five GPU states, masses and bit distances.
+`npm run check:gpu` asserts every state against explicit 16-site expectations.
+The Lean proofs cover the abstract model, not equivalence of the GPU code.
+Neither these examples nor reversibility alone settle Q4.
+
 ## Setup (pre-registered)
 
 - `n = 1024` (power of two); seeds 1…16 (Philox key `(seed, 0)`); 16 paired

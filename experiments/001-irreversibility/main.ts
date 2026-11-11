@@ -6,6 +6,7 @@ import { nullBand, renderVerdict, score } from "./score.ts";
 import type { Results } from "./score.ts";
 import { run } from "./run.ts";
 import type { RunConfig, RunResult } from "./run.ts";
+import { mountReversalLesson, reversalLesson } from "./reversal.ts";
 
 const $ = (id: string) => document.getElementById(id)!;
 const params = new URLSearchParams(location.search);
@@ -190,6 +191,7 @@ const out = $("out");
 
 try {
   const { device, adapter } = await gpu();
+  await mountReversalLesson(device);
   const { n, seed, mode, tE } = config;
   const b = config.b;
   if ((n & (n - 1)) !== 0 || n < 64) throw new Error(`n = ${n} must be a power of two ≥ 64`);
@@ -428,6 +430,7 @@ try {
   Object.assign(window, {
     probe: {
       adapter,
+      reversal: (paired: boolean) => reversalLesson(device, paired),
       config,
       run: (cfg: RunConfig) => run(device, adapter, cfg),
       // The exact-N initial-state constructors, one hex digit per site, in
