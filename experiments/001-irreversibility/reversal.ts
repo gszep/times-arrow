@@ -6,9 +6,10 @@ export async function reversalLesson(device: GPUDevice, paired: boolean) {
   const initial = new Uint32Array(16);
   initial[5] = 1; // east at (1, 1)
   initial[paired ? 5 : 6] |= 4; // move only the west particle
-  const states: Record<string, number[]> = { initial: Array.from(initial) };
+  const states: Record<string, number[]> = {};
   try {
     h.load(initial);
+    states.initial = Array.from(await h.words());
     h.step(1);
     const forward = await h.words();
     states.forward = Array.from(forward);
