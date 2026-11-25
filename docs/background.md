@@ -363,6 +363,228 @@ Cosmological recurrence:
   10.1088/1126-6708/2002/10/011. De Sitter recurrence and its entropy
   paradoxes: relevant to whether a global arrow is well-defined at late times.
 
+## Causal second law: classical and order-theoretic prior art (#14)
+
+Checked 2026-11-25 against the arXiv, Crossref and Semantic Scholar APIs.
+Claim under test (issue #14): for local lattice dynamics with a strict light
+cone, (1) relative entropy between two evolving states restricted to a region
+is non-increasing when the later region is causally nested in the earlier
+one; (2) the converse; (3) reversible dynamics give no one-way arrow;
+(4) a fixed region's change splits into a loss term and a boundary inflow.
+`all:`-phrase searches on arXiv cover title and abstract only, so every
+absence below is an absence *in metadata*, not in full text. Semantic
+Scholar's bulk search was rate-limited (429); single-DOI lookups worked.
+
+**A — classical lattice systems.** Verdict: the ingredients are established
+(data processing, locality, information decay on networks, reversible-CA
+thermodynamics); the composite statement (1) and the converse (2) were
+**not found** for classical CA, PCA or lattice gases.
+
+- Takesue, "Reversible Cellular Automata and Statistical Mechanics",
+  PRL **59**, 2499 (1987), DOI 10.1103/physrevlett.59.2499. "Reversible
+  cellular automata are used to investigate the thermodynamic behavior of
+  large systems... it is numerically shown that a canonical distribution
+  is realized under certain conditions concerning the conserved
+  quantities." **literature** (3): reversible local dynamics relax given a
+  suitable initial ensemble.
+- Takesue, J. Stat. Phys. **56**, 371 (1989), DOI 10.1007/bf01044442.
+  "every ERCA satisfies the Liouville theorem or the preservation of phase
+  space volume... If a locally defined quantity is conserved, however, it
+  prevents the realization of statistical mechanics." **literature** (3):
+  local conservation laws block thermodynamic behaviour in reversible CA;
+  an arrow needs a special initial slice.
+- Maes, "Nonequilibrium physics aspects of probabilistic cellular
+  automata", arXiv:1605.02876, DOI 10.1007/978-3-319-65558-1_9. "when
+  time-symmetry is broken in the stationary process, there is a fluctuation
+  symmetry for a corresponding entropy flux." **literature** (3): in PCA
+  the arrow comes from the update's broken time-symmetry (noise), not from
+  reversibility.
+- Evans & Schulman, "Signal propagation and noisy circuits", IEEE Trans.
+  Inf. Theory **45**, 2367 (1999), DOI 10.1109/18.796377. In a noisy circuit
+  "the information is bounded by the sum over all paths... of a quantity
+  that is exponentially small in the length of the path", supporting "the
+  view of information as a kind of fluid that flows from the input to the
+  output along the wires". **literature**: data processing plus locality,
+  i.e. information enters only through the boundary and decays with
+  distance — the classical network form of (1) for mutual information.
+- Polyanskiy & Wu, "Strong data-processing inequalities for channels and
+  Bayesian networks", arXiv:1508.06025, DOI 10.1007/978-1-4939-7005-6_7.
+  "given SDPI for each constituent channel in a Bayesian network, how to
+  produce an end-to-end SDPI?" — contraction of KL divergence across
+  networks of local channels. **literature**: the quantitative toolbox for
+  a strict version of (1).
+- Yau, "Relative entropy and hydrodynamics of Ginzburg-Landau models",
+  Lett. Math. Phys. **22**, 63 (1991), DOI 10.1007/bf00400379. Relative
+  entropy to local-equilibrium states as the Lyapunov functional of lattice
+  dynamics. **literature** (also D).
+- Wagner, "An H-theorem for the lattice Boltzmann approach to
+  hydrodynamics", EPL **44**, 144 (1998), DOI 10.1209/epl/i1998-00448-8.
+  "usual nine-velocity models do not obey an H-theorem but models that do
+  obey an H-theorem can be constructed." **literature**: a lattice
+  H-functional exists only for special updates.
+- Kelly & Wall, "Coarse-grained entropy and causal holographic
+  information in AdS/CFT", JHEP **03** (2014) 118, arXiv:1309.3610, DOI
+  10.1007/jhep03(2014)118. "The 'future one-point entropy' is defined by
+  generalizing this conjecture to future domains of dependence... the
+  future one-point entropy obeys a nontrivial second law."
+  **literature** (QFT/holography): a second law for an entropy defined on
+  a future domain of dependence — the closest published "second law on a
+  DOD".
+- Dowling, Floerchinger & Haas, "Second law of thermodynamics for
+  relativistic fluids formulated with relative entropy", PRD **102**,
+  105002 (2020), arXiv:2008.02706, DOI 10.1103/physrevd.102.105002. "A
+  local version of the second law similar to the one used in relativistic
+  fluid dynamics can be formulated with relative entropy or even relative
+  entanglement entropy in a space-time region bounded by two light
+  cones." **literature**: the closest published relative of (1) —
+  relative-entropy monotonicity on a light-cone-bounded region — but for
+  quantum states/relativistic fluids, not classical lattice dynamics.
+- Jakšić, Pillet & Szczepanek, "Dynamical conservation laws in quantum
+  spin systems", arXiv:2610.21489 (2026). "we prove conservation of the
+  specific entropy, specific energy, and specific relative entropy...
+  The transported local Hamiltonians admit surface energies that vanish
+  per unit volume in the van Hove limit." **literature**: the quantum-
+  lattice version of (1)+(4) — bulk conservation up to surface terms under
+  Lieb–Robinson transport.
+- Casini, "Relative entropy and the Bekenstein bound", Class. Quantum
+  Grav. **25**, 205021 (2008), arXiv:0804.2182, DOI
+  10.1088/0264-9381/25/20/205021. Relative entropy "between the vacuum and
+  another state, both reduced to a local region". **literature**: relative
+  entropy on local regions is the sharp entropy bound (quantum; nested
+  regions contract by Araki monotonicity).
+- **Conjecture (absence, checked 2026-11-25):** arXiv metadata searches
+  for "relative entropy"+"cellular automata", "probabilistic cellular
+  automata"+"relative entropy", "causal diamond"+"relative entropy" return
+  0 hits; "light cone"+"relative entropy" gives 7, all quantum/field-
+  theory. Statement (1) is a composite of DPI and locality **(derived
+  here)**; nobody appears to have stated it, or the converse (2), for
+  classical lattice dynamics.
+
+**B — order-theoretic unification.** Verdict: every ingredient exists;
+the identification "the causal order is exactly the order along which a
+second law holds for all states" was **not found**.
+
+- Lieb & Yngvason, "The physics and mathematics of the second law",
+  Phys. Rep. **310**, 1 (1999), arXiv:cond-mat/9708200, DOI
+  10.1016/s0370-1573(98)00082-9. "the existence and uniqueness of S is
+  proved to be a consequence of certain basic properties of the relation
+  of adiabatic accessibility among equilibrium states" — the second law as
+  an order-theoretic statement about a preorder on *states*.
+  **literature**.
+- Minguzzi, "Time functions as utilities", Commun. Math. Phys. **298**,
+  855 (2010), arXiv:0909.0890, DOI 10.1007/s00220-010-1048-1. "the time
+  or temporal functions can be used to recover the K+ relation which
+  indeed turns out to be the intersection of the time or temporal
+  orderings." **literature**: the causal order is exactly the order along
+  which *every* time function increases — the geometric template of the
+  converse (2).
+- Malament, J. Math. Phys. **18**, 1399 (1977); Hawking, King & McCarthy,
+  J. Math. Phys. **17**, 174 (1976). As stated in Minguzzi's review
+  (Lorentzian causality theory, Living Rev. Relativ. **22** (2019), DOI
+  10.1007/s41114-019-0019-x): a map "which takes future directed null
+  geodesics to future directed null geodesics is a C∞ diffeomorphism and
+  hence a conformal isometry", and a chronological bijection of
+  distinguishing spacetimes "must also be a smooth conformal isometry".
+  **literature**: causal structure fixes the metric up to a conformal
+  factor — the slot a Tolman temperature (or entropy rate) would have to
+  fill.
+- Sorkin's causal-set slogan "order plus number equals geometry"
+  (Bombelli–Lee–Meyer–Sorkin, above; the phrase quoted in Dribus, "On the
+  axioms of causal set theory", arXiv:1311.2148). **conjecture**: the
+  "number" is a counting measure; nobody replaces it by an entropy.
+- Martin & Panangaden, "A domain of spacetime intervals in general
+  relativity", Commun. Math. Phys. **267**, 463 (2006), arXiv:gr-qc/0407094,
+  DOI 10.1007/s00220-006-0066-5. "a globally hyperbolic spacetime with its
+  causality relation is a bicontinuous poset whose interval topology is
+  the manifold topology", so a globally hyperbolic spacetime can be
+  "reconstruct[ed]... in a purely order theoretic manner". **literature**.
+- Process theories: Chiribella, D'Ariano & Perinotti, "Informational
+  derivation of quantum theory", PRA **84**, 012311 (2011),
+  arXiv:1011.6451 — "Five elementary axioms—causality, ...—define a
+  broad class of theories"; Coecke & Lal, "Causal categories: relativisti-
+  cally interacting processes", Found. Phys. **43**, 458 (2012),
+  arXiv:1107.6019, DOI 10.1007/s10701-012-9646-8 — "correlations, either
+  classical or quantum, force terminality of the tensor unit" (causality
+  as a unique discarding effect); Chiribella & Scandolo, "Microcanonical
+  thermodynamics in general physical theories", NJP **19**, 123043
+  (2017), arXiv:1608.04460 — "the convertibility of states by unital
+  operations is completely characterised by a majorisation criterion".
+  **literature**: thermodynamics as a convertibility order inside theories
+  whose causal structure is an axiom.
+- Gavassino, PRX **12**, 041001 (2022), already above: "'stability' is a
+  Lorentz-invariant property of dissipative theories if and only if the
+  principle of causality is respected." **literature**: the closest
+  published iff between dissipation and causality (continuum, not
+  lattice, and about stability, not relative entropy).
+- Liu, Ebler & Dahlsten, "Thermodynamics of quantum switch information
+  capacity activation", PRL **129**, 230604 (2022), arXiv:2205.07406.
+  "there may indeed be an information capacity increase for consecutive
+  thermalizations obeying the first and second laws... if these are
+  placed in an indefinite order", at the cost of the switch's coherence.
+  **literature**: the second law is sensitive to causal order (quantum).
+- **Conjecture:** the specific unification — "the causal order of regions
+  is exactly the order along which a second law holds for all states,
+  conformal factor from local temperature (Tolman)" — was not found
+  anywhere, in any of these languages. Jacobson's equation-of-state
+  result and the thermal-time papers (above) are the nearest neighbours.
+
+**C — time functions from entropy.** Verdict: **not found**; the absence
+conjecture of 2026-10-11 survives a second round.
+
+- Searched 2026-11-25 (arXiv metadata): "thermodynamic time function" (0
+  hits); "time function"+"entropy" (13, none weights Hawking's or Geroch's
+  time function by entropy); "causal set"+"arrow of time" (2, neither
+  builds an entropy time); "entropy"+"domain of dependence" (10, closest
+  below).
+- Rideout & Zohren, "Evidence for an entropy bound from fundamentally
+  discrete gravity", Class. Quantum Grav. **23**, 6195 (2006),
+  arXiv:gr-qc/0606065, DOI 10.1088/0264-9381/23/22/008. "a bound for the
+  entropy contained in this region can be derived from a counting of
+  potential 'degrees of freedom' associated to the Cauchy horizon of its
+  future domain of dependence." **literature**: causal-set entropy
+  counting on domains of dependence — but a bound, not a time function.
+- Caticha, "Entropic time", AIP Conf. Proc. **1305**, 200 (2011),
+  arXiv:1011.0746, DOI 10.1063/1.3573617. "Entropic time is introduced as
+  a book-keeping device to keep track of the accumulation of changes"...
+  it "incorporates a natural distinction between past and future".
+  **literature**: a time-from-entropy program exists, but on configuration
+  space in the entropic-dynamics framework, not a Lorentzian time function
+  weighted by entropy production.
+- **Conjecture (absence):** no published work ties Hawking's/Geroch's
+  geometric time function to an entropy current, or uses entropy as the
+  "number" in causal sets. Checked 2026-10-11 and, with the terms above,
+  2026-11-25.
+
+**D — fixed-region decomposition.** Verdict: **partly established**; the
+exact sign-definite loss/collar split was **not found**.
+
+- Horowitz & Esposito, "Thermodynamics with continuous information flow",
+  PRX **4**, 031015 (2014), arXiv:1402.3276, DOI
+  10.1103/physrevx.4.031015. "while the joint system satisfies the second
+  law, the entropy balance for the relevant system is modified by an
+  information term related to the mutual information rate between the two
+  systems." **literature**: a subsystem's entropy change is production
+  plus a boundary information term; a subsystem can appear to run
+  backwards while the joint system does not.
+- Esposito, PRE **85**, 041125 (2012) and Shiraishi & Sagawa, PRE **91**,
+  012130 (2015) (both above): hidden and partial entropy production — the
+  decomposition of entropy production into region-local pieces with their
+  own fluctuation relations. **literature**.
+- Yau (1991, above) and Jakšić–Pillet–Szczepanek (above): relative-entropy
+  Lyapunov functionals for lattice dynamics, and surface energies that
+  vanish per unit volume — bulk-minus-boundary decompositions one step
+  away from (4). **literature**.
+- The continuum shape of (4) is the entropy balance `∂_t S_region =
+  ∫σ − ∮ j_s·n` of local thermodynamics (de Groot–Mazur; Eckart, above).
+  **literature** for the balance; **derived here** for the conditional-
+  relative-entropy chain-rule version for two evolving states.
+- **Conjecture (absence):** no prior work was found stating, for relative
+  entropy between two evolving states on a fixed region, a decomposition
+  into a non-positive bulk loss plus a non-negative collar inflow scaling
+  with the perimeter. Searched: "entropy production"+"cellular
+  automata", "entropy production"+"lattice gas" (arXiv metadata), and
+  the stochastic-thermodynamics decomposition literature above.
+
 ## Entanglement Hamiltonians and modular flow (Q6, 007)
 
 - Modular flow is geometric for wedges in any Poincaré-covariant QFT
