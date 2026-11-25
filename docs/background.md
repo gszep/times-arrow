@@ -475,9 +475,10 @@ second law holds for all states" was **not found**.
   855 (2010), arXiv:0909.0890, DOI 10.1007/s00220-010-1048-1. "the time
   or temporal functions can be used to recover the K+ relation which
   indeed turns out to be the intersection of the time or temporal
-  orderings." **literature**: the causal order is exactly the order along
-  which *every* time function increases — the geometric template of the
-  converse (2).
+  orderings." **literature**: under stable causality the `K⁺` relation,
+  which contains the causal relation and need not equal it (Theorems 3.3
+  and 4.1), is exactly the order along which *every* time function
+  increases — an analogy for the converse (2), not the lattice statement.
 - Malament, J. Math. Phys. **18**, 1399 (1977); Hawking, King & McCarthy,
   J. Math. Phys. **17**, 174 (1976). As stated in Minguzzi's review
   (Lorentzian causality theory, Living Rev. Relativ. **22** (2019), DOI
@@ -580,8 +581,11 @@ exact sign-definite loss/collar split was **not found**.
   relative-entropy chain-rule version for two evolving states.
 - **Conjecture (absence):** no prior work was found stating, for relative
   entropy between two evolving states on a fixed region, a decomposition
-  into a non-positive bulk loss plus a non-negative collar inflow scaling
-  with the perimeter. Searched: "entropy production"+"cellular
+  into a non-positive bulk loss plus a non-negative collar inflow. The
+  split is the chain rule; a perimeter bound on the inflow needs a bound on
+  the likelihood ratio (**derived here**: at most `|collar|·log|Cell|` for
+  a finite alphabet and a uniform product reference, while one boundary bit
+  with `P(1)=1`, `Q(1)=ε` already contributes `log(1/ε)`). Searched: "entropy production"+"cellular
   automata", "entropy production"+"lattice gas" (arXiv metadata), and
   the stochastic-thermodynamics decomposition literature above.
 

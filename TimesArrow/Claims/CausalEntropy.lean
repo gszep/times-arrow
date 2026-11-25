@@ -21,8 +21,10 @@ namespace TimesArrow.LatticeGas
 /-- The `t`-step HPP dynamics is causal for `(S, R)` whenever `S`
 contains every `t`-step diamond of a site of `R`: configurations that
 agree on `S` still agree on `R` after `t` steps. The lattice light-cone
-speed is one cell per step, so `R` at time `t` lies inside the domain of
-dependence of `S` at time `0` exactly when this holds. -/
+speed is one cell per step, so this containment is sufficient for `R` at
+time `t` to lie inside the domain of dependence of `S` at time `0`. It is
+not necessary: after one step a site reads its four neighbours but not
+itself. -/
 theorem causal (n : ℕ) [NeZero n] (t : ℕ) (S R : Set (Site n))
     (h : (⋃ p ∈ R, diamond n p t) ⊆ S) :
     Causal ((stepState n)^[t]) S R := by
