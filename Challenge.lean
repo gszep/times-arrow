@@ -7,6 +7,7 @@ import TimesArrow.Markov.Fluctuation
 import TimesArrow.FHP
 import TimesArrow.Divergence
 import TimesArrow.CausalEntropy
+import TimesArrow.Telegraph
 
 namespace TimesArrow.FHP
 
@@ -290,3 +291,24 @@ theorem causal_second_law (n : ℕ) [NeZero n] (b : ℕ → Site n → Bool) (t 
   sorry
 
 end TimesArrow.FHP
+
+namespace TimesArrow.Telegraph
+
+open InformationTheory
+
+theorem vertex_dissipation_nonneg (a x y : ℝ) (ha0 : 0 ≤ a) (ha1 : a ≤ 1)
+    (hx : 0 ≤ x) (hy : 0 ≤ y) :
+    klFun ((1 - a) * x + a * y) + klFun (a * x + (1 - a) * y) ≤ klFun x + klFun y := by
+  sorry
+
+theorem horizon_region_never_gains (a : ℝ) (ha0 : 0 ≤ a) (ha1 : a ≤ 1) (r l : ℤ → ℝ)
+    (hr : ∀ x, 0 ≤ r x) (hl : ∀ x, 0 ≤ l x) (A B : ℤ) (t : ℕ) :
+    info ((step a)^[t] (r, l)) (A + t) (B - t) ≤ info (r, l) A B := by
+  sorry
+
+theorem fixed_wall_leak :
+    info ((fun x => if x = 0 then 2 else 1, fun _ => 1) : (ℤ → ℝ) × (ℤ → ℝ)) 1 1 = 0 ∧
+    0 < info (step 0 ((fun x => if x = 0 then 2 else 1, fun _ => 1) : (ℤ → ℝ) × (ℤ → ℝ))) 1 1 := by
+  sorry
+
+end TimesArrow.Telegraph

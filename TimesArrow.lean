@@ -8,6 +8,7 @@ import TimesArrow.Walker
 import TimesArrow.WalkerProfile
 import TimesArrow.Markov.KlDiv
 import TimesArrow.CausalEntropy
+import TimesArrow.Telegraph
 import TimesArrow.Markov.Chain
 import TimesArrow.Markov.EntropyProduction
 import TimesArrow.Markov.Fluctuation
@@ -17,3 +18,4 @@ import TimesArrow.Claims.WalkerProfile
 import TimesArrow.Claims.Markov
 import TimesArrow.Claims.Divergence
 import TimesArrow.Claims.CausalEntropy
+import TimesArrow.Claims.Telegraph
