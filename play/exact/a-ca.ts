@@ -128,7 +128,7 @@ function evolve(start: Float64Array, dyn: Dynamics, perms: { perm: Uint32Array[]
   if (got.join(",") !== kat.join(",")) throw new Error(`philox stream mismatch: ${got} vs ${kat}`);
   const perms = margolusPerms(N);
   const mu = productDist(N, MUS[0].probs), nu = uniformDist(N);
-  let m = mu, v = nu, dFull = kl(m, v);
+  let m: Float64Array<ArrayBufferLike> = mu, v: Float64Array<ArrayBufferLike> = nu, dFull = kl(m, v);
   for (let t = 0; t < T; t++) {
     m = step(m, t, perms, false); v = step(v, t, perms, false);
     const d1 = kl(m, v);
