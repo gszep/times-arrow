@@ -47,7 +47,7 @@ namespace TimesArrow
 
 /-- **Data processing along a factorization.** If `f` factors through a
 measurable `r` via a measurable `g` (`f x = g (r x)` for every `x`), then
-pushing measures through `f` loses no more relative entropy than pushing
+pushing measures through `f` keeps no more relative entropy than pushing
 them through `r`: the divergence of the `f`-images is at most that of the
 `r`-images. `InformationTheory.klDiv_map_le` is the case `r = id`. -/
 theorem klDiv_map_factorization_le {X Y Z : Type*}

@@ -47,9 +47,9 @@ theorem causal_second_law (n : ℕ) [NeZero n] (t : ℕ) (S R : Set (Site n))
 
 /-- **The causal second law holds in both time directions.** HPP's step is
 invertible, with the inverse of the `t`-step map given by conjugating
-with velocity reversal. The reversed dynamics satisfies the same light
-cones, so the causal second law holds for it too: the inequality gives no
-arrow of time by itself. -/
+with `revState` (reverse the velocities, then collide). The reversed
+dynamics satisfies the same light cones, so the causal second law holds
+for it too: the inequality gives no arrow of time by itself. -/
 theorem causal_second_law_reverse (n : ℕ) [NeZero n] (t : ℕ) (S R : Set (Site n))
     (h : (⋃ p ∈ R, diamond n p t) ⊆ S)
     (μ ν : Measure (State n)) [IsFiniteMeasure μ] [IsFiniteMeasure ν] :

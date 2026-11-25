@@ -6346,7 +6346,7 @@
    "causal_second_law_reverse (n : ℕ) [NeZero n] (t : ℕ) (S R : Set (Site n)) (h : (⋃ p ∈ R, diamond n p t) ⊆ S) (μ ν : Measure (State n)) [IsFiniteMeasure μ] [IsFiniteMeasure ν] : (∀ s, revStepState n t ((stepState n)^[t] s) = s) ∧ (∀ s, (stepState n)^[t] (revStepState n t s) = s) ∧ klDiv ((μ.map (revStepState n t)).map (restrict R)) ((ν.map (revStepState n t)).map (restrict R)) ≤ klDiv (μ.map (restrict S)) (ν.map (restrict S))",
    "name": "TimesArrow.LatticeGas.causal_second_law_reverse",
    "doc":
-   "**The causal second law holds in both time directions.** HPP's step is\ninvertible, with the inverse of the `t`-step map given by conjugating\nwith velocity reversal. The reversed dynamics satisfies the same light\ncones, so the causal second law holds for it too: the inequality gives no\narrow of time by itself.",
+   "**The causal second law holds in both time directions.** HPP's step is\ninvertible, with the inverse of the `t`-step map given by conjugating\nwith `revState` (reverse the velocities, then collide). The reversed\ndynamics satisfies the same light cones, so the causal second law holds\nfor it too: the inequality gives no arrow of time by itself.",
    "axioms": ["propext", "Classical.choice", "Quot.sound"]},
   {"status": "proved",
    "statement":

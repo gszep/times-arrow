@@ -22,10 +22,16 @@ but a statistical, partition-dependent one:
    the horizon partitions space, and the resulting thermal state's modular
    flow is the frame's boost time (Bisognano–Wichmann). Current reading
    ([#14](https://github.com/gszep/times-arrow/issues/14)): a frame is a
-   slicing and keeps the arrow; a partition is a wall and keeps it for every
-   state only when nothing can enter the region, which a horizon guarantees
-   (**proved** for finite lattice dynamics, `TimesArrow/CausalEntropy.lean`).
-   Changes of partition form a one-way semigroup, not a group
+   slicing and a partition is a wall. For a fixed deterministic lattice
+   dynamics, a region's relative entropy is non-increasing for all states iff
+   its state is a function of the earlier region's, which a wall retreating
+   at the cone speed guarantees (**proved**,
+   `TimesArrow/CausalEntropy.lean`; for the playground gas's intensity
+   recursion, `TimesArrow/Telegraph.lean`). That it falls on every
+   observer's slices of that gas is derived by hand, not formalised. The
+   same law holds backwards for reversible dynamics, so it constrains an
+   arrow without choosing one. Changes of partition form a one-way
+   semigroup, not a group
    ([#8](https://github.com/gszep/times-arrow/issues/8), **conjecture**).
 2. **Proper time as counted irreversibility.** A clock's precision is bounded
    by the entropy it produces per tick. Is proper time a count of irreversible
