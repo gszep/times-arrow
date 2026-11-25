@@ -1,0 +1,12 @@
+# theta=1.0 max group velocity 0.5403; |quasi-energy| max 1.142; unitarity 2.2e-16
+# reference stationary to 1.0e-15
+wall v   D(0)       rises>1e-11  largest rise   total rise    D(max)      note
+ 0.25   0.000e+00      38      2.212e-02    3.738e-01    2.526e-01   slower than every packet
+ 0.40   0.000e+00      14      6.255e-07    1.351e-06    7.614e-07   slower than every packet
+ 0.50   0.000e+00       0      5.942e-14    5.439e-13    4.017e-14   slower than every packet
+ 0.60   0.000e+00       0      4.985e-14    5.537e-13    4.017e-14   between group velocity and strict cone
+ 0.70   0.000e+00       0      4.951e-14    6.798e-13    5.158e-14   between group velocity and strict cone
+ 0.80   0.000e+00       0      3.978e-14    5.767e-13    3.964e-14   between group velocity and strict cone
+ 0.90   0.000e+00       0      6.569e-14    6.759e-13    4.774e-14   between group velocity and strict cone
+ 1.00   0.000e+00       0      3.743e-14    5.786e-13    3.885e-14   strict cone or faster
+ 1.25   0.000e+00       0      3.917e-14    4.100e-13    2.278e-14   strict cone or faster
