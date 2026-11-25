@@ -1,153 +1,419 @@
 import { gpu } from "../src/gpu.ts";
-import { Circles, Gas, defaults, pop, type Config, type Curve, type Sample } from "./fhp.ts";
+import { C, LINKS, N, R, T, XR, Gas, phi, cpuField, frameCurve, wallCurve, type FrameCurve, type WallCurve } from "./model.ts";
 
 const el = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
-const image = el<HTMLCanvasElement>("gas"), plot = el<HTMLCanvasElement>("plot"), caption = el("caption");
-const toggle = el<HTMLButtonElement>("toggle"), pause = el<HTMLButtonElement>("pause"), rewind = el<HTMLButtonElement>("rewind"), slider = el<HTMLInputElement>("rho");
+const image = el<HTMLCanvasElement>("diagram"), plot = el<HTMLCanvasElement>("curve"), caption = el("caption");
+const frameBtn = el<HTMLButtonElement>("vframe"), wallBtn = el<HTMLButtonElement>("vwall");
+const slider = el<HTMLInputElement>("speed"), play = el<HTMLButtonElement>("play");
+const slabel = el("slabel"), svalue = el("svalue"), status = el("status"), tick = el("tick");
 const url = new URL(location.href);
-const c = { ...defaults };
-for (const key of Object.keys(c) as (keyof Config)[]) if (url.searchParams.has(key)) c[key] = Number(url.searchParams.get(key));
-if (![64, 128, 256, 512].includes(c.n)) c.n = defaults.n;
-c.seed = c.seed >>> 0;
-c.rho = Math.min(4, Math.max(0.5, c.rho || defaults.rho));
-c.outside = Math.min(6, Math.max(0, Number.isFinite(c.outside) ? c.outside : defaults.outside));
-c.radius = Math.min(Math.floor(c.n / 3), Math.max(4, Math.round(c.radius || c.n / 4)));
-c.window = Math.min(128, Math.max(1, Math.round(c.window || 16)));
-c.x = Math.min(1, Math.max(0, Number.isFinite(c.x) ? c.x : 0.5)); c.y = Math.min(1, Math.max(0, Number.isFinite(c.y) ? c.y : 0.5));
-let on = url.searchParams.get("collisions") !== "off", playing = url.searchParams.get("paused") !== "1";
-const end = Math.min(2048, Math.max(c.window, Number(url.searchParams.get("end")) || 128));
-let gas: Gas, circles: Circles, state: Uint32Array, initial: Uint32Array, previous: Sample, curve: Curve | null = null;
-let busy = false, rewinding = false, ready = false;
-let drawRect = { x: 0, y: 0, width: 1, height: 1 };
-function sync() {
-  for (const [key, value] of Object.entries(c)) url.searchParams.set(key, String(value));
-  url.searchParams.set("collisions", on ? "on" : "off"); url.searchParams.set("paused", playing ? "0" : "1"); url.searchParams.set("end", String(end));
-  history.replaceState(null, "", url);
-  toggle.textContent = `Collisions ${on ? "on" : "off"}`; toggle.setAttribute("aria-pressed", String(on));
-  pause.textContent = playing ? "Ⅱ" : "▶"; pause.setAttribute("aria-label", playing ? "Pause" : "Play");
-  slider.value = String(c.rho); el("density").textContent = `mean free path ≈ ${(6 / c.rho).toFixed(1)} cells`;
+const param = (key: string) => url.searchParams.get(key);
+const clamp = (x: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, x));
+
+// Guards: the field's support |x − c| ≤ R + t stays inside the ring
+// (R + T < N/2), frame slices are only evaluated at valid levels, and the
+// reversal probability must lie in (0, 1). Out-of-range values are clamped.
+const num = (key: string, dflt: number) => {
+  const x = param(key) === null ? dflt : Number(param(key));
+  return Number.isFinite(x) ? x : dflt;
+};
+let a = 1 / 64;
+{
+  const [p, q = "1"] = (param("a") ?? "").split("/");
+  const value = Number(p) / Number(q);
+  if (Math.fround(value) > 0 && Math.fround(value) < 1) a = value;
 }
-function canvas(canvas: HTMLCanvasElement) {
-  const { width: w, height: h } = canvas.getBoundingClientRect(), dpr = devicePixelRatio;
-  canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
-  const ctx = canvas.getContext("2d")!; ctx.scale(dpr, dpr); ctx.font = "10px system-ui";
+let view: "frame" | "wall" = param("view") === "wall" ? "wall" : "frame";
+let u = clamp(num("u", 0.5), -0.75, 0.75);
+let v = clamp(num("v", 0.5), 0, 1.5);
+if (R + T >= N / 2) throw new Error("field support leaves the ring");
+
+const FRAME_US = [0, 0.25, -0.25, 0.5, -0.5, 0.75, -0.75];
+const WALL_VS = [0, 0.25, 0.5, 0.75, 0.9, 0.95, 1, 1.25, 1.5];
+const CAPTIONS = {
+  frame: "Every observer slices space-time differently. Slide the speed: the curve only ever falls. Observers disagree about rates, never about the direction.",
+  wall: "A partition is a wall that things can cross. Slower than light, the curve can rise: information leaks in and the region's clock runs backwards. At light speed the wall is a horizon and nothing can.",
+};
+const RED = "#ff6b66", GOLD = "#f4cf72", SEALED = "#7fd4a8";
+
+type Data = {
+  adapter: Awaited<ReturnType<typeof gpu>>["adapter"];
+  phiF: Float64Array;
+  heat: HTMLCanvasElement;
+  probe: Record<string, unknown>;
+};
+
+function fail(error: unknown) {
+  (window as any).probeError ??= String(error);
+  caption.textContent = String(error);
+  caption.style.color = RED;
+}
+
+function canvas(element: HTMLCanvasElement) {
+  const { width: w, height: h } = element.getBoundingClientRect(), dpr = devicePixelRatio;
+  element.width = Math.round(w * dpr);
+  element.height = Math.round(h * dpr);
+  const ctx = element.getContext("2d")!;
+  ctx.scale(dpr, dpr);
+  ctx.font = "10px system-ui";
   return { ctx, w, h };
 }
-function draw() {
-  if (!ready) return;
-  const { ctx, w, h } = canvas(image), height = c.n * Math.sqrt(3) / 2;
-  const scale = Math.min(w / c.n, (h - 25) / height), width = scale * c.n, hh = scale * height;
-  drawRect = { x: (w - width) / 2, y: (h - hh) / 2 + 8, width, height: hh };
-  ctx.fillStyle = "#9eb2c3"; ctx.fillText(`tap a point · density · t = ${gas.time}`, 5, 13);
-  ctx.textAlign = "right"; ctx.fillStyle = "#f4cf72"; ctx.fillText("watch the gold rings ↓", w - 5, 13); ctx.textAlign = "left";
-  const cell = Math.max(2, c.n / 64), offset = on ? 0 : c.n ** 2;
-  for (let y = 0; y < c.n; y += cell) for (let x = 0; x < c.n; x += cell) {
-    let sum = 0;
-    for (let j = 0; j < cell; j++) for (let i = 0; i < cell; i++) sum += pop[state[offset + (y + j) * c.n + x + i]];
-    const v = Math.min(1, sum / (cell ** 2 * c.rho));
-    ctx.fillStyle = `rgb(${Math.round(12 + 40 * v)},${Math.round(28 + 171 * v)},${Math.round(44 + 174 * v)})`;
-    ctx.fillRect(drawRect.x + x * scale, drawRect.y + (c.n - y - cell) * Math.sqrt(3) / 2 * scale, cell * scale + 0.5, cell * Math.sqrt(3) / 2 * scale + 0.5);
-  }
-  ctx.save(); ctx.beginPath(); ctx.rect(drawRect.x, drawRect.y, width, hh); ctx.clip();
-  const cx = drawRect.x + c.x * width, cy = drawRect.y + (1 - c.y) * hh;
-  for (const r of [18 / c.rho, Math.sqrt(18 / c.rho * c.radius), c.radius]) {
-    ctx.strokeStyle = "#f4cf7270"; ctx.lineWidth = 1;
-    for (const dx of [-width, 0, width]) for (const dy of [-hh, 0, hh]) { ctx.beginPath(); ctx.arc(cx + dx, cy + dy, r * scale, 0, 2 * Math.PI); ctx.stroke(); }
-  }
-  ctx.fillStyle = "#ffdf83"; ctx.beginPath(); ctx.arc(cx, cy, 4, 0, 2 * Math.PI); ctx.fill(); ctx.restore();
-  const p = canvas(plot), g = p.ctx, left = 49, right = p.w - 12, top = 31, bottom = p.h - 28;
-  const radii = circles.radii, lx = (r: number) => left + Math.log(r / radii[0]) / Math.log(radii.at(-1)! / radii[0]) * (right - left);
-  const values = curve?.rates.flat().map(Math.abs).filter(v => v > 0 && Number.isFinite(v)) ?? [];
-  const ymax = values.length ? Math.ceil(Math.log10(Math.max(...values))) : -6;
-  const ymin = values.length ? Math.max(ymax - 6, Math.floor(Math.log10(Math.min(...values)))) : -10;
-  const ly = (v: number) => bottom - (Math.log10(v) - ymin) / Math.max(1, ymax - ymin) * (bottom - top);
-  const bandStart = Math.max(radii[0], 18 / c.rho), bandEnd = Math.min(c.radius, radii.at(-1)!);
-  if (bandEnd > bandStart) { g.fillStyle = "#f4cf7218"; g.fillRect(lx(bandStart), top, lx(bandEnd) - lx(bandStart), bottom - top); }
-  g.fillStyle = "#f4cf72"; g.fillText("Φ / area", 3, 12); g.fillStyle = "#97acbc";
-  g.fillText(`3λ–R · ${curve ? `t ${curve.from}–${curve.time}` : `window ${c.window}`} · dashed < 0`, left, 12);
-  g.textAlign = "right"; g.fillText("faint = paired opposite", right, 25); g.textAlign = "left";
-  for (let j = ymin; j <= ymax; j++) { const y = ly(10 ** j); g.strokeStyle = "#273443"; g.beginPath(); g.moveTo(left, y); g.lineTo(right, y); g.stroke(); g.fillText(`1e${j}`, 3, y + 3); }
-  for (const r of [2, 4, 8, 16, 32, 64, 128]) if (r <= radii.at(-1)!) { g.fillText(String(r), lx(r) - 5, bottom + 13); }
-  g.textAlign = "right"; g.fillText("r · cells (log)", right, p.h - 2); g.textAlign = "left";
-  if (curve) for (const side of [on ? 1 : 0, on ? 0 : 1]) {
-    g.strokeStyle = side === (on ? 0 : 1) ? "#f4cf72" : "#89b6d36b"; g.lineWidth = side === (on ? 0 : 1) ? 2.5 : 1.5;
-    for (let j = 1; j < radii.length; j++) {
-      const a = curve.rates[side][j - 1], b = curve.rates[side][j];
-      if (a * b <= 0 || Math.min(Math.abs(a), Math.abs(b)) < 10 ** ymin) continue;
-      g.setLineDash(b < 0 ? [3, 3] : []); g.beginPath(); g.moveTo(lx(radii[j - 1]), ly(Math.abs(a))); g.lineTo(lx(radii[j]), ly(Math.abs(b))); g.stroke();
+
+/** φ(r) + φ(l) as a 401×401 log-scale heat map, row 0 at the top (t = 400). */
+function heatMap(phiF: Float64Array) {
+  const heat = document.createElement("canvas");
+  heat.width = 401;
+  heat.height = 401;
+  const ctx = heat.getContext("2d")!;
+  const img = ctx.createImageData(401, 401);
+  const ramp = (q: number) => {
+    const a0 = [16, 40, 66], a1 = [36, 145, 128], a2 = [244, 207, 114];
+    const [p, s, e] = q < 0.5 ? [a0, a1, q * 2] : [a1, a2, q * 2 - 1];
+    return [0, 1, 2].map(k => Math.round(p[k] + (s[k] - p[k]) * e)) as [number, number, number];
+  };
+  for (let t = 0; t <= 400; t++) {
+    const base = t * N * 2;
+    for (let x = 0; x <= 400; x++) {
+      const s = phiF[base + (C - 200 + x) * 2] + phiF[base + (C - 200 + x) * 2 + 1];
+      const i = ((400 - t) * 401 + x) * 4;
+      const rgb = s > 0 ? ramp(clamp((Math.log10(s) + 7) / 7.9, 0, 1)) : [11, 20, 32];
+      img.data.set(rgb, i);
+      img.data[i + 3] = 255;
     }
-    g.setLineDash([]);
   }
-  const side = on ? 0 : 1, slope = curve?.slopes[side], spread = curve?.spread[side];
-  const flat = slope != null && spread != null && Math.abs(slope) <= 0.25 && spread <= 2;
-  caption.textContent = rewinding ? "Rewinding: the same collisions, exactly undone" : !curve ? "Tap the gas; look for a flat curve in the gold band" : `Collisions ${on ? "on" : "off"}: ${flat ? "flat here — compare the faint curve" : slope == null ? "no positive plateau in this window" : `no flat band · slope ${slope.toFixed(2)}`}`;
+  ctx.putImageData(img, 0, 0);
+  return heat;
 }
-function fail(error: unknown) { playing = false; (window as any).probeError ??= String(error); caption.textContent = (window as any).probeError; }
-async function main() {
+
+async function compute(): Promise<Data> {
+  caption.textContent = "Computing the gas…";
   const { device, adapter } = await gpu();
-  device.addEventListener("uncapturederror", event => fail(event.error.message));
-  device.lost.then(info => fail(`GPU lost: ${info.message}`));
-  async function reset(patch: Partial<Config> = {}) {
-    if (gas) await gas.destroy(); Object.assign(c, patch);
-    gas = new Gas(device, c); circles = new Circles(c); state = await gas.state(); initial = state.slice();
-    previous = circles.sample(state, 0); curve = null; ready = true; sync(); draw(); return previous;
+  device.addEventListener("uncapturederror", (event) => fail((event as GPUUncapturedErrorEvent).error.message));
+  device.lost.then((info) => fail(`GPU lost: ${info.message}`));
+  const gas = new Gas(device, a);
+  const gpuField = await gas.run();
+  gas.destroy();
+  const cpu = cpuField(a);
+  let maxDiff = 0, nan = 0;
+  for (let i = 0; i < LINKS; i++) {
+    const g = gpuField[i];
+    if (!Number.isFinite(g)) nan++;
+    const d = Math.abs(g - cpu.field[i]);
+    if (d > maxDiff) maxDiff = d;
   }
-  async function run(steps: number) {
-    const samples: Curve[] = [];
-    while (steps > 0) {
-      const batch = Math.min(c.window, steps); await gas.advance(batch); steps -= batch;
-      state = await gas.state(); const next = circles.sample(state, gas.time);
-      curve = circles.curve(previous, next); samples.push(curve); previous = next;
-    }
-    draw(); return { sample: previous, curve, samples };
+  let wallEdge = 0; // the field is exactly zero at the retreating right end
+  for (let t = 0; t <= 399; t++) for (let x = C + XR - t - 2; x <= C + XR - t + 2; x++) {
+    const i = t * N * 2 + x * 2;
+    wallEdge = Math.max(wallEdge, Math.abs(cpu.field[i]), Math.abs(cpu.field[i + 1]), Math.abs(gpuField[i]), Math.abs(gpuField[i + 1]));
   }
-  async function undo() {
-    rewinding = true; draw();
-    while (gas.time > 0) { await gas.advance(Math.min(c.window, gas.time), true); state = await gas.state(); draw(); }
-    let mismatch = 0; for (let i = 0; i < state.length; i++) if (state[i] !== initial[i]) mismatch++;
-    previous = circles.sample(state, 0); curve = null; rewinding = false; draw();
-    caption.textContent = mismatch ? `Rewind mismatch: ${mismatch} sites` : "Rewound exactly · every bit restored";
-    return { mismatch, sample: previous };
-  }
-  async function exclusive(fn: () => Promise<unknown>) {
-    if (busy) return;
-    busy = true; slider.disabled = true; rewind.disabled = true;
-    try { return await fn(); } finally { busy = false; slider.disabled = false; rewind.disabled = false; }
-  }
-  await reset();
-  (window as any).probe = { adapter, config: () => ({ ...c }),
-    reset: async (patch: Partial<Config>) => { playing = false; return exclusive(() => reset(patch)); },
-    run: (steps: number) => exclusive(() => run(steps)), rewind: () => exclusive(undo),
-    state: async () => Array.from(await gas.state()),
-    audit: () => ({ sample: previous, curve, radii: circles.radii, areas: circles.areas, scrollHeight: document.documentElement.scrollHeight, innerHeight, width: innerWidth }),
+  const phiF = Float64Array.from(gpuField, phi);
+  const frame = Object.fromEntries(FRAME_US.map(x => {
+    const f = frameCurve(cpu.phiF, x);
+    const g = frameCurve(phiF, x);
+    return [String(x), { rises: f.rises, D100: f.D[100 - f.s0], gpuRises: g.rises,
+      maxCurveDiff: Math.max(...f.D.map((d, i) => Math.abs(d - g.D[i]))) }];
+  }));
+  const wall = Object.fromEntries(WALL_VS.map(x => {
+    const w = wallCurve(cpu.phiF, x);
+    const g = wallCurve(phiF, x);
+    return [String(x), { rises: w.rises, largest: w.largest, D0: w.D[0], gpuRises: g.rises,
+      maxCurveDiff: Math.max(...w.D.map((d, i) => Math.abs(d - g.D[i]))) }];
+  }));
+  return {
+    adapter,
+    phiF,
+    heat: heatMap(phiF),
+    probe: {
+      adapter,
+      maxDiff,
+      nan,
+      wallEdge,
+      supportInside: R + T < N / 2,
+      minSigma: cpu.minSigma,
+      sumSigma: cpu.sumSigma,
+      D0: cpu.D0,
+      DT: cpu.DT,
+      D0minusDT: cpu.D0 - cpu.DT,
+      frame,
+      wall,
+    },
   };
-  toggle.onclick = () => { on = !on; sync(); draw(); };
-  pause.onclick = () => {
-    if (busy) return;
-    if (gas.time >= end) void exclusive(async () => { await reset(); playing = true; sync(); }).catch(fail);
-    else { playing = !playing; sync(); }
-  };
-  slider.onchange = () => { playing = false; void exclusive(() => reset({ rho: Number(slider.value) })).catch(fail); };
-  rewind.onclick = () => { playing = false; sync(); void exclusive(undo).catch(fail); };
-  image.onpointerdown = event => {
-    if (busy) return;
-    const bounds = image.getBoundingClientRect();
-    c.x = Math.min(1, Math.max(0, (event.clientX - bounds.left - drawRect.x) / drawRect.width));
-    c.y = Math.min(1, Math.max(0, 1 - (event.clientY - bounds.top - drawRect.y) / drawRect.height));
-    circles = new Circles(c); previous = circles.sample(state, gas.time); curve = null; sync(); draw();
-  };
-  new ResizeObserver(draw).observe(document.body);
-  let lastFrame = 0;
-  async function frame() {
-    if (playing && !busy && performance.now() - lastFrame >= 600) {
-      lastFrame = performance.now();
-      await exclusive(async () => {
-        if (gas.time >= end) { playing = false; sync(); return; }
-        await run(Math.min(c.window, end - gas.time));
-      });
-    }
-    requestAnimationFrame(() => void frame().catch(fail));
-  }
-  sync(); void frame().catch(fail);
 }
+
+let data: Data | null = null;
+const frameCache = new Map<string, FrameCurve>();
+const wallCache = new Map<string, WallCurve>();
+const frameOf = (speed: number) => {
+  const key = String(speed);
+  if (!frameCache.has(key)) frameCache.set(key, frameCurve(data!.phiF, speed));
+  return frameCache.get(key)!;
+};
+const wallOf = (speed: number) => {
+  const key = String(speed);
+  if (!wallCache.has(key)) wallCache.set(key, wallCurve(data!.phiF, speed));
+  return wallCache.get(key)!;
+};
+
+let playing = false, fraction = 0.5, lastFrame = 0;
+
+function draw() {
+  if (!data) return;
+  drawDiagram();
+  drawCurve();
+}
+
+function drawDiagram() {
+  const { ctx, w, h } = canvas(image);
+  ctx.fillStyle = "#0b1420";
+  ctx.fillRect(0, 0, w, h);
+  const rect = { x: 2, y: 2, width: w - 4, height: h - 4 };
+  const X = (x: number) => rect.x + (x - (C - 200)) / 400 * rect.width;
+  const Y = (t: number) => rect.y + (1 - t / 400) * rect.height;
+  ctx.imageSmoothingEnabled = true;
+  ctx.drawImage(data!.heat, 0, 0, 401, 401, rect.x, rect.y, rect.width, rect.height);
+  ctx.fillStyle = "rgba(228,237,244,0.55)";
+  ctx.fillText("time ↑", 5, 12);
+  ctx.fillText("space →", 5, h - 5);
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(rect.x, rect.y, rect.width, rect.height);
+  ctx.clip();
+  ctx.strokeStyle = "rgba(255,255,255,0.10)";
+  ctx.lineWidth = 1;
+  for (const xc of [C - 20, C + 40]) {
+    for (const d of [-1, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(X(xc), Y(0));
+      ctx.lineTo(X(xc + d * 400), Y(400));
+      ctx.stroke();
+    }
+  }
+  if (view === "frame") {
+    const f = frameOf(u);
+    ctx.strokeStyle = "rgba(228,237,244,0.35)";
+    for (let k = 0; k <= 4; k++) {
+      const s = f.s0 + (f.s1 - f.s0) * k / 4;
+      ctx.beginPath();
+      ctx.moveTo(X(C - 200), Y(s - u * 200));
+      ctx.lineTo(X(C + 200), Y(s + u * 200));
+      ctx.stroke();
+    }
+    const s = f.s0 + (f.s1 - f.s0) * fraction;
+    ctx.strokeStyle = GOLD;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(X(C - 200), Y(s - u * 200));
+    ctx.lineTo(X(C + 200), Y(s + u * 200));
+    ctx.stroke();
+  } else {
+    ctx.fillStyle = "rgba(159,196,224,0.10)";
+    ctx.beginPath();
+    ctx.moveTo(X(C), Y(0));
+    ctx.lineTo(X(C + v * 400), Y(400));
+    ctx.lineTo(X(C + 200), Y(400));
+    ctx.lineTo(X(C + 200), Y(0));
+    ctx.closePath();
+    ctx.fill();
+    ctx.setLineDash([4, 4]);
+    ctx.strokeStyle = "rgba(228,237,244,0.5)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(X(C), Y(0));
+    ctx.lineTo(X(C + 400), Y(400));
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = "rgba(228,237,244,0.75)";
+    ctx.textAlign = "right";
+    ctx.fillText("light", X(C + 200) - 3, Y(200) + 4);
+    ctx.textAlign = "left";
+    ctx.strokeStyle = GOLD;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(X(C), Y(0));
+    ctx.lineTo(X(C + v * 400), Y(400));
+    ctx.stroke();
+    ctx.fillStyle = GOLD;
+    ctx.beginPath();
+    ctx.arc(X(C + v * fraction * 399), Y(fraction * 399), 3.5, 0, 2 * Math.PI);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawCurve() {
+  const { ctx: g, w, h } = canvas(plot);
+  g.fillStyle = "#0b1420";
+  g.fillRect(0, 0, w, h);
+  if (!data) return;
+  const left = 8, right = w - 10, top = 16, bottom = h - 12;
+  let xs: (i: number) => number, ys: (i: number) => number, count: number, marker: [number, number] | null;
+  if (view === "frame") {
+    const f = frameOf(u), f0 = frameOf(0);
+    const x0 = f.s0 * f.gamma, x1 = f.s1 * f.gamma;
+    const lo = Math.min(...f.D), hi = Math.max(...f.D);
+    const padY = (hi - lo) * 0.05 + 1e-9;
+    const X = (x: number) => left + (x - x0) / (x1 - x0) * (right - left);
+    const Y = (d: number) => bottom - (d - (lo - padY)) / (hi - lo + 2 * padY) * (bottom - top);
+    g.strokeStyle = "rgba(137,182,211,0.4)";
+    g.lineWidth = 1;
+    g.beginPath();
+    for (let i = 0; i < f0.D.length; i++) {
+      const px = X(f0.s0 * f0.gamma + i * f0.gamma), py = Y(f0.D[i]);
+      i ? g.lineTo(px, py) : g.moveTo(px, py);
+    }
+    g.stroke();
+    xs = i => X((f.s0 + i) * f.gamma);
+    ys = i => Y(f.D[i]);
+    count = f.D.length;
+    const i = Math.round(fraction * (count - 1));
+    marker = [xs(i), ys(i)];
+  } else {
+    const c = wallOf(v);
+    const lo = Math.min(...c.D), hi = Math.max(...c.D);
+    const padY = (hi - lo) * 0.05 + 1e-9;
+    const X = (t: number) => left + t / 399 * (right - left);
+    const Y = (d: number) => bottom - (d - (lo - padY)) / (hi - lo + 2 * padY) * (bottom - top);
+    xs = X;
+    ys = t => Y(c.D[t]);
+    count = c.D.length;
+    const i = Math.round(fraction * (count - 1));
+    marker = [xs(i), ys(i)];
+  }
+  g.strokeStyle = "#273443";
+  g.beginPath();
+  g.moveTo(left, bottom);
+  g.lineTo(right, bottom);
+  g.stroke();
+  g.lineWidth = 2;
+  g.strokeStyle = GOLD;
+  const D = view === "frame" ? frameOf(u).D : wallOf(v).D;
+  g.beginPath();
+  g.moveTo(xs(0), ys(0));
+  for (let i = 1; i < count; i++) {
+    const rise = D[i] - D[i - 1] > 1e-12;
+    if (rise) {
+      g.stroke();
+      g.strokeStyle = RED;
+      g.beginPath();
+      g.moveTo(xs(i - 1), ys(i - 1));
+    }
+    g.lineTo(xs(i), ys(i));
+    if (rise) {
+      g.stroke();
+      g.strokeStyle = GOLD;
+      g.beginPath();
+      g.moveTo(xs(i), ys(i));
+    }
+  }
+  g.stroke();
+  g.fillStyle = "#95a6b7";
+  g.fillText("information left", 3, 12);
+  g.textAlign = "right";
+  g.fillText(view === "frame" ? "observer's proper time" : "time", right, h - 3);
+  g.textAlign = "left";
+  if (marker) {
+    g.fillStyle = GOLD;
+    g.beginPath();
+    g.arc(marker[0], marker[1], 3.5, 0, 2 * Math.PI);
+    g.fill();
+    g.strokeStyle = "#0b1420";
+    g.stroke();
+  }
+}
+
+function sync() {
+  url.searchParams.set("view", view);
+  url.searchParams.set("u", String(u));
+  url.searchParams.set("v", String(v));
+  url.searchParams.set("a", Number.isInteger(1 / a) ? `1/${Math.round(1 / a)}` : String(a));
+  history.replaceState(null, "", url);
+  frameBtn.setAttribute("aria-pressed", String(view === "frame"));
+  wallBtn.setAttribute("aria-pressed", String(view === "wall"));
+  caption.style.color = "";
+  caption.textContent = CAPTIONS[view];
+  if (view === "frame") {
+    slabel.textContent = "observer speed";
+    slider.min = "-0.75";
+    slider.max = "0.75";
+    slider.value = String(u);
+    svalue.textContent = `${u.toFixed(2)} c`;
+    status.textContent = "";
+    status.style.color = "";
+    tick.hidden = true;
+  } else {
+    slabel.textContent = "wall speed";
+    slider.min = "0";
+    slider.max = "1.5";
+    slider.value = String(v);
+    svalue.textContent = `${v.toFixed(2)} c`;
+    status.textContent = v < 1 ? "slower than light: leaks" : v === 1 ? "light speed: a horizon, sealed" : "faster than light: sealed";
+    status.style.color = v < 1 ? RED : SEALED;
+    tick.hidden = false;
+  }
+  draw();
+}
+
+function loop(now: number) {
+  if (!playing || !data) return;
+  const span = view === "frame" ? 12000 : 9000;
+  fraction += ((lastFrame ? now - lastFrame : 16) / span);
+  lastFrame = now;
+  if (fraction >= 1) {
+    fraction = 1;
+    playing = false;
+    play.textContent = "▶";
+  }
+  draw();
+  if (playing) requestAnimationFrame(loop);
+  else lastFrame = 0;
+}
+
+frameBtn.onclick = () => {
+  if (view === "frame") return;
+  view = "frame";
+  playing = false;
+  play.textContent = "▶";
+  sync();
+};
+wallBtn.onclick = () => {
+  if (view === "wall") return;
+  view = "wall";
+  playing = false;
+  play.textContent = "▶";
+  sync();
+};
+slider.oninput = () => {
+  if (view === "frame") u = clamp(Number(slider.value), -0.75, 0.75);
+  else v = clamp(Number(slider.value), 0, 1.5);
+  sync();
+};
+play.onclick = () => {
+  if (!data) return;
+  if (playing) {
+    playing = false;
+    play.textContent = "▶";
+    return;
+  }
+  if (fraction >= 1) fraction = 0;
+  playing = true;
+  play.textContent = "Ⅱ";
+  requestAnimationFrame(loop);
+};
+
+new ResizeObserver(() => draw()).observe(document.body);
+
+async function main() {
+  data = await compute();
+  const probe = async () => ({
+    ...data!.probe,
+    scrollHeight: document.documentElement.scrollHeight,
+    innerHeight,
+    width: innerWidth,
+    parameters: { view, u, v, a },
+  });
+  (window as any).probe = probe;
+  (window as any).probe.adapter = data.adapter;
+  sync();
+}
+
 void main().catch(fail);

@@ -18,6 +18,7 @@ const linuxFlags = [
 ];
 
 export type Evaluate = (expression: string) => Promise<any>;
+export type CDP = (method: string, params?: Record<string, unknown>) => Promise<any>;
 
 /** Sweep provenance: the commit, whether tracked changes exist, the host,
  * and now. Untracked files do not count as dirty (untracked results made
@@ -67,7 +68,7 @@ export function writeRaw(name: string, data: unknown) {
  */
 export async function headless<T>(
   page: string,
-  fn: (evaluate: Evaluate) => Promise<T>,
+  fn: (evaluate: Evaluate, cdp: CDP) => Promise<T>,
   expectedVendor = process.env.TIMES_ARROW_VENDOR,
 ): Promise<T> {
   const server = await createServer({ logLevel: "error" });
@@ -107,23 +108,25 @@ export async function headless<T>(
       pending.get(m.id)?.(m);
     };
     let id = 0;
-    const evaluate: Evaluate = (expression) =>
+    const cdp: CDP = (method, params = {}) =>
       new Promise((resolve, reject) => {
         const i = ++id;
         pending.set(i, (m) => {
           pending.delete(i);
           const r = m.result;
-          if (m.error || r.exceptionDetails) reject(new Error(JSON.stringify(m.error ?? r.exceptionDetails)));
-          else resolve(r.result.value);
+          if (m.error || r?.exceptionDetails) reject(new Error(JSON.stringify(m.error ?? r.exceptionDetails)));
+          else resolve(r);
         });
         ws.send(
           JSON.stringify({
             id: i,
-            method: "Runtime.evaluate",
-            params: { expression, awaitPromise: true, returnByValue: true },
+            method,
+            params,
           }),
         );
       });
+    const evaluate: Evaluate = async expression =>
+      (await cdp("Runtime.evaluate", { expression, awaitPromise: true, returnByValue: true })).result.value;
     for (let i = 0; !(await evaluate("!!(window.probe || window.probeError)")); i++) {
       if (i > 600) throw new Error(`${url} never exposed window.probe`);
       await sleep(100);
@@ -134,7 +137,7 @@ export async function headless<T>(
     if (adapter.fallback) throw new Error(`software adapter: ${JSON.stringify(adapter)}`);
     if (expectedVendor && adapter.vendor.toLowerCase() !== expectedVendor.toLowerCase())
       throw new Error(`adapter vendor "${adapter.vendor}" is not the expected "${expectedVendor}": ${JSON.stringify(adapter)}`);
-    const result = await fn(evaluate);
+    const result = await fn(evaluate, cdp);
     ws.close();
     return result;
   } finally {

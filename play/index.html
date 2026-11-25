@@ -1,11 +1,32 @@
 <!doctype html>
-<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Can collisions make a local clock?</title>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Where does the arrow of time survive?</title>
 <style>
-*{box-sizing:border-box}html,body{margin:0;height:100%;background:#0b1420;color:#e4edf4;font:14px system-ui,sans-serif}body{height:100dvh;padding:env(safe-area-inset-top) 10px env(safe-area-inset-bottom);display:grid;grid-template-rows:30px minmax(0,55fr) minmax(0,35fr) 30px 66px;gap:3px;max-width:650px;margin:auto}header{display:flex;align-items:center;justify-content:space-between;font-size:13px}header span{color:#95a6b7;font-size:10px}canvas{display:block;width:100%;height:100%;min-height:0;touch-action:none}#caption{margin:0;align-self:center;text-align:center;color:#f4cf72;font-size:12px;white-space:nowrap}#controls{display:grid;grid-template-columns:96px minmax(80px,1fr) 38px 76px;gap:6px;align-items:center}button{height:40px;border:1px solid #455264;border-radius:9px;background:#172333;color:#e4edf4;font:12px system-ui;cursor:pointer;padding:2px}#toggle{border-color:#f4cf72;color:#f4cf72;font-weight:700}label{display:grid;gap:2px;font-size:10px;text-align:center;color:#a9bbca}input{width:100%;min-width:0;accent-color:#f4cf72;margin:4px 0}button small{display:block;font-size:9px;color:#a9bbca}button:disabled{opacity:.45}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:#0b1420;color:#e4edf4;font:14px/1.4 system-ui,sans-serif}
+body{height:100dvh;max-width:520px;margin:auto;padding:max(10px,env(safe-area-inset-top)) 14px max(8px,env(safe-area-inset-bottom));display:grid;grid-template-rows:auto auto minmax(0,1fr) minmax(100px,.48fr) auto auto 28px;gap:8px}
+h1{font-size:21px;line-height:1.18;letter-spacing:-.5px;margin:0;font-weight:600;max-width:340px}
+nav{display:grid;grid-template-columns:1fr 1fr;gap:6px}button{font:inherit;color:inherit;background:#172333;border:1px solid #455264;border-radius:8px;cursor:pointer;min-height:42px;padding:6px}
+button[aria-pressed=true]{color:#f4cf72;border-color:#f4cf72;background:#2b2a24}button:focus-visible,summary:focus-visible,input:focus-visible{outline:2px solid #f4cf72;outline-offset:2px}
+canvas{display:block;width:100%;height:100%;min-height:0}#diagram{border:1px solid #273443;border-radius:6px}#controls{display:grid;grid-template-columns:1fr 44px;gap:0 10px}#controls>div{min-width:0}
+label{display:flex;justify-content:space-between;font-size:13px}output{color:#f4cf72;font-variant-numeric:tabular-nums}input{display:block;width:100%;height:30px;margin:0;accent-color:#f4cf72;cursor:pointer}
+#scale{position:relative;height:17px}#tick{position:absolute;left:calc(66.666% - 3px);top:-4px;font-size:10px;color:#b4c7d7;border-left:1px solid #b4c7d7;padding-left:4px}#status{font-size:12px;min-height:17px}#play{align-self:start;margin-top:9px}
+#caption{margin:0;font-size:13px;line-height:1.45;color:#d0dce7;min-height:5.8em}details{font-size:12px;color:#a9bbca}summary{cursor:pointer;min-height:28px;padding:4px 0}details[open]{position:fixed;z-index:2;inset:max(12px,env(safe-area-inset-top)) 12px max(12px,env(safe-area-inset-bottom));max-width:496px;margin:auto;padding:16px;background:#142232;border:1px solid #617588;border-radius:12px;overflow:auto;box-shadow:0 0 0 100vmax #000a;font-size:14px}details[open] summary{color:#f4cf72;font-size:16px}details p{margin:12px 0}a{color:#9fd5ff}code{font-size:12px;overflow-wrap:anywhere}
+@media(max-height:760px){body{gap:6px;padding-top:8px}h1{font-size:20px}#caption{font-size:12px;line-height:1.4;min-height:5.6em}nav button{font-size:12px}}
 </style></head><body>
-<header>A clock needs collisions?<span>exploration · c = 1 cell/step</span></header>
-<canvas id="gas" aria-label="Density; tap to move the circle centre"></canvas>
-<canvas id="plot" aria-label="Log-log partition entropy rate per area versus radius"></canvas>
-<p id="caption">Starting WebGPU…</p>
-<div id="controls"><button id="toggle" aria-pressed="true">Collisions on</button><label><span id="density">mean free path ≈ 2 cells</span><input id="rho" aria-label="Density" type="range" min="0.5" max="4" step="0.25"></label><button id="pause" aria-label="Pause">Ⅱ</button><button id="rewind">↶ Rewind<small>rewinds exactly</small></button></div>
+<h1>Where does the arrow of time survive?</h1>
+<nav aria-label="Perspective"><button id="vframe" aria-pressed="true">Change the observer</button><button id="vwall" aria-pressed="false">Change the partition</button></nav>
+<canvas id="diagram" aria-label="Space-time diagram: information spreads from two bumps; time points upwards"></canvas>
+<canvas id="curve" aria-label="Information left against time: gold falls, red rises"></canvas>
+<section id="controls" aria-label="Speed"><div><label for="speed"><span id="slabel">observer speed</span><output id="svalue" for="speed">0.50 c</output></label><input id="speed" type="range" min="-0.75" max="0.75" step="0.05" value="0.5"><div id="scale"><span id="tick" hidden>light</span></div><div id="status" aria-live="polite"></div></div><button id="play" aria-label="Play slice">▶</button></section>
+<p id="caption" role="status">Starting WebGPU…</p>
+<details><summary>What is this?</summary>
+<p>Independent particles move left or right on a ring, one site per step: this is the model’s light speed. Each reverses independently with probability 1/64 per step by default. Two smooth bumps are prepared above a stationary Poisson background with one particle per link on average.</p>
+<p>“Information left” is the relative entropy between the prepared state and equilibrium, not the entropy of a single trajectory. Equilibrium itself shows no arrow here. The colours show information on a logarithmic scale; gold curve segments fall and red segments rise.</p>
+<p>The gas has a rest frame, that of the scatterers. Observers agree on the direction of the fall, not on its rate: the model is not Lorentz invariant. “Clock runs backwards” in the caption means information increases, not that a physical clock reverses.</p>
+<p>The wall statement is about all states and walls that things can cross. A reflecting wall, or a state with nothing outside, also never leaks. The region’s other end retreats at light speed too, beyond this diagram; both ends must prevent inflow. Faster-than-light retreat is a choice of region, not a moving material wall.</p>
+<p>Lean proves the general theorem and its deterministic converse for finite lattice dynamics in <a href="https://github.com/gszep/times-arrow/blob/main/TimesArrow/CausalEntropy.lean">CausalEntropy.lean</a>, not this Poisson gas. Here exact ensemble formulas are evaluated in floating point: f32 evolution on the GPU, checked against an independent f64 evaluation; the information sums use f64. These are numerical checks, not certified error bounds.</p>
+<p>The continuum connection is the “information current” of Gavassino, Antonelli and Haskell, <a href="https://arxiv.org/html/2105.14621v2">PRL 128, 010606 (2022)</a>, for perturbations near relativistic equilibrium; this lattice illustration is not a continuum-limit test.</p>
+<p>The ring has 2048 sites and 768 steps. We show space within 200 sites of the centre and the first 400 steps. For deviation d on a link, information is φ(d) = (1+d) ln(1+d) − d. Observer cuts sum links crossing t − u(x−c) = s, only for complete cuts; walls sum c + ⌊vt⌋ ≤ x ≤ c + 900 − t, for t = 0…399. The perturbation never wraps around the ring.</p>
+<p>Exploration page, no registered claims. <a href="https://github.com/gszep/times-arrow/issues/14">Question, checks and caveats · issue #14</a>.</p>
+</details>
 <script type="module" src="./main.ts"></script></body></html>

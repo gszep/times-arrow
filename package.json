@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "vite --host",
     "build": "tsc && vite build",
-    "check:gpu": "node scripts/check.ts"
+    "check:gpu": "node scripts/check.ts && node play/check.ts"
   },
   "devDependencies": {
     "@types/node": "^24.19.0",

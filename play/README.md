@@ -1,74 +1,36 @@
-# Collisions and a partition clock (exploration)
+# Where does the arrow of time survive? (exploration)
 
-One ephemeral WebGPU page, no confirmatory claims. Tap a point, compare the
-gold collision-on curve with its faint same-seed free-streaming partner, and
-rewind the actual dynamics. Hexagonal FHP on an even periodic offset-row grid;
-speed is one nearest-neighbour cell per step. Integer states, Philox chirality,
-collision then streaming; inverse streaming then inverse collision at the
-original step/site. The paired buffers share their initial state bit for bit.
-Initialization follows the Lean `fhp` contract: inclusive disc boundary,
-centre `(n/2,n√3/4)`, high 24 Philox bits strictly less than
-`floor(ρ × 2²⁴ / 6)`, computed with exact rational decimal arithmetic.
+One mobile WebGPU page, no registered claims. Change the observer to tilt
+space-time cuts: information falls on every complete cut. Change the partition
+to move a transparent left wall: information can enter below light speed.
+The right end also retreats at light speed, so neither end admits inflow when
+the left wall retreats at least that fast. Reflecting walls and special empty
+exteriors are exceptions to any claim that a slower wall must leak.
 
-`S = −D((p,1−p) ‖ (a,1−a))`, where `p` is the particle fraction inside a
-circle and `a` its exact lattice-site fraction. The plot is
-`[S(t)−S(t−W)] / (W × circle area)`, in nats/particle/step/cell²; each site has
-area √3/2. Euclidean distances use the periodic rectangular embedding. Dashed
-segments show the magnitude of **negative** rates; zero and sign crossings
-are omitted from the logarithmic plot. This partition observable is not an
-established local thermodynamic entropy-production density.
+Independent Poisson particles on a 2048-site ring move one site per step,
+reversing independently with probability `a`. Link intensities have background
+1; initial deviations in both directions are two `4 cos²(π(x−xc)/24)` bumps,
+half-width 12, centred at `c−20` and `c+40`. Incoming deviations mix with
+weights `1−a,a`. Information per link is `(1+d)ln(1+d)−d`.
+The GPU evolves 768 steps in f32; the heat map and curves use that readback,
+with f64 information sums. The probe compares it with independent f64 evolution.
+No individual trajectories are sampled; these are ensemble observables.
 
-The shaded exploratory band is `3λ ≤ r < R`, with the requested rough
-estimate `λ = 6/ρ_in`, not a measured transport mean free path. A descriptive
-"flat here" caption requires all sampled band rates positive, at least three
-radii, absolute log-log slope ≤ 0.25, and max/min ≤ 2. These are exploratory
-display thresholds, not a pre-registered statistical test. Flatness alone
-cannot establish a clock or local equilibrium; the paired off curve matters.
+The heat map shows `|x−c|≤200`, `0≤t≤400`, on a logarithmic colour scale.
+Observer cuts cross links at `t−u(x−c)=s`, for
+`ceil(52|u|)+1≤s≤floor(767(1−|u|)−52|u|)`, plotted in observer proper time.
+The wall region is `c+floor(vt)≤x≤c+900−t`, for `t=0…399`.
+Support obeys `52+768<1024`: no wrapping or incomplete-cut comparisons.
+The gas has a preferred rest frame and is not Lorentz invariant.
 
-All page parameters are in the URL: `n`, `seed`, `rho`, `outside`, `radius`,
-`x`, `y`, `window`, `collisions=on|off`, `paused=0|1`, `end`. Defaults are
-256², seed 1, densities 3/0.15, radius 64, centre observer, 16-step windows,
-128-step playback. Density changes reset both runs; toggling only selects
-which already-running member is highlighted. The probe exposes `reset`,
-`run`, `rewind`, `state`, `audit`, and adapter provenance.
+URL: `view=frame|wall`, `u` (default .5, clamped to ±.75), `v` (default .5,
+clamped to 0…1.5), `a` (default `1/64`, fractions accepted; invalid values,
+including values rounded to 0 or 1 in f32, fall back to the default).
+Play moves the highlighted slice or wall marker and the corresponding curve dot.
+“What is this?” opens the assumptions, proof boundary and literature.
 
-Run `node play/check.ts` for hardware WebGPU model checks; `node play/sweep.ts`
-on Artemis for paired multi-seed exploration. Batch output records its commit,
-parameters and GPU. Read nulls before the dense-disc results.
-
-## Exploratory result
-
-No reliable positive plateau at either density: over seeds 1–16 and eight
-16-step windows through t=128, collisions on meets the display threshold in
-0/128 windows at both ρ=1 and ρ=3; off meets it in 3/128 and 0/128 respectively.
-The three off hits belong to three different seeds; windows within a seed
-are correlated. Uniform nulls give 0/128 hits in every arm. At ρ=1, t=48–64,
-mean per-seed log slopes are −0.953 (on) and −1.223 (off), with descriptive
-95% t intervals [−0.996,−0.909] and [−1.260,−1.187]. At ρ=3, on has slope
-−1.160 [−1.177,−1.144] at t=64–80; off has no all-positive band in that window.
-These are finite-lattice, centre-observer, transient measurements, not a
-continuum result or a test of local equilibrium.
-
-The λ label is only a heuristic. **Derived under independent channel
-occupancy** f=ρ/6, the fraction of particles deflected per step is
-`[6f²(1−f)⁴ + 6f³(1−f)³]/ρ = f(1−f)³`: inverse rates are 10.37 and 16 steps
-at ρ=1 and 3, not the label's 6 and 2. Thus W=16 and R=64 offer weak scale
-separation for these restricted collision rules. Also collisions preserve
-site mass exactly: this spatial two-cell entropy changes through streaming,
-and omits velocity equilibration. Larger R and windows above the **measured**
-collision time would be a next exploration, not a guarantee of a plateau.
-
-Disc membership uses integral squared hex distance, including the exact
-boundary. Seed 1 at both densities reproduces between NVIDIA/Artemis and
-Intel/Mac: identical initial/final state SHA-256 and all 400 plotted rates
-per run exactly equal. The raw includes state hashes for every run.
-
-Raw output: GitHub release `results-play`, asset `play-fhp-lean.json`; source
-commit `bdb0cf3`, clean Artemis checkout,
-NVIDIA Lovelace hardware adapter. SHA-256:
-`895e5f475f9b110c6d398af5458472c6c2e68a234ad3a1d0cdcc48af408304a6`.
-Regenerate at that commit on Artemis with `node play/sweep.ts`.
-`node play/check.ts` checks all 18 Lean FHP goldens. Set `FHP_LEAN` to a
-built `timesarrow` executable to add fresh random-seed CLI differentials.
-**Verified:** all 18 goldens on Intel and NVIDIA; eight fresh CLI cases on
-Intel (four initialization, four evolution), all bit-exact with exact rewind.
+Run `node play/check.ts` or `npm run check:gpu`. The hardware-only CDP check
+asserts f64 references to relative 1e-9, f32 field error below 1e-5, curve
+error below 1e-3, all seven observer rise counts, nine wall rise counts,
+dissipation balance and the exactly zero right boundary. Both views fit
+390×844 and 360×740 without scrolling. `window.probe()` exposes these numbers.
