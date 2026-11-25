@@ -12,8 +12,6 @@ state, and `hppinit <packed|null> <seed> <n>` prints a 001 initial state.
 `walkjson <seed> <arm> <n> <m> <t>` prints one 002 trajectory golden and
 `walkprofilejson <seed> <arm> <n> <m> <t>` the whole 003 profile vector
 (trajectory, per-time occupancies and window sums).
-`fhp SEED N T RADIUS IN_NUM IN_DEN OUT_NUM OUT_DEN` prints the full FHP
-trajectory golden as JSON; densities are rational particles per site.
 -/
 
 open Lean TimesArrow Philox LatticeGas TimesArrow.Walker
@@ -346,25 +344,6 @@ def initState (mode : String) (seed : UInt32) : ℕ → Array UInt32
     | "null" => toArray (n + 1) (nullState seed (n + 1))
     | _ => #[]
 
-/-- Full row-major FHP states; each value is a six-bit occupation mask. -/
-def fhpGolden (seed : UInt32) (n t radius : ℕ) (inside outside : ℕ × ℕ) : Json :=
-  Json.mkObj [("seed", toJson seed), ("n", toJson n), ("t", toJson t),
-    ("radius", toJson radius), ("rhoIn", toJson [inside.1, inside.2]),
-    ("rhoOut", toJson [outside.1, outside.2]),
-    ("state", toJson (FHP.run seed n t radius inside outside))]
-
-def fhpContract : Json := Json.mkObj [
-  ("directions", toJson ["E", "NE", "NW", "W", "SW", "SE"]),
-  ("neighbour", toJson "periodic even n; even y: [(1,0),(0,1),(-1,1),(-1,0),(-1,-1),(0,-1)]; odd y: [(1,0),(1,1),(0,1),(-1,0),(0,-1),(1,-1)]; pull from opposite direction"),
-  ("initialization", toJson "centre (n/2,n*sqrt(3)/4), radius inclusive; rho=[numerator,denominator] particles/site; bit k iff (rand(seed,k/4,site)[k%4] >> 8) < floor(rho*2^24/6)"),
-  ("chirality", toJson "rand(seed,time,site).x0 & 1; time=0..t-1; site=y*n+x; 0 rotates pairs +60 degrees, 1 -60 degrees"),
-  ("inverse", toJson "unstream then collide with opposite chirality at original site/time; undo times t-1..0"),
-  ("momentumBasis", toJson "(E,NE); velocities [(1,0),(0,1),(-1,1),(-1,0),(0,-1),(1,-1)]"),
-  ("collide", toJson ([false, true].map fun b => (List.finRange 64).map fun s => (FHP.collide b s).val)),
-  ("golden", toJson ([1, 7, 3735928559].flatMap fun seed : ℕ =>
-    [16, 32].flatMap fun n => [0, 1, 50].map fun t =>
-      fhpGolden seed.toUInt32 n t (n / 4) (3, 1) (1, 4)))]
-
 def contract : MetaM Json := do
   let stream := Id.run do
     let mut out := #[]
@@ -404,17 +383,9 @@ def contract : MetaM Json := do
       ("inverse", toJson invGold),
       ("echo", toJson echoGold),
       ("init", toJson initGold)]),
-    ("walk", walkContract ()),
-    ("fhp", fhpContract)]
+    ("walk", walkContract ())]
 
 def main : List String → IO Unit
-  | ["fhp", seed, n, t, radius, inNum, inDen, outNum, outDen] => do
-    let nn := n.toNat!
-    if nn == 0 || nn % 2 != 0 || inDen.toNat! == 0 || outDen.toNat! == 0 ||
-        inNum.toNat! > 6 * inDen.toNat! || outNum.toNat! > 6 * outDen.toNat! then
-      throw (IO.userError "FHP requires positive even n and rational densities in [0,6]")
-    IO.println (fhpGolden seed.toNat!.toUInt32 nn t.toNat! radius.toNat!
-      (inNum.toNat!, inDen.toNat!) (outNum.toNat!, outDen.toNat!)).compress
   | ["contract"] => do
     initSearchPath (← findSysroot)
     let env ← importModules #[{ module := `TimesArrow }] {}
@@ -459,4 +430,4 @@ def main : List String → IO Unit
       | throw (IO.userError "invalid profile arm, lattice (a power of two ≤ 16) or horizon")
     IO.println (Json.mkObj fields).compress
   | _ => throw (IO.userError
-      "usage: timesarrow contract | rand SEED STEP SITE | fhp SEED N T RADIUS IN_NUM IN_DEN OUT_NUM OUT_DEN | hpp SEED N T | hppinv SEED N T | hppecho SEED N T | hppinit MODE SEED N | walk SEED ARM N M T | walktally SEED ARM M T | walkprofilejson SEED ARM N M T")
+      "usage: timesarrow contract | rand SEED STEP SITE | hpp SEED N T | hppinv SEED N T | hppecho SEED N T | hppinit MODE SEED N | walk SEED ARM N M T | walktally SEED ARM M T | walkprofilejson SEED ARM N M T")

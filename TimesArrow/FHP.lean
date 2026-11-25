@@ -1,4 +1,3 @@
-import TimesArrow.Philox
 import Mathlib.Data.ZMod.Basic
 import Mathlib.Tactic.LinearCombination
 
@@ -6,10 +5,6 @@ import Mathlib.Tactic.LinearCombination
 # Six-velocity hexagonal gas
 
 Offset rows, even periodic side length, directions E, NE, NW, W, SW, SE.
-The executable uses the model collision and neighbour functions. The disc
-centre is `(n/2, n√3/4)`, with its boundary included. Density is a rational
-particle count per site; initialization compares the high 24 Philox bits
-against `floor(density * 2^24 / 6)`. Collision time starts at zero.
 
 Claims prove bijection, mass/momentum conservation and a one-hex-edge causal
 cone for the discrete periodic model. The inverse needs the original collision
@@ -75,40 +70,6 @@ def stepState (n : ℕ) [NeZero n] (b : Site n → Bool) (s : State n) : State n
 
 def inverseState (n : ℕ) [NeZero n] (b : Site n → Bool) (s : State n) : State n :=
   collision n (fun p => !(b p)) (unstream n s)
-
-def chirality (seed : UInt32) (t i : ℕ) : Bool :=
-  (Philox.rand seed t.toUInt32 i.toUInt32).x0 &&& 1 == 1
-
-/-- Materialize the specification, with row-major indexing. -/
-def step (seed : UInt32) (n t : ℕ) (a : Array ℕ) : Array ℕ :=
-  if hn : n = 0 then #[] else
-    letI : NeZero n := ⟨hn⟩
-    let s : State n := fun p => ⟨a[p.2.val * n + p.1.val]!.mod 64,
-      Nat.mod_lt _ (by decide)⟩
-    let b := fun p : Site n => chirality seed t (p.2.val * n + p.1.val)
-    (Array.range (n * n)).map fun i =>
-      (stepState n b s ((i % n : ℕ), (i / n : ℕ))).val
-
-/-- Exact disc membership, without floating point. -/
-def inDisc (n radius x y : ℕ) : Bool :=
-  let dx : ℤ := 2 * (x : ℤ) + (y % 2 : ℕ) - n
-  let dy : ℤ := 2 * (y : ℤ) - n
-  4 * dx * dx + 3 * dy * dy ≤ 16 * (radius : ℤ) * radius
-
-/-- Rational densities `(numerator, denominator)`, in particles per site. -/
-def initial (seed : UInt32) (n radius : ℕ) (inside outside : ℕ × ℕ) : Array ℕ :=
-  (Array.range (n * n)).map fun i =>
-    let rho := if inDisc n radius (i % n) (i / n) then inside else outside
-    let threshold := rho.1 * 16777216 / (6 * rho.2)
-    (assemble fun k =>
-      let w := Philox.rand seed (k.val / 4).toUInt32 i.toUInt32
-      let word : UInt32 := match k.val % 4 with
-        | 0 => w.x0 | 1 => w.x1 | 2 => w.x2 | _ => w.x3
-      (word >>> 8).toNat < threshold).val
-
-def run (seed : UInt32) (n t radius : ℕ) (inside outside : ℕ × ℕ) : Array ℕ :=
-  (List.range t).foldl (fun a time => step seed n time a)
-    (initial seed n radius inside outside)
 
 theorem bits_assemble : ∀ (b : Dir → Bool) (k : Dir), bits k (assemble b) = b k := by
   decide +kernel
