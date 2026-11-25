@@ -28,10 +28,11 @@ but a statistical, partition-dependent one:
    at the cone speed guarantees (**proved**,
    `TimesArrow/CausalEntropy.lean`; for the playground gas's intensity
    recursion, `TimesArrow/Telegraph.lean`). That it falls on every
-   observer's slices of that gas is derived by hand, not formalised. The
-   same law holds backwards for reversible dynamics, so it constrains an
-   arrow without choosing one. Changes of partition form a one-way
-   semigroup, not a group
+   observer's slices of that gas is derived by hand, not formalised. For
+   reversible dynamics a law of the same form holds backwards, with the
+   inverse's light cone (the same cone for the HPP gas, **proved**), so it
+   constrains an arrow without choosing one. Changes of partition form a
+   one-way semigroup, not a group
    ([#8](https://github.com/gszep/times-arrow/issues/8), **conjecture**).
 2. **Proper time as counted irreversibility.** A clock's precision is bounded
    by the entropy it produces per tick. Is proper time a count of irreversible

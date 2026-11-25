@@ -8,9 +8,9 @@ import TimesArrow.Claims
 The HPP and FHP instances of the causal second law: relative entropy
 restricted to a region cannot increase when the later region lies inside
 the domain of dependence of the earlier one (`TimesArrow.CausalEntropy`
-proves the general law), a fixed region breaks it, and — because the
-dynamics is reversible — the law holds in both time directions, so by
-itself it gives no arrow of time.
+proves the general law), a fixed region can break it, and — because the
+HPP dynamics is reversible with the same light cone backwards — the law
+holds in both time directions, so by itself it gives no arrow of time.
 -/
 
 open MeasureTheory InformationTheory

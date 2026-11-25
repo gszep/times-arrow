@@ -4,9 +4,11 @@ import Mathlib.Probability.Notation
 /-!
 # The causal second law
 
-Relative entropy restricted to a region of space cannot increase under
-causal dynamics, provided the later region lies inside the domain of
-dependence of the earlier one; and nothing of the sort holds otherwise.
+Relative entropy restricted to a region of space cannot increase when the
+dynamics is causal for the pair of regions, in particular when the later
+region lies in the domain of dependence of the earlier one. For a fixed
+deterministic dynamics and pair of regions it holds for every pair of
+states only if the dynamics is causal for that pair.
 
 Configurations are functions `Site → Cell` from a finite set of sites to a
 finite set of cells, with the discrete measurable structure that finite
