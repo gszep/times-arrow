@@ -96,7 +96,7 @@ export async function headless<T>(
       } catch {}
     }
     const url = new URL(page, server.resolvedUrls!.local[0]).href;
-    const target = await (await fetch(`http://127.0.0.1:${port}/json/new?${url}`, { method: "PUT" })).json();
+    const target = await (await fetch(`http://127.0.0.1:${port}/json/new?${encodeURIComponent(url)}`, { method: "PUT" })).json();
     const ws = new WebSocket(target.webSocketDebuggerUrl);
     await new Promise((resolve, reject) => {
       ws.onopen = resolve;

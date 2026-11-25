@@ -36,17 +36,12 @@ const CAPTIONS = {
 };
 const RED = "#ff6b66", GOLD = "#f4cf72", SEALED = "#7fd4a8";
 
-type Data = {
-  adapter: Awaited<ReturnType<typeof gpu>>["adapter"];
-  phiF: Float64Array;
-  heat: HTMLCanvasElement;
-  probe: Record<string, unknown>;
-};
-
 function fail(error: unknown) {
   (window as any).probeError ??= String(error);
   caption.textContent = String(error);
   caption.style.color = RED;
+  stop();
+  for (const control of [frameBtn, wallBtn, slider, play]) control.disabled = true;
 }
 
 function canvas(element: HTMLCanvasElement) {
@@ -85,12 +80,24 @@ function heatMap(phiF: Float64Array) {
   return heat;
 }
 
-async function compute(): Promise<Data> {
+async function compute() {
   caption.textContent = "Computing the gas…";
   const { device, adapter } = await gpu();
   device.addEventListener("uncapturederror", (event) => fail((event as GPUUncapturedErrorEvent).error.message));
   device.lost.then((info) => fail(`GPU lost: ${info.message}`));
   const gas = new Gas(device, a);
+  // Null first: remove only the preparation, using the same GPU recursion.
+  device.queue.writeBuffer(gas.hist, 0, new Float32Array(N * 2));
+  const nullField = await gas.run();
+  const nullMax = nullField.reduce((m, d) => Math.max(m, Math.abs(d)), 0);
+  const nullPhi = Float64Array.from(nullField, phi);
+  const nullCheck = {
+    maxDeviation: nullMax,
+    maxInformation: nullPhi.reduce((m, d) => Math.max(m, Math.abs(d)), 0),
+    frameRises: FRAME_US.map(x => frameCurve(nullPhi, x).rises),
+    wallRises: WALL_VS.map(x => wallCurve(nullPhi, x).rises),
+  };
+  gas.dispatch("init");
   const gpuField = await gas.run();
   gas.destroy();
   const cpu = cpuField(a);
@@ -120,11 +127,11 @@ async function compute(): Promise<Data> {
       maxCurveDiff: Math.max(...w.D.map((d, i) => Math.abs(d - g.D[i]))) }];
   }));
   return {
-    adapter,
     phiF,
     heat: heatMap(phiF),
     probe: {
       adapter,
+      null: nullCheck,
       maxDiff,
       nan,
       wallEdge,
@@ -140,21 +147,24 @@ async function compute(): Promise<Data> {
   };
 }
 
-let data: Data | null = null;
-const frameCache = new Map<string, FrameCurve>();
-const wallCache = new Map<string, WallCurve>();
+let data: Awaited<ReturnType<typeof compute>> | null = null;
+const frameCache = new Map<number, FrameCurve>();
+const wallCache = new Map<number, WallCurve>();
 const frameOf = (speed: number) => {
-  const key = String(speed);
-  if (!frameCache.has(key)) frameCache.set(key, frameCurve(data!.phiF, speed));
-  return frameCache.get(key)!;
+  if (!frameCache.has(speed)) frameCache.set(speed, frameCurve(data!.phiF, speed));
+  return frameCache.get(speed)!;
 };
 const wallOf = (speed: number) => {
-  const key = String(speed);
-  if (!wallCache.has(key)) wallCache.set(key, wallCurve(data!.phiF, speed));
-  return wallCache.get(key)!;
+  if (!wallCache.has(speed)) wallCache.set(speed, wallCurve(data!.phiF, speed));
+  return wallCache.get(speed)!;
 };
 
-let playing = false, fraction = 0.5, lastFrame = 0;
+let playing = false, fraction = 0.5, lastFrame = 0, animation = 0;
+const frameLevel = () => {
+  const f = frameOf(u);
+  return Math.round(f.s0 + fraction * (Math.min(399, f.s1) - f.s0));
+};
+const wallTime = () => Math.floor(fraction * Math.min(399, v ? 198 / v : 399));
 
 function draw() {
   if (!data) return;
@@ -166,7 +176,8 @@ function drawDiagram() {
   const { ctx, w, h } = canvas(image);
   ctx.fillStyle = "#0b1420";
   ctx.fillRect(0, 0, w, h);
-  const rect = { x: 2, y: 2, width: w - 4, height: h - 4 };
+  const side = Math.min(w, h) - 4; // equal space/time scales: light rays are 45°
+  const rect = { x: (w - side) / 2, y: (h - side) / 2, width: side, height: side };
   const X = (x: number) => rect.x + (x - (C - 200)) / 400 * rect.width;
   const Y = (t: number) => rect.y + (1 - t / 400) * rect.height;
   ctx.imageSmoothingEnabled = true;
@@ -178,33 +189,27 @@ function drawDiagram() {
   ctx.beginPath();
   ctx.rect(rect.x, rect.y, rect.width, rect.height);
   ctx.clip();
+  const line = (x0: number, t0: number, x1: number, t1: number) => {
+    ctx.beginPath(); ctx.moveTo(X(x0), Y(t0)); ctx.lineTo(X(x1), Y(t1)); ctx.stroke();
+  };
   ctx.strokeStyle = "rgba(255,255,255,0.10)";
   ctx.lineWidth = 1;
   for (const xc of [C - 20, C + 40]) {
     for (const d of [-1, 1]) {
-      ctx.beginPath();
-      ctx.moveTo(X(xc), Y(0));
-      ctx.lineTo(X(xc + d * 400), Y(400));
-      ctx.stroke();
+      line(xc, 0, xc + d * 400, 400);
     }
   }
   if (view === "frame") {
     const f = frameOf(u);
     ctx.strokeStyle = "rgba(228,237,244,0.35)";
     for (let k = 0; k <= 4; k++) {
-      const s = f.s0 + (f.s1 - f.s0) * k / 4;
-      ctx.beginPath();
-      ctx.moveTo(X(C - 200), Y(s - u * 200));
-      ctx.lineTo(X(C + 200), Y(s + u * 200));
-      ctx.stroke();
+      const s = f.s0 + (Math.min(399, f.s1) - f.s0) * k / 4;
+      line(C - 200, s - u * 200, C + 200, s + u * 200);
     }
-    const s = f.s0 + (f.s1 - f.s0) * fraction;
+    const s = frameLevel();
     ctx.strokeStyle = GOLD;
     ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(X(C - 200), Y(s - u * 200));
-    ctx.lineTo(X(C + 200), Y(s + u * 200));
-    ctx.stroke();
+    line(C - 200, s - u * 200, C + 200, s + u * 200);
   } else {
     ctx.fillStyle = "rgba(159,196,224,0.10)";
     ctx.beginPath();
@@ -217,10 +222,7 @@ function drawDiagram() {
     ctx.setLineDash([4, 4]);
     ctx.strokeStyle = "rgba(228,237,244,0.5)";
     ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(X(C), Y(0));
-    ctx.lineTo(X(C + 400), Y(400));
-    ctx.stroke();
+    line(C, 0, C + 400, 400);
     ctx.setLineDash([]);
     ctx.fillStyle = "rgba(228,237,244,0.75)";
     ctx.textAlign = "right";
@@ -228,13 +230,10 @@ function drawDiagram() {
     ctx.textAlign = "left";
     ctx.strokeStyle = GOLD;
     ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(X(C), Y(0));
-    ctx.lineTo(X(C + v * 400), Y(400));
-    ctx.stroke();
+    line(C, 0, C + v * 400, 400);
     ctx.fillStyle = GOLD;
     ctx.beginPath();
-    ctx.arc(X(C + v * fraction * 399), Y(fraction * 399), 3.5, 0, 2 * Math.PI);
+    ctx.arc(X(C + v * wallTime()), Y(wallTime()), 3.5, 0, 2 * Math.PI);
     ctx.fill();
   }
   ctx.restore();
@@ -244,81 +243,49 @@ function drawCurve() {
   const { ctx: g, w, h } = canvas(plot);
   g.fillStyle = "#0b1420";
   g.fillRect(0, 0, w, h);
-  if (!data) return;
   const left = 8, right = w - 10, top = 16, bottom = h - 12;
-  let xs: (i: number) => number, ys: (i: number) => number, count: number, marker: [number, number] | null;
-  if (view === "frame") {
-    const f = frameOf(u), f0 = frameOf(0);
-    const x0 = f.s0 * f.gamma, x1 = f.s1 * f.gamma;
-    const lo = Math.min(...f.D), hi = Math.max(...f.D);
-    const padY = (hi - lo) * 0.05 + 1e-9;
-    const X = (x: number) => left + (x - x0) / (x1 - x0) * (right - left);
-    const Y = (d: number) => bottom - (d - (lo - padY)) / (hi - lo + 2 * padY) * (bottom - top);
+  const f = view === "frame" ? frameOf(u) : null;
+  const D = f ? f.D : wallOf(v).D;
+  const x0 = f ? f.s0 * f.gamma : 0, x1 = f ? f.s1 * f.gamma : 399;
+  const lo = Math.min(...D), hi = Math.max(...D), pad = (hi - lo) * .05 + 1e-9;
+  const X = (t: number) => left + (t - x0) / (x1 - x0) * (right - left);
+  const Y = (d: number) => bottom - (d - lo + pad) / (hi - lo + 2 * pad) * (bottom - top);
+  const xs = (i: number) => X(f ? (f.s0 + i) * f.gamma : i);
+  g.save();
+  g.beginPath(); g.rect(left, top, right - left, bottom - top); g.clip();
+  if (f) {
+    const f0 = frameOf(0);
     g.strokeStyle = "rgba(137,182,211,0.4)";
     g.lineWidth = 1;
     g.beginPath();
     for (let i = 0; i < f0.D.length; i++) {
-      const px = X(f0.s0 * f0.gamma + i * f0.gamma), py = Y(f0.D[i]);
+      const px = X(f0.s0 + i), py = Y(f0.D[i]);
       i ? g.lineTo(px, py) : g.moveTo(px, py);
     }
     g.stroke();
-    xs = i => X((f.s0 + i) * f.gamma);
-    ys = i => Y(f.D[i]);
-    count = f.D.length;
-    const i = Math.round(fraction * (count - 1));
-    marker = [xs(i), ys(i)];
-  } else {
-    const c = wallOf(v);
-    const lo = Math.min(...c.D), hi = Math.max(...c.D);
-    const padY = (hi - lo) * 0.05 + 1e-9;
-    const X = (t: number) => left + t / 399 * (right - left);
-    const Y = (d: number) => bottom - (d - (lo - padY)) / (hi - lo + 2 * padY) * (bottom - top);
-    xs = X;
-    ys = t => Y(c.D[t]);
-    count = c.D.length;
-    const i = Math.round(fraction * (count - 1));
-    marker = [xs(i), ys(i)];
   }
+  g.lineWidth = 2;
+  g.lineCap = "round";
+  for (let i = 1; i < D.length; i++) {
+    g.strokeStyle = D[i] - D[i - 1] > 1e-12 ? RED : GOLD;
+    g.beginPath(); g.moveTo(xs(i - 1), Y(D[i - 1])); g.lineTo(xs(i), Y(D[i])); g.stroke();
+  }
+  g.restore();
   g.strokeStyle = "#273443";
   g.beginPath();
   g.moveTo(left, bottom);
   g.lineTo(right, bottom);
   g.stroke();
-  g.lineWidth = 2;
-  g.strokeStyle = GOLD;
-  const D = view === "frame" ? frameOf(u).D : wallOf(v).D;
-  g.beginPath();
-  g.moveTo(xs(0), ys(0));
-  for (let i = 1; i < count; i++) {
-    const rise = D[i] - D[i - 1] > 1e-12;
-    if (rise) {
-      g.stroke();
-      g.strokeStyle = RED;
-      g.beginPath();
-      g.moveTo(xs(i - 1), ys(i - 1));
-    }
-    g.lineTo(xs(i), ys(i));
-    if (rise) {
-      g.stroke();
-      g.strokeStyle = GOLD;
-      g.beginPath();
-      g.moveTo(xs(i), ys(i));
-    }
-  }
-  g.stroke();
   g.fillStyle = "#95a6b7";
   g.fillText("information left", 3, 12);
   g.textAlign = "right";
   g.fillText(view === "frame" ? "observer's proper time" : "time", right, h - 3);
+  if (f) g.fillText("faint: observer at rest", right, 12);
   g.textAlign = "left";
-  if (marker) {
-    g.fillStyle = GOLD;
-    g.beginPath();
-    g.arc(marker[0], marker[1], 3.5, 0, 2 * Math.PI);
-    g.fill();
-    g.strokeStyle = "#0b1420";
-    g.stroke();
-  }
+  const marker = f ? frameLevel() - f.s0 : wallTime();
+  g.fillStyle = GOLD;
+  g.beginPath(); g.arc(xs(marker), Y(D[marker]), 3.5, 0, 2 * Math.PI); g.fill();
+  g.strokeStyle = "#0b1420"; g.stroke();
 }
 
 function sync() {
@@ -331,25 +298,15 @@ function sync() {
   wallBtn.setAttribute("aria-pressed", String(view === "wall"));
   caption.style.color = "";
   caption.textContent = CAPTIONS[view];
-  if (view === "frame") {
-    slabel.textContent = "observer speed";
-    slider.min = "-0.75";
-    slider.max = "0.75";
-    slider.value = String(u);
-    svalue.textContent = `${u.toFixed(2)} c`;
-    status.textContent = "";
-    status.style.color = "";
-    tick.hidden = true;
-  } else {
-    slabel.textContent = "wall speed";
-    slider.min = "0";
-    slider.max = "1.5";
-    slider.value = String(v);
-    svalue.textContent = `${v.toFixed(2)} c`;
-    status.textContent = v < 1 ? "slower than light: leaks" : v === 1 ? "light speed: a horizon, sealed" : "faster than light: sealed";
-    status.style.color = v < 1 ? RED : SEALED;
-    tick.hidden = false;
-  }
+  const frame = view === "frame";
+  slabel.textContent = frame ? "observer speed" : "wall speed";
+  slider.min = frame ? "-0.75" : "0";
+  slider.max = frame ? "0.75" : "1.5";
+  slider.value = String(frame ? u : v);
+  svalue.textContent = `${(frame ? u : v).toFixed(2)} c`;
+  status.textContent = frame ? "" : v < 1 ? "slower than light: leaks" : v === 1 ? "light speed: a horizon, sealed" : "faster than light: sealed";
+  status.style.color = v < 1 ? RED : SEALED;
+  tick.hidden = frame;
   draw();
 }
 
@@ -360,27 +317,21 @@ function loop(now: number) {
   lastFrame = now;
   if (fraction >= 1) {
     fraction = 1;
-    playing = false;
-    play.textContent = "▶";
+    stop();
   }
   draw();
-  if (playing) requestAnimationFrame(loop);
-  else lastFrame = 0;
+  if (playing) animation = requestAnimationFrame(loop);
 }
 
-frameBtn.onclick = () => {
-  if (view === "frame") return;
-  view = "frame";
+function stop() {
+  cancelAnimationFrame(animation);
   playing = false;
+  lastFrame = 0;
   play.textContent = "▶";
-  sync();
-};
-wallBtn.onclick = () => {
-  if (view === "wall") return;
-  view = "wall";
-  playing = false;
-  play.textContent = "▶";
-  sync();
+  play.ariaLabel = "Play slice";
+}
+for (const mode of ["frame", "wall"] as const) el(`v${mode}`).onclick = () => {
+  view = mode; stop(); sync();
 };
 slider.oninput = () => {
   if (view === "frame") u = clamp(Number(slider.value), -0.75, 0.75);
@@ -389,15 +340,12 @@ slider.oninput = () => {
 };
 play.onclick = () => {
   if (!data) return;
-  if (playing) {
-    playing = false;
-    play.textContent = "▶";
-    return;
-  }
+  if (playing) return stop();
   if (fraction >= 1) fraction = 0;
   playing = true;
   play.textContent = "Ⅱ";
-  requestAnimationFrame(loop);
+  play.ariaLabel = "Pause slice";
+  animation = requestAnimationFrame(loop);
 };
 
 new ResizeObserver(() => draw()).observe(document.body);
@@ -412,7 +360,7 @@ async function main() {
     parameters: { view, u, v, a },
   });
   (window as any).probe = probe;
-  (window as any).probe.adapter = data.adapter;
+  (window as any).probe.adapter = data.probe.adapter;
   sync();
 }
 

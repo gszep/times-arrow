@@ -6,6 +6,9 @@ const close = (actual: number, expected: number, label: string) =>
 await headless("play/", async (ev, cdp) => {
   const p = await ev("probe()");
   assert.equal(p.adapter.fallback, false);
+  assert.equal(p.null.maxDeviation, 0);
+  assert.equal(p.null.maxInformation, 0);
+  assert.ok([...p.null.frameRises, ...p.null.wallRises].every(x => x === 0));
   assert.equal(p.nan, 0);
   assert.ok(p.maxDiff < 1e-5, `GPU field error ${p.maxDiff}`);
   assert.ok(p.minSigma >= -1e-12);
@@ -56,6 +59,28 @@ await headless("play/", async (ev, cdp) => {
     assert.equal(await ev("new URL(location.href).searchParams.get('v')"), String(v));
     assert.ok((await ev("document.getElementById('status').textContent")).includes(v < 1 ? "leaks" : "sealed"));
   }
+  await ev("document.querySelector('summary').click()");
+  assert.equal(await ev("document.querySelector('details').open"), true);
+  await ev("document.querySelector('summary').click()");
+  assert.equal((await ev("probe()")).scrollHeight, 740);
+  await ev("document.getElementById('play').click()");
+  assert.equal(await ev("document.getElementById('play').ariaLabel"), "Pause slice");
+  await ev("document.getElementById('play').click()");
+  assert.equal(await ev("document.getElementById('play').ariaLabel"), "Play slice");
   assert.equal(await ev("window.probeError"), undefined);
   console.log("PASS f64 references, GPU field and curves, dissipation, zero right boundary, URL controls", JSON.stringify(p));
+});
+
+for (const [query, expected] of [
+  ["view=bad&u=99&v=-3&a=1", { view: "frame", u: .75, v: 0, a: 1 / 64 }],
+  ["view=wall&u=-99&v=99&a=1/8", { view: "wall", u: -.75, v: 1.5, a: 1 / 8 }],
+] as const) await headless(`play/?${query}`, async ev => {
+  const p = await ev("probe()");
+  assert.deepEqual(p.parameters, expected);
+  assert.equal(p.nan, 0);
+  assert.ok(p.maxDiff < 1e-5);
+  assert.ok(p.minSigma >= -1e-12);
+  assert.equal(p.wallEdge, 0);
+  assert.equal(await ev("window.probeError"), undefined);
+  console.log(`PASS URL guards and GPU: ${query}`);
 });

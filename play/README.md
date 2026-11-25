@@ -26,11 +26,12 @@ The gas has a preferred rest frame and is not Lorentz invariant.
 URL: `view=frame|wall`, `u` (default .5, clamped to ±.75), `v` (default .5,
 clamped to 0…1.5), `a` (default `1/64`, fractions accepted; invalid values,
 including values rounded to 0 or 1 in f32, fall back to the default).
-Play moves the highlighted slice or wall marker and the corresponding curve dot.
+Play moves a visible slice or wall marker and the corresponding curve dot.
 “What is this?” opens the assumptions, proof boundary and literature.
 
 Run `node play/check.ts` or `npm run check:gpu`. The hardware-only CDP check
-asserts f64 references to relative 1e-9, f32 field error below 1e-5, curve
+checks the zero-preparation null first, f64 references to relative 1e-9,
+f32 field error below 1e-5, curve
 error below 1e-3, all seven observer rise counts, nine wall rise counts,
 dissipation balance and the exactly zero right boundary. Both views fit
 390×844 and 360×740 without scrolling. `window.probe()` exposes these numbers.
