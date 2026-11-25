@@ -22,6 +22,8 @@ Observer cuts cross links at `t−u(x−c)=s`, for
 The wall region is `c+floor(vt)≤x≤c+900−t`, for `t=0…399`.
 Support obeys `52+768<1024`: no wrapping or incomplete-cut comparisons.
 The gas has a preferred rest frame and is not Lorentz invariant.
+Lean proves the vertex and shrinking-interval inequalities for the intensity
+recursion in `TimesArrow/Telegraph.lean`, not the Poisson or tilted-cut identification.
 
 URL: `view=frame|wall`, `u` (default .5, clamped to ±.75), `v` (default .5,
 clamped to 0…1.5), `a` (default `1/64`, fractions accepted; invalid values,
