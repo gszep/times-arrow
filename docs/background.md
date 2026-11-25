@@ -825,6 +825,144 @@ the slogan.
   (issue #10): whether the TUR on a dissipative clock along a worldline is a
   covariant bound on resolved proper time.
 
+## Causal second law: the information current, stability and causality (#14)
+
+Search 2026-11-25: arXiv and publisher full text for “information current
+stability causality”, “relativistic Boltzmann relative entropy current”,
+“entropy spacelike hypersurface”, “lattice Boltzmann H theorem”, “telegraph
+entropy Lorentz”, and “stochastic network relative entropy causal cuts”. The
+arXiv abstracts or publisher texts linked below were read, not just metadata.
+An unlocated prior statement is a **conjecture**, not a novelty certificate.
+
+**A — literature, central recollection confirmed with limits.** Gavassino,
+Antonelli & Haskell, “Thermodynamic Stability Implies Causality”, PRL **128**,
+010606 (2022), [arXiv:2105.14621](https://arxiv.org/abs/2105.14621),
+equations (3)–(5), (9) and causality argument: “localised perturbations to the
+equilibrium state cannot propagate outside their future light-cone”. They define
+`E^μ = −δs^μ − α*_I δJ_I^μ` using the finite change from equilibrium, entropy
+current `s`, conserved currents `J_I`, and equilibrium reservoir affinities
+`α*_I`; `E[Σ] = ∫Σ E^μ n_μ dΣ` uses a **past-directed** unit normal. For
+all timelike past normals the density is nonnegative, vanishes exactly when
+all perturbations vanish, and `∇_μ E^μ ≤ 0` on solutions. Under these local
+conditions and the paper's smoothness, localized-perturbation and near-
+equilibrium assumptions, the integrated current is a Lyapunov functional and
+the equilibrium exterior of the future cone stays unperturbed. This is not a
+general nonlinear or stochastic network theorem. Strict definiteness matters;
+causality of a current alone does not identify the entire state.
+
+**A — literature, converse is not general.** The same paper says “causality
+alone does not imply stability”, distinguishing off-shell thermodynamic
+stability against virtual perturbations from on-shell mode stability. Geroch &
+Lindblom's special divergence-type class does have a causality-to-equilibrium-
+stability result under its additional assumptions; see B. Gavassino, “Can We
+Make Sense of Dissipation without Causality?”, PRX **12**, 041001 (2022),
+[arXiv:2111.05254](https://arxiv.org/abs/2111.05254), theorem 2: “If a causal
+(linear) theory presents a growing Fourier mode in one reference frame, then
+it is linearly unstable in all reference frames.” Thus causal **linear mode**
+stability in one inertial frame gives it in all, with the paper's homogeneous
+stationary-background and solution assumptions; it is not a proof that
+causality alone creates an entropy law.
+
+**A — literature, transport.** Heller, Serantes, Spaliński & Withers,
+“Rigorous Bounds on Transport from Causality”, PRL **130**, 261601 (2023),
+[arXiv:2212.07434](https://arxiv.org/abs/2212.07434), derive “two-sided bounds
+on all transport coefficients in units of this radius”, including an upper
+diffusivity bound, from causal retarded response and analyticity, not the
+information-current theorem; their qualification excludes relevant stochastic
+fluctuations. Gavassino, [arXiv:2301.06651](https://arxiv.org/abs/2301.06651),
+abstract, derives the same dispersion constraint from covariant stability.
+
+**B — literature, history.** Hiscock & Lindblom, PRD **31**, 725 (1985),
+[paper](https://www.math.tecnico.ulisboa.pt/~jnatar/nonarxivpapers/HiscockLindblom.pdf),
+study the classic Eckart/Landau–Lifshitz first-order class: despite an entropy
+law, equilibrium has unstable modes; this is not a no-go for every modern
+first-order frame. Their abstract reports “small spatially bounded departures
+from equilibrium” that “diverge exponentially with time”.
+For Israel–Stewart, the 2024 primary treatment by Gavassino et al.,
+[arXiv:2401.13852](https://arxiv.org/abs/2401.13852), contrasts transient
+variables and entropy-current construction with first-order theories; it
+describes a “timelike future-directed information current” even at first order.
+Geroch & Lindblom, PRD **41**, 1855 (1990),
+[paper](https://electronicsandbooks.com/edt/manual/Magazine/P/Physical%20Review%20D/PhysRevD%201982-1994/root/data/PhysRevD%201982-1994/pdf/PRD/v41/i6/PRD_v41_i06_p1855_1.pdf),
+construct divergence-type theories with an entropy law and examine nonlinear
+causality; §I says causality of that class “implies stability of the equilibrium
+states”. Kovtun, [arXiv:1907.08191](https://arxiv.org/abs/1907.08191), finds
+stable first-order hydrodynamic frames. Hoult & Kovtun, PRD **106**, 066023
+(2022), [paper](https://arxiv.org/abs/2112.14042), explain BDNK: appropriately
+chosen frames yield hyperbolicity and stable equilibrium with positive entropy
+production within the derivative expansion, not necessarily an exact
+nonnegative entropy divergence for arbitrary gradients.
+
+**C — literature and derived here, kinetic theory.** Gavassino et al. 2022,
+equation (9), already give the causal kinetic information current near
+equilibrium: `E^μ = ∫(δf)^2 p^μ/[2 f_eq(1+ε f_eq)] d³p/p⁰ + O(δf³)`;
+the paper says the ideal-gas current obeys all three conditions. For the
+nonlinear classical Boltzmann equation with elastic number- and four-momentum-
+conserving collisions and global Jüttner equilibrium `ln f_eq = α + β_μ p^μ`,
+Rocha, Gavassino & Mullins, [arXiv:2405.10878](https://arxiv.org/html/2405.10878),
+equation (7) and conclusion, **already state exactly the proposed current**
+`D^μ = ∫(f ln(f/f_eq)−f+f_eq)p^μ d³p/[(2π)³p⁰]` (their `E^μ`). They write
+“The fully nonlinear information current” is “manifestly timelike
+future-directed” and has “non-positive divergence due to the H-theorem”.
+Their equation (7) is valid for arbitrarily large fluctuations; their linear
+stochastic construction is a separate result. **Derived here:** convexity and
+future momentum give causal direction, with `∂_μ D^μ = −∂_μ s^μ ≤ 0` from
+collision invariants when β is Killing. This assumes suitable integrability
+and no external forcing; a local equilibrium or quantum gas needs a different
+calculation (the same paper gives quantum statistics in Appendix A). We did
+not verify the exact nonlinear formula
+in de Groot–van Leeuwen–van Weert, Cercignani–Kremer or Israel 1963; do not
+attribute it to them on this search. An absolute entropy current being timelike
+is a distinct, convention-sensitive assertion: the nonnegative relative
+entropy integrand makes `D` causal without requiring it for `s`.
+
+**D — literature and derived here, slices and boundaries.** Gavassino et al.
+2022, equations (3)–(5), state positivity on arbitrary spacelike surfaces and
+non-positive current divergence; their proof uses spacelike boundaries taken
+arbitrarily close to null.
+**Derived here:** Gauss gives nonincrease between ordered complete Cauchy slices
+when side flux vanishes or has the needed sign, and likewise for bounded
+domains with the appropriate sign on the whole side boundary. Divergence
+alone suffices for complete slices with no side flux; causality supplies the
+universal sign on null or spacelike oriented boundary pieces. A timelike
+surface has spacelike normal, so causal currents can cross it either way;
+there is no universal sign. This does **not** imply that only horizon-bounded
+regions can have a monotone clock: reflecting/no-flux boundaries, special
+states or dynamics, and suitable timelike boundaries can also make the side
+term favourable. An individual null flux may vanish. We found no separately
+verified ordinary-fluid horizon-clock theorem.
+
+**E — literature and derived here, discrete and telegraph.** Succi, Karlin &
+Chen, [arXiv:cond-mat/0205639](https://arxiv.org/abs/cond-mat/0205639),
+survey an `H` theorem in discrete phase space; the abstract emphasizes
+“compliance of the method with macroscopic evolutionary constraints”. We did
+not find a verified arbitrary-tilted-cut statement in that source. Heller,
+Serantes, Spaliński, Svensson & Withers,
+[arXiv:2011.13864](https://arxiv.org/abs/2011.13864), call the telegrapher
+equation “a causal theory with a hydrodynamic sector”. Serva,
+[arXiv:2004.11983](https://arxiv.org/abs/2004.11983), introduction, says a
+boosted light-speed persistent process generally has “an unbalanced
+probability rate of velocity inversion”: covariance of a family does not mean
+the same symmetric rates in every frame. **Derived here:** on a periodic line,
+the two-velocity symmetric-rate process has non-increasing KL divergence to
+its uniform stationary distribution by streaming plus Markov data processing;
+its rate is a nonnegative direction-flip contribution. We did not verify a
+published many-fingered-time or entropy-production theorem for this process.
+The separate classical/order lane is responsible for a fuller network search.
+
+**F — conjecture, novelty and logical conditions.** The hydrodynamic current,
+foliation argument and ordinary channel contraction are prior art; an exact
+lightlike lattice-gas demonstration with a rigorously qualified converse may
+still be new, but absence is unproved. **Derived here:** a later cut marginal
+must factor through the earlier cut by the *same* stochastic channel for both
+states (including all necessary inputs and correlations) for KL contraction.
+For a converse, an outside variable must have actual operational influence,
+and the quantified state pairs must permit changing it while keeping the
+earlier cut fixed. A graph edge erased by its channel is a counterexample to
+characterising the declared graph order; restricted state families can also
+hide influence. Equal earlier marginals and unequal later marginals witness
+failure, provided those pairs are admissible. No Lean proof is claimed here.
+
 ## Tooling references
 
 - LeanArchitect: Lean-native blueprint metadata. Zhu, Monticone, Welleck &
