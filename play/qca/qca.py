@@ -299,8 +299,7 @@ def rel_entropy_arb(Gp_f64, Gw_acb, S_p_f64, dps=120, nsites=None):
     if nsites is None:
         nsites = N // 2
     h2 = N // 2
-    U = sector_U(nsites)
-    Ua = to_acb_mat(U.astype(complex), dps)
+    Ua = sector_U_arb(nsites, dps)
     Uh = Ua.transpose().conjugate()
     Gws = Uh * Gw_acb * Ua
     sym_res = max(float(Gws[i, j].abs_upper()) for i in range(h2) for j in range(h2, N))
@@ -357,7 +356,7 @@ def vac_ref_prep(nsites, n, theta, dps=100):
     Gw_arb = region_vacuum_arb(sites, n, theta, dps=dps)
     N = 2 * nsites
     h2 = nsites
-    Ua = to_acb_mat(sector_U(nsites).astype(complex), dps)
+    Ua = sector_U_arb(nsites, dps)
     Uh = Ua.transpose().conjugate()
     Gws = Uh * Gw_arb * Ua
     sym_res = max(float(Gws[i, j].abs_upper()) for i in range(h2) for j in range(h2, N))
@@ -380,6 +379,28 @@ def vac_ref_prep(nsites, n, theta, dps=100):
     # f64 counterpart (built with the same V as the states use, so that the
     # null D(omega||omega) below measures the full pipeline's zero level)
     return ref
+
+
+def sector_U_arb(nsites, dps=100):
+    """sector_U with EXACT 1/sqrt(2) entries as radius-0 Arb balls.
+
+    The f64 decimal of sqrt(1/2) would perturb the reference by ~1e-17,
+    which is negligible for f64 pipelines but moves the deep/near-1
+    eigenvalues (1-lambda ~ 1e-34) of the certified route and widens the
+    near-1 log terms; the sectorizer itself must be exact.
+    """
+    import flint
+    flint.ctx.dps = dps
+    U = sector_U(nsites)
+    N = 2 * nsites
+    half = flint.acb(flint.arb("0.5").sqrt())
+    M = flint.acb_mat(N, N)
+    for i in range(N):
+        for j in range(N):
+            x = U[i, j]
+            if x != 0.0:
+                M[i, j] = flint.acb(1 if x > 0 else -1) * half
+    return M
 
 
 def ref_n(ref):

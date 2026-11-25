@@ -7,13 +7,19 @@ cos theta cos k). Exploration only; no claims. The owner integrates.
 - `qca.py` — walk, band basis, Gaussian states, entropies, relative
   entropies; f64 routes (valid while the reference spectrum is
   f64-resolvable) and certified Arb routes (python-flint balls,
-  dps 100) with reflection-sector eigendecompositions.
+  dps 100) with reflection-sector eigendecompositions (the sectoriser
+  uses exact 1/sqrt(2) balls: the f64 decimal would perturb the deep
+  spectrum the certification exists to resolve).
 - `validate.py` — V1-V10: brute-force many-body checks of every
   convention (walk, update rule, formulas, Peschel h, certified route).
   Run: `uv run validate.py`.
 - `e1_arrow.py` — E1 moving walls; certified vacuum-reference D(t) via
   `uv run e1_arrow.py`; results in `results/e1_arrow.json`.
-- `e2_identity.py` — E2 D = Delta<K> - Delta S residuals.
+- `e1_stalls.py` — post-processes the E1 results: every rise of D sits on
+  a step where the integer wall stalls (floor(v(t+1)) == floor(vt));
+  walls that advance every step (v >= 1) never rise.
+- `e2_identity.py` — E2 D = Delta<K> - Delta S residuals (certified for
+  the vacuum reference, two f64 routes for the thermal one).
 - `e4_classical.py` — E4 classical Ising contrast.
 
 Key numerics fact: the restricted vacuum spectrum piles up
