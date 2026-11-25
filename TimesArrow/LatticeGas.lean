@@ -243,6 +243,11 @@ theorem stepState_rev (n : ℕ) [NeZero n] (s : State n) :
 theorem revState_involutive (n : ℕ) : Function.Involutive (revState n) := fun s => by
   funext p; simp only [revState, rev16_rev16]
 
+/-- The inverse of the `t`-step map: the forward `t`-step dynamics
+conjugated by velocity reversal (`stepState_rev` is the one-step case). -/
+def revStepState (n : ℕ) [NeZero n] (t : ℕ) (s : State n) : State n :=
+  revState n ((stepState n)^[t] (revState n s))
+
 /-! ## Sums over the lattice -/
 
 /-- Translating sites is a bijection. -/

@@ -18047,6 +18047,13 @@
    "axioms": ["propext", "Classical.choice", "Quot.sound"]},
   {"status": "proved",
    "statement":
+   "causal_second_law (n : ℕ) [NeZero n] (b : ℕ → Site n → Bool) (t : ℕ) (S R : Set (Site n)) (h : (⋃ p ∈ R, {q | hexBall n t p q}) ⊆ S) (μ ν : Measure (State n)) [IsFiniteMeasure μ] [IsFiniteMeasure ν] : klDiv ((μ.map (evolve n b t)).map (restrict R)) ((ν.map (evolve n b t)).map (restrict R)) ≤ klDiv (μ.map (restrict S)) (ν.map (restrict S))",
+   "name": "TimesArrow.FHP.causal_second_law",
+   "doc":
+   "**The causal second law for FHP.** The `t`-step FHP evolution with a\nfixed collision field is causal for `(S, R)` whenever `S` contains every\n`t`-step hexagonal light cone of a site of `R`, and the causal second law\nfollows: the divergence seen in `R` after `t` steps is at most the\ndivergence present in `S`.",
+   "axioms": ["propext", "Classical.choice", "Quot.sound"]},
+  {"status": "proved",
+   "statement":
    "checkerboard_counterexample : labelMass 4 0 0 singleNW = 1 ∧ labelMass 4 1 0 (stepState 4 (fun _ => false) singleNW) = 0",
    "name": "TimesArrow.FHP.checkerboard_counterexample",
    "doc":
@@ -18107,6 +18114,27 @@
    "name": "TimesArrow.FHP.step_inverse",
    "doc":
    "On every positive even periodic lattice, the exact two-sided inverse\nunstreams first, then collides with opposite chirality at the original site.\nThe field `b` must be replayed from the same seed and original time.",
+   "axioms": ["propext", "Classical.choice", "Quot.sound"]},
+  {"status": "proved",
+   "statement":
+   "causal (n : ℕ) [NeZero n] (t : ℕ) (S R : Set (Site n)) (h : (⋃ p ∈ R, diamond n p t) ⊆ S) : Causal ((stepState n)^[t]) S R",
+   "name": "TimesArrow.LatticeGas.causal",
+   "doc":
+   "The `t`-step HPP dynamics is causal for `(S, R)` whenever `S`\ncontains every `t`-step diamond of a site of `R`: configurations that\nagree on `S` still agree on `R` after `t` steps. The lattice light-cone\nspeed is one cell per step, so `R` at time `t` lies inside the domain of\ndependence of `S` at time `0` exactly when this holds.",
+   "axioms": ["propext", "Classical.choice", "Quot.sound"]},
+  {"status": "proved",
+   "statement":
+   "causal_second_law (n : ℕ) [NeZero n] (t : ℕ) (S R : Set (Site n)) (h : (⋃ p ∈ R, diamond n p t) ⊆ S) (μ ν : Measure (State n)) [IsFiniteMeasure μ] [IsFiniteMeasure ν] : klDiv ((μ.map ((stepState n)^[t])).map (restrict R)) ((ν.map ((stepState n)^[t])).map (restrict R)) ≤ klDiv (μ.map (restrict S)) (ν.map (restrict S))",
+   "name": "TimesArrow.LatticeGas.causal_second_law",
+   "doc":
+   "**The causal second law for HPP.** After `t` steps of HPP, the\nrelative entropy of two measures restricted to `R` is at most their\nrelative entropy restricted to `S`, whenever `S` contains every `t`-step\ndiamond of a site of `R`. Inside the domain of dependence, restriction\ncannot create distinguishability.",
+   "axioms": ["propext", "Classical.choice", "Quot.sound"]},
+  {"status": "proved",
+   "statement":
+   "causal_second_law_reverse (n : ℕ) [NeZero n] (t : ℕ) (S R : Set (Site n)) (h : (⋃ p ∈ R, diamond n p t) ⊆ S) (μ ν : Measure (State n)) [IsFiniteMeasure μ] [IsFiniteMeasure ν] : (∀ s, revStepState n t ((stepState n)^[t] s) = s) ∧ (∀ s, (stepState n)^[t] (revStepState n t s) = s) ∧ klDiv ((μ.map (revStepState n t)).map (restrict R)) ((ν.map (revStepState n t)).map (restrict R)) ≤ klDiv (μ.map (restrict S)) (ν.map (restrict S))",
+   "name": "TimesArrow.LatticeGas.causal_second_law_reverse",
+   "doc":
+   "**The causal second law holds in both time directions.** HPP's step is\ninvertible, with the inverse of the `t`-step map given by conjugating\nwith velocity reversal. The reversed dynamics satisfies the same light\ncones, so the causal second law holds for it too: the inequality gives no\narrow of time by itself.",
    "axioms": ["propext", "Classical.choice", "Quot.sound"]},
   {"status": "proved",
    "statement":
@@ -18200,6 +18228,13 @@
    "name": "TimesArrow.LatticeGas.subset_mass",
    "doc":
    "Selection sampling selects exactly the particles asked for: the\nexact-`count` subset state of a lattice region holds exactly\n`min count (4 · side²)` particles — every slot when the count exceeds the\nregion.",
+   "axioms": ["propext", "Classical.choice", "Quot.sound"]},
+  {"status": "proved",
+   "statement":
+   "wall_violation : klDiv ((Measure.dirac (east4 : State 4)).map (restrict ({(1, 0)} : Set (Site 4)))) ((Measure.dirac (0 : State 4)).map (restrict ({(1, 0)} : Set (Site 4)))) = 0 ∧ klDiv (((Measure.dirac (east4 : State 4)).map (stepState 4)).map (restrict ({(1, 0)} : Set (Site 4)))) (((Measure.dirac (0 : State 4)).map (stepState 4)).map (restrict ({(1, 0)} : Set (Site 4)))) = ∞",
+   "name": "TimesArrow.LatticeGas.wall_violation",
+   "doc":
+   "**A decided violation: a fixed region lets information in.** On the\n4×4 HPP lattice, compare the single east-going particle at the origin\nwith the empty lattice, through the fixed one-site region `{(1, 0)}`.\nThe restricted states coincide before the step — divergence `0` — but one\nstep later the particle has entered the region and the restricted images\ndiffer — divergence `∞`. Causality fails for `S = R` a fixed region,\nexactly as the converse `TimesArrow.causal_of_klDiv_le` predicts.",
    "axioms": ["propext", "Classical.choice", "Quot.sound"]},
   {"status": "proved",
    "statement":

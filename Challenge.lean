@@ -6,6 +6,7 @@ import TimesArrow.WalkerProfile
 import TimesArrow.Markov.Fluctuation
 import TimesArrow.FHP
 import TimesArrow.Divergence
+import TimesArrow.CausalEntropy
 
 namespace TimesArrow.FHP
 
@@ -236,3 +237,56 @@ theorem lattice_sigma_decomposition (n : ℕ) [NeZero n] (h3 : 3 ≤ n)
   sorry
 
 end TimesArrow.Divergence
+
+namespace TimesArrow.LatticeGas
+
+open MeasureTheory InformationTheory
+open scoped ENNReal
+
+theorem causal (n : ℕ) [NeZero n] (t : ℕ) (S R : Set (Site n))
+    (h : (⋃ p ∈ R, diamond n p t) ⊆ S) :
+    Causal ((stepState n)^[t]) S R := by
+  sorry
+
+theorem causal_second_law (n : ℕ) [NeZero n] (t : ℕ) (S R : Set (Site n))
+    (h : (⋃ p ∈ R, diamond n p t) ⊆ S)
+    (μ ν : Measure (State n)) [IsFiniteMeasure μ] [IsFiniteMeasure ν] :
+    klDiv ((μ.map ((stepState n)^[t])).map (restrict R))
+        ((ν.map ((stepState n)^[t])).map (restrict R))
+      ≤ klDiv (μ.map (restrict S)) (ν.map (restrict S)) := by
+  sorry
+
+theorem causal_second_law_reverse (n : ℕ) [NeZero n] (t : ℕ) (S R : Set (Site n))
+    (h : (⋃ p ∈ R, diamond n p t) ⊆ S)
+    (μ ν : Measure (State n)) [IsFiniteMeasure μ] [IsFiniteMeasure ν] :
+    (∀ s, revStepState n t ((stepState n)^[t] s) = s) ∧
+    (∀ s, (stepState n)^[t] (revStepState n t s) = s) ∧
+    klDiv ((μ.map (revStepState n t)).map (restrict R))
+        ((ν.map (revStepState n t)).map (restrict R))
+      ≤ klDiv (μ.map (restrict S)) (ν.map (restrict S)) := by
+  sorry
+
+theorem wall_violation :
+    klDiv ((Measure.dirac (east4 : State 4)).map (restrict ({(1, 0)} : Set (Site 4))))
+        ((Measure.dirac (0 : State 4)).map (restrict ({(1, 0)} : Set (Site 4)))) = 0 ∧
+    klDiv (((Measure.dirac (east4 : State 4)).map (stepState 4)).map
+          (restrict ({(1, 0)} : Set (Site 4))))
+        (((Measure.dirac (0 : State 4)).map (stepState 4)).map
+          (restrict ({(1, 0)} : Set (Site 4)))) = ∞ := by
+  sorry
+
+end TimesArrow.LatticeGas
+
+namespace TimesArrow.FHP
+
+open MeasureTheory InformationTheory
+
+theorem causal_second_law (n : ℕ) [NeZero n] (b : ℕ → Site n → Bool) (t : ℕ)
+    (S R : Set (Site n)) (h : (⋃ p ∈ R, {q | hexBall n t p q}) ⊆ S)
+    (μ ν : Measure (State n)) [IsFiniteMeasure μ] [IsFiniteMeasure ν] :
+    klDiv ((μ.map (evolve n b t)).map (restrict R))
+        ((ν.map (evolve n b t)).map (restrict R))
+      ≤ klDiv (μ.map (restrict S)) (ν.map (restrict S)) := by
+  sorry
+
+end TimesArrow.FHP
