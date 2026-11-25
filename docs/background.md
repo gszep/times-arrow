@@ -385,7 +385,7 @@ cone", "Unruh", "Hawking"; "information current stability causality", "relativis
 Boltzmann relative entropy current", "entropy spacelike hypersurface", "lattice Boltzmann H
 theorem", "telegraph entropy Lorentz", "stochastic network relative entropy causal cuts".
 
-- (1) nested-region monotonicity: partly established — ingredients published, composite not found for classical CA, PCA or lattice gases.
+- (1) nested-region monotonicity: partly established — ingredients published, and a local information current with a continuity equation exists for reversible cellular automata (abstract only); the two-state region inequality was not found for classical CA, PCA or lattice gases.
 - (2) converse: partly established — continuum analogues only.
 - (3) reversible dynamics give no one-way arrow: established.
 - (4) fixed-region loss/inflow split: partly established — balance standard, exact split derived here.
@@ -524,10 +524,26 @@ theorem", "telegraph entropy Lorentz", "stochastic network relative entropy caus
   and specific relative entropy... The transported local Hamiltonians admit surface energies
   that vanish per unit volume in the van Hove limit." **literature**: quantum-lattice
   (1)+(4) — bulk conservation up to Lieb–Robinson surface terms.
-- **Conjecture (absence, checked 2026-11-25):** nobody appears to have stated (1), or the
-  converse (2), for classical CA, PCA or lattice gases ("light cone"+"relative entropy"
-  gives 7 hits, all quantum/field theory). Statement (1) is a composite of DPI and locality
-  **(derived here)**.
+- Helvik, Lindgren & Nordahl, "Continuity of Information Transport in Surjective Cellular
+  Automata", Commun. Math. Phys. **272**, 53 (2007), DOI 10.1007/s00220-007-0192-8.
+  Publisher abstract, read 2026-11-26 (full text not accessible): "We introduce a local
+  version of the Shannon entropy... Using an appropriately defined information current,
+  this quantity is shown to obey a local conservation law in the case of one-dimensional
+  reversible cellular automata with arbitrary initial measures... Bounds on the information
+  flow are also shown." **literature (abstract only)**: the closest lattice prior art found
+  for an information current — a local information with a continuity equation and flow
+  bounds in reversible cellular automata. Whether it contains a restricted-region
+  inequality between two states, or a converse, is unverified. Its reference list names
+  Toffoli, "Information transport obeying the continuity equation", IBM J. Res. Dev.
+  **32**, 29 (1988), DOI 10.1147/rd.321.0029, and Lindgren, "Microscopic and macroscopic
+  entropy", PRA **38**, 4794 (1988), DOI 10.1103/physreva.38.4794 (existence checked
+  against Crossref; not read).
+- **Conjecture (absence, checked 2026-11-25 and 26):** the restricted-region inequality (1)
+  for the relative entropy of two arbitrary states, with its converse (2), was not found
+  for classical CA, PCA or lattice gases ("light cone"+"relative entropy" gives 7 hits, all
+  quantum/field theory). The first search used "relative entropy" and missed the
+  "information transport" line above, which a reviewer found; that line has not been read
+  in full. Statement (1) is a composite of DPI and locality **(derived here)**.
 
 **Order theory and time functions.**
 
