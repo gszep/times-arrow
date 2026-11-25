@@ -532,8 +532,10 @@ theorem", "telegraph entropy Lorentz", "stochastic network relative entropy caus
   reversible cellular automata with arbitrary initial measures... Bounds on the information
   flow are also shown." **literature (abstract only)**: the closest lattice prior art found
   for an information current — a local information with a continuity equation and flow
-  bounds in reversible cellular automata. Whether it contains a restricted-region
-  inequality between two states, or a converse, is unverified. Its reference list names
+  bounds in reversible cellular automata. Against a uniform stationary measure, relative
+  entropy is an entropy deficit, `|R| ln q − H(μ_R)`, so for that case their local
+  information may be the same quantity (**conjecture**). Whether the paper contains a
+  restricted-region inequality between two states, or a converse, is unverified. Its reference list names
   Toffoli, "Information transport obeying the continuity equation", IBM J. Res. Dev.
   **32**, 29 (1988), DOI 10.1147/rd.321.0029, and Lindgren, "Microscopic and macroscopic
   entropy", PRA **38**, 4794 (1988), DOI 10.1103/physreva.38.4794 (existence checked
@@ -623,9 +625,11 @@ theorem", "telegraph entropy Lorentz", "stochastic network relative entropy caus
 - The continuum shape of (4) is the entropy balance `∂_t S_region = ∫σ − ∮ j_s·n` of local
   thermodynamics (de Groot–Mazur; Eckart, above). **literature** for the balance; **derived
   here** for the conditional-relative-entropy chain-rule version for two evolving states.
-- **Conjecture (absence):** no prior work was found stating, for relative entropy between
-  two evolving states on a fixed region, a decomposition into a non-positive bulk loss plus
-  a non-negative collar inflow. The split is the chain rule, and the collar inflow has no
+- **Conjecture (absence):** apart from the continuity equation for a local Shannon
+  information in reversible cellular automata (Helvik, Lindgren & Nordahl, above; abstract
+  only), a balance of the same shape, no prior work was found stating, for relative entropy
+  between two evolving states on a fixed region, a decomposition into a non-positive bulk
+  loss plus a non-negative collar inflow. The split is the chain rule, and the collar inflow has no
   state-independent perimeter bound (**derived here**: at most `|collar|·log|Cell|` for a
   finite alphabet and a uniform product reference, while one boundary bit with `P(1)=1`,
   `Q(1)=ε` already contributes `log(1/ε)`).
