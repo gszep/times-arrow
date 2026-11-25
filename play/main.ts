@@ -12,7 +12,7 @@ const clamp = (x: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, x
 
 // Guards: the field's support |x − c| ≤ R + t stays inside the ring
 // (R + T < N/2), frame slices are only evaluated at valid levels, and the
-// reversal probability must lie in (0, 1). Out-of-range values are clamped.
+// reversal probability uses the numerically checked range [1/256, 1/2].
 const num = (key: string, dflt: number) => {
   const x = param(key) === null ? dflt : Number(param(key));
   return Number.isFinite(x) ? x : dflt;
@@ -21,7 +21,7 @@ let a = 1 / 64;
 {
   const [p, q = "1"] = (param("a") ?? "").split("/");
   const value = Number(p) / Number(q);
-  if (Math.fround(value) > 0 && Math.fround(value) < 1) a = value;
+  if (value >= 1 / 256 && value <= 1 / 2) a = value;
 }
 let view: "frame" | "wall" = param("view") === "wall" ? "wall" : "frame";
 let u = clamp(num("u", 0.5), -0.75, 0.75);
@@ -35,6 +35,12 @@ const CAPTIONS = {
   wall: "A partition is a wall that things can cross. Slower than light, the curve can rise: information leaks in and the region's clock runs backwards. At light speed the wall is a horizon and nothing can.",
 };
 const RED = "#ff6b66", GOLD = "#f4cf72", SEALED = "#7fd4a8";
+const compare = (f: FrameCurve | WallCurve, g: FrameCurve | WallCurve) => ({
+  rises: f.rises, gpuRises: g.rises,
+  maxCurveDiff: Math.max(...f.D.map((d, i) => Math.abs(d - g.D[i]))),
+});
+const matches = (c: ReturnType<typeof compare>) => c.rises === c.gpuRises && c.maxCurveDiff < 1e-3;
+let invalid = false;
 
 function fail(error: unknown) {
   (window as any).probeError ??= String(error);
@@ -117,17 +123,20 @@ async function compute() {
   const frame = Object.fromEntries(FRAME_US.map(x => {
     const f = frameCurve(cpu.phiF, x);
     const g = frameCurve(phiF, x);
-    return [String(x), { rises: f.rises, D100: f.D[100 - f.s0], gpuRises: g.rises,
-      maxCurveDiff: Math.max(...f.D.map((d, i) => Math.abs(d - g.D[i]))) }];
+    frameCache.set(x, f);
+    return [String(x), { ...compare(f, g), D100: f.D[100 - f.s0] }];
   }));
   const wall = Object.fromEntries(WALL_VS.map(x => {
     const w = wallCurve(cpu.phiF, x);
     const g = wallCurve(phiF, x);
-    return [String(x), { rises: w.rises, largest: w.largest, D0: w.D[0], gpuRises: g.rises,
-      maxCurveDiff: Math.max(...w.D.map((d, i) => Math.abs(d - g.D[i]))) }];
+    wallCache.set(x, w);
+    return [String(x), { ...compare(w, g), largest: w.largest, D0: w.D[0] }];
   }));
+  invalid = nan !== 0 || !(maxDiff < 1e-5) ||
+    [...Object.values(frame), ...Object.values(wall)].some(c => !matches(c));
   return {
-    phiF,
+    phiF: cpu.phiF,
+    gpuPhi: phiF,
     heat: heatMap(phiF),
     probe: {
       adapter,
@@ -151,11 +160,23 @@ let data: Awaited<ReturnType<typeof compute>> | null = null;
 const frameCache = new Map<number, FrameCurve>();
 const wallCache = new Map<number, WallCurve>();
 const frameOf = (speed: number) => {
-  if (!frameCache.has(speed)) frameCache.set(speed, frameCurve(data!.phiF, speed));
+  if (!frameCache.has(speed)) {
+    const f = frameCurve(data!.phiF, speed), g = frameCurve(data!.gpuPhi, speed);
+    const c = { ...compare(f, g), D100: f.D[100 - f.s0] };
+    data!.probe.frame[speed] = c;
+    invalid ||= !matches(c);
+    frameCache.set(speed, f);
+  }
   return frameCache.get(speed)!;
 };
 const wallOf = (speed: number) => {
-  if (!wallCache.has(speed)) wallCache.set(speed, wallCurve(data!.phiF, speed));
+  if (!wallCache.has(speed)) {
+    const f = wallCurve(data!.phiF, speed), g = wallCurve(data!.gpuPhi, speed);
+    const c = { ...compare(f, g), largest: f.largest, D0: f.D[0] };
+    data!.probe.wall[speed] = c;
+    invalid ||= !matches(c);
+    wallCache.set(speed, f);
+  }
   return wallCache.get(speed)!;
 };
 
@@ -168,6 +189,18 @@ const wallTime = () => Math.floor(fraction * Math.min(399, v ? 198 / v : 399));
 
 function draw() {
   if (!data) return;
+  // Validate newly selected speeds before either diagram or plot uses them.
+  if (view === "frame") frameOf(u); else wallOf(v);
+  if (invalid) {
+    fail("Numerical validation failed. Curves hidden; GPU and f64 disagree.");
+    status.textContent = "numerical check failed";
+    const { ctx, w, h } = canvas(plot);
+    ctx.clearRect(0, 0, w, h);
+    ctx.fillStyle = RED;
+    ctx.font = "14px system-ui";
+    ctx.fillText("Curves hidden: numerical check failed.", 8, h / 2);
+    return;
+  }
   drawDiagram();
   drawCurve();
 }
@@ -304,7 +337,7 @@ function sync() {
   slider.max = frame ? "0.75" : "1.5";
   slider.value = String(frame ? u : v);
   svalue.textContent = `${(frame ? u : v).toFixed(2)} c`;
-  status.textContent = frame ? "" : v < 1 ? "slower than light: leaks" : v === 1 ? "light speed: a horizon, sealed" : "faster than light: sealed";
+  status.textContent = frame ? "" : v < 1 ? (data && wallOf(v).rises === 0 ? "slower than light: no rise in this run" : "slower than light: leaks") : v === 1 ? "light speed: a horizon, sealed" : "faster than light: sealed";
   status.style.color = v < 1 ? RED : SEALED;
   tick.hidden = frame;
   draw();
@@ -358,6 +391,8 @@ async function main() {
     innerHeight,
     width: innerWidth,
     parameters: { view, u, v, a },
+    validated: !invalid,
+    curvePrecision: "f64",
   });
   (window as any).probe = probe;
   (window as any).probe.adapter = data.probe.adapter;

@@ -1,10 +1,24 @@
 import assert from "node:assert/strict";
+import { setTimeout as sleep } from "node:timers/promises";
 import { headless } from "../scripts/headless.ts";
 
 const close = (actual: number, expected: number, label: string) =>
   assert.ok(Number.isFinite(actual) && Math.abs(actual - expected) <= 1e-9 * Math.abs(expected), `${label}: ${actual} != ${expected}`);
+const agreement = (p: any) => {
+  assert.equal(p.validated, true);
+  assert.equal(p.curvePrecision, "f64");
+  assert.equal(p.nan, 0);
+  assert.ok(p.maxDiff < 1e-5);
+  for (const c of [...Object.values(p.frame), ...Object.values(p.wall)] as any[]) {
+    assert.equal(c.gpuRises, c.rises);
+    assert.ok(c.maxCurveDiff < 1e-3);
+  }
+  for (const c of Object.values(p.frame) as any[]) assert.equal(c.rises, 0);
+  for (const [v, c] of Object.entries(p.wall) as [string, any][]) if (+v >= 1) assert.equal(c.rises, 0);
+};
 await headless("play/", async (ev, cdp) => {
   const p = await ev("probe()");
+  agreement(p);
   assert.equal(p.adapter.fallback, false);
   assert.equal(p.null.maxDeviation, 0);
   assert.equal(p.null.maxInformation, 0);
@@ -69,18 +83,69 @@ await headless("play/", async (ev, cdp) => {
   assert.equal(await ev("document.getElementById('play').ariaLabel"), "Play slice");
   assert.equal(await ev("window.probeError"), undefined);
   console.log("PASS f64 references, GPU field and curves, dissipation, zero right boundary, URL controls", JSON.stringify(p));
+  // Corrupt only the second (prepared-state) readback. Neither control changes
+  // production code: one exceeds the field tolerance; one changes a rise count
+  // while staying below both numeric difference tolerances.
+  await cdp("Page.enable");
+  for (const mode of ["field", "rise"]) {
+    const index = mode === "field" ? 2 * 1004 : (300 * 2048 + 1474) * 2;
+    const { identifier } = await cdp("Page.addScriptToEvaluateOnNewDocument", { source: `
+      window.control = '${mode}';
+      const original = GPUBuffer.prototype.getMappedRange;
+      let calls = 0;
+      GPUBuffer.prototype.getMappedRange = function(...args) {
+        const result = Reflect.apply(original, this, args);
+        if (++calls === 2) new Float32Array(result)[${index}] += ${mode === "field" ? .01 : 1e-6};
+        return result;
+      };
+    ` });
+    await cdp("Page.reload");
+    let failed: any;
+    for (let attempt = 0; attempt < 300; attempt++) {
+      await sleep(100);
+      try { failed = await ev(`window.control === '${mode}' && window.probeError && window.probe && probe()`); } catch {}
+      if (failed) break;
+    }
+    assert.equal(failed?.validated, false, `${mode} control must fail visibly`);
+    if (mode === "rise") {
+      assert.ok(failed.maxDiff < 1e-5);
+      assert.ok(failed.wall[1.5].maxCurveDiff < 1e-3);
+      assert.notEqual(failed.wall[1.5].gpuRises, failed.wall[1.5].rises);
+    }
+    assert.match(await ev("document.getElementById('caption').textContent"), /Curves hidden/);
+    assert.equal(await ev("document.getElementById('status').textContent"), "numerical check failed");
+    assert.equal(await ev("[...document.querySelectorAll('button,input')].every(e=>e.disabled)"), true);
+    await cdp("Page.removeScriptToEvaluateOnNewDocument", { identifier });
+    console.log(`PASS ${mode} corruption: error replaces plot and status`);
+  }
 });
 
 for (const [query, expected] of [
   ["view=bad&u=99&v=-3&a=1", { view: "frame", u: .75, v: 0, a: 1 / 64 }],
   ["view=wall&u=-99&v=99&a=1/8", { view: "wall", u: -.75, v: 1.5, a: 1 / 8 }],
+  ["a=1e-8", { view: "frame", u: .5, v: .5, a: 1 / 64 }],
+  ["a=1/256", { view: "frame", u: .5, v: .5, a: 1 / 256 }],
+  ["a=1/2", { view: "frame", u: .5, v: .5, a: 1 / 2 }],
 ] as const) await headless(`play/?${query}`, async ev => {
   const p = await ev("probe()");
+  agreement(p);
   assert.deepEqual(p.parameters, expected);
   assert.equal(p.nan, 0);
   assert.ok(p.maxDiff < 1e-5);
   assert.ok(p.minSigma >= -1e-12);
   assert.equal(p.wallEdge, 0);
   assert.equal(await ev("window.probeError"), undefined);
-  console.log(`PASS URL guards and GPU: ${query}`);
+  if (expected.a === 1 / 256 || expected.a === 1 / 2) {
+    // Every slider setting, not just the pinned probe speeds, must pass the gate.
+    for (const view of ["frame", "wall"]) {
+      await ev(`document.getElementById('v${view}').click()`);
+      for (let i = 0; i <= 30; i++) {
+        const speed = (i * .05 - (view === "frame" ? .75 : 0)).toFixed(2);
+        await ev(`document.getElementById('speed').value='${speed}'; document.getElementById('speed').dispatchEvent(new Event('input'))`);
+        agreement(await ev("probe()"));
+      }
+    }
+    assert.equal(await ev("window.probeError"), undefined);
+  }
+  console.log(`PASS URL guards and GPU: ${query}`, JSON.stringify(p));
 });

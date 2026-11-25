@@ -4,16 +4,16 @@ One mobile WebGPU page, no registered claims. Change the observer to tilt
 space-time cuts: information falls on every complete cut. Change the partition
 to move a transparent left wall: information can enter below light speed.
 The right end also retreats at light speed, so neither end admits inflow when
-the left wall retreats at least that fast. Reflecting walls and special empty
-exteriors are exceptions to any claim that a slower wall must leak.
+the left wall retreats at least that fast. The wall statement is about all states
+and walls that things can cross; a reflecting wall, for example, never leaks.
 
 Independent Poisson particles on a 2048-site ring move one site per step,
 reversing independently with probability `a`. Link intensities have background
 1; initial deviations in both directions are two `4 cos²(π(x−xc)/24)` bumps,
 half-width 12, centred at `c−20` and `c+40`. Incoming deviations mix with
 weights `1−a,a`. Information per link is `(1+d)ln(1+d)−d`.
-The GPU evolves 768 steps in f32; the heat map and curves use that readback,
-with f64 information sums. The probe compares it with independent f64 evolution.
+The GPU evolves 768 steps in f32 for the heat map; curves and rise colours use
+independent f64 evolution. Failed GPU comparisons hide the plot with an error.
 No individual trajectories are sampled; these are ensemble observables.
 
 The heat map shows `|x−c|≤200`, `0≤t≤400`, on a logarithmic colour scale.
@@ -26,14 +26,14 @@ Lean proves the vertex and shrinking-interval inequalities for the intensity
 recursion in `TimesArrow/Telegraph.lean`, not the Poisson or tilted-cut identification.
 
 URL: `view=frame|wall`, `u` (default .5, clamped to ±.75), `v` (default .5,
-clamped to 0…1.5), `a` (default `1/64`, fractions accepted; invalid values,
-including values rounded to 0 or 1 in f32, fall back to the default).
+clamped to 0…1.5), `a` (default `1/64`, fractions accepted; values outside
+the checked range `1/256 ≤ a ≤ 1/2` fall back to the default).
 Play moves a visible slice or wall marker and the corresponding curve dot.
 “What is this?” opens the assumptions, proof boundary and literature.
 
 Run `node play/check.ts` or `npm run check:gpu`. The hardware-only CDP check
 checks the zero-preparation null first, f64 references to relative 1e-9,
-f32 field error below 1e-5, curve
-error below 1e-3, all seven observer rise counts, nine wall rise counts,
+f32 field error below 1e-5, curve error below 1e-3 and agreement of rise counts,
+including both probability endpoints and the rejected `a=1e-8` URL,
 dissipation balance and the exactly zero right boundary. Both views fit
 390×844 and 360×740 without scrolling. `window.probe()` exposes these numbers.
