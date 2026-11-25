@@ -413,6 +413,163 @@ Cosmological recurrence:
   EH converges to the discretised boost, mass-blind as in the continuum, is
   007's pre-registerable question (issue #11).
 
+## Causal second law: horizons, modular flow and quantum lattices (#14)
+
+Search of arXiv and publisher full text on 2026-11-25; quotations below identify
+the supporting passage. **Literature** means a result in the cited source;
+**derived here** means an elementary deduction, not a Lean theorem; **conjecture**
+includes an unverified literature absence. Causality and data processing alone
+do not choose a future direction or supply a physical clock.
+
+**A. Horizons and entropy theorems — literature, with corrections.**
+
+- Wall, *Phys. Rev. D* **85**, 104049 (2012), arXiv:1105.3445v6, §§2.5–2.8,
+  proves a semiclassical generalized second law for causal horizons, minimally
+  coupled fields and general relativity, subject to horizon-algebra axioms
+  (determinism, ultralocality, local Lorentz invariance, stability) and the
+  stated renormalization assumptions. Abstract: “comparing any slice of the
+  horizon to any earlier slice”; §2.6: the KMS vacuum is restricted to the
+  horizon **above** each cut. A later cut removes an initial portion of each
+  horizon generator, giving nested future-horizon algebras; §2.7 includes
+  future null infinity for information escaping the horizon. “Relative entropy
+  decreases under restriction to the future horizon above a later cut” is fair;
+  restriction to the cut itself is not. Relating that decrease to increasing
+  area/4G plus exterior entropy uses the semiclassical gravitational equation,
+  horizon thermality and renormalization, not data processing alone. Section
+  2.5 explicitly flags the infinite-system free-energy identity with
+  renormalized quantities as an assumption.
+- Casini, *Class. Quantum Grav.* **25**, 205021 (2008), arXiv:0804.2182,
+  §4, derives a well-defined **vacuum-subtracted, modular-energy** version of
+  the Bekenstein bound from positivity of relative entropy; abstract: “the
+  positivity of the relative entropy ... constitutes a well defined statement
+  of the bound”. This is not an unconditional proof of every naive entropy
+  bound: the modular energy need not be a simple total energy for every region.
+- Casini & Huerta, *J. Phys. A* **40**, 7031 (2007),
+  arXiv:cond-mat/0610375, abstract: “Lorentz symmetry and the strong subadditive
+  property” give an entropic c-theorem in **1+1** dimensions. Their *Phys.
+  Rev. D* **85**, 125016 (2012), arXiv:1202.5650, abstract, proves circle
+  entropy concavity in 2+1 using SSA and Lorentz covariance, but states that
+  irreversibility follows **provided** there is an intrinsic fixed-point
+  definition of the constant term. Calling that paper alone an unconditional
+  F-theorem proof omits its qualification.
+- Casini, Testé & Torroba, *J. Phys. A* **50**, 364001 (2017),
+  arXiv:1703.10656, abstract and §7: null-plane vacuum modular Hamiltonians
+  obey a “Markov property” implying SSA saturation; for a CFT the conformally
+  related null cone is included. This is a statement about those regions and
+  the vacuum, not arbitrary spacelike regions or all states.
+
+**B. Modular free energy and clocks — literature.** Casini 2008, §§3–5,
+arXiv:0804.2182, eqs. (18)–(22), writes `D(ρ‖ω)=β(F(ρ)−F(ω))` for a
+thermal reference and discusses the Hartle–Hawking exterior. Equivalently, in
+a finite regulator with `Kω=−log ω` and `Δ` relative to ω,
+`D(ρ‖ω)=Δ⟨Kω⟩−ΔS`; in continuum QFT the separately divergent terms require a
+valid subtraction/algebraic definition. Wall §2.6 makes precisely this
+free-energy comparison for horizon cuts, then uses gravity to obtain the GSL.
+Connes & Rovelli, arXiv:gr-qc/9406019, abstract, **propose**, rather than
+prove universally, “the physical time-flow ... is determined by the
+thermodynamical state”; Rovelli & Smerlak, arXiv:1005.2985, abstract, identify
+equilibrium temperature with the rate of thermal time relative to proper time
+in stationary spacetimes. Martinetti & Rovelli, arXiv:gr-qc/0212074, abstract,
+study a finite-lifetime observer's diamond in a four-dimensional CFT; the
+vacuum modular flow is geometric and their thermal-time interpretation gives
+an observer-dependent diamond temperature, even at zero acceleration. Wong,
+Klich, Pando Zayas & Vaman,
+arXiv:1305.3291, abstract, derive a spatially varying entanglement temperature
+for spherical CFT regions. These are close prior art for the rate interpretation;
+the modular flow need not be geometric for a general state or region.
+
+**C. Strict causal quantum models — literature and conjecture.** D'Ariano &
+Perinotti, arXiv:1608.02004, abstract, derive free Weyl/Dirac/Maxwell dynamics
+in an appropriate low-wavevector limit of local automata. D'Ariano, Mosco,
+Perinotti & Tosini, arXiv:1406.1021, abstract: their 1D Dirac automaton is
+linear in fields and “isomorphic to a quantum walk”. Arrighi, Facchini &
+Forets, arXiv:1404.4499, abstract: the Dirac walk is covariant only to first
+order; their distinct clock walk/automaton is exactly discretely covariant.
+Do not conflate a one-particle walk with a specified filled many-body vacuum.
+
+- Eisler & Peschel, arXiv:1805.00078, introduction, state that the lattice
+  interval EH “does not have exactly the conformal form”; Eisler, Tonni &
+  Peschel, arXiv:1902.04474, abstract, recover the CFT continuum limit only
+  including farther-neighbour hopping. Giudici, Mendes-Santos, Calabrese &
+  Dalmonte, arXiv:1807.01322, §II and §III.C, compare lattice BW predictions
+  to 1D/2D models and extract the sound velocity from entanglement spectra:
+  their velocity comes from the **low-momentum relativistic dispersion**, and
+  is “generically different” from momentum-dependent group velocity. It is
+  not identified with a strict cone or Lieb–Robinson bound. Their continuous-
+  time Hamiltonians are not, by themselves, strict discrete-time QCAs.
+  Dalmonte, Vermersch & Zoller, *Nat. Phys.* **14**, 827 (2018),
+  arXiv:1707.04455, abstract, propose spectroscopy of suitably constructed BW
+  entanglement Hamiltonians; this is not a general exact lattice theorem.
+- **Literature:** Shi et al., *Nat. Commun.* **14**, 3263 (2023), DOI
+  10.1038/s41467-023-39064-6, abstract and Fig. 3, report stimulated analog
+  Hawking radiation from quantum-walk-like dynamics in a superconducting
+  fermionic lattice, with a fitted effective temperature; the continuous-time,
+  inhomogeneous analog horizon is not a strict QCA vacuum Unruh measurement.
+  An entangled-photon quantum walk near a synthetic Rindler horizon is reported
+  in *Phys. Rev. Research* **6**, 013233 (2024), DOI
+  10.1103/PhysRevResearch.6.013233, abstract; it reports optical escape, not a
+  vacuum thermal spectrum.
+- **Conjecture (bounded absence):** searches combining “quantum walk” / “quantum
+  cellular automaton” with “entanglement Hamiltonian”, “Bisognano-Wichmann”,
+  “relative entropy”, “light cone”, “Unruh” and “Hawking” found no paper
+  calculating both the vacuum half-line BW ramp and exact causal-cone relative
+  entropy monotonicity for the same strictly causal discrete-time model. No
+  such QCA-specific ramp slope or Unruh temperature was verified. This is not
+  evidence of absence, and does not negate the analog results above.
+
+**D. Fermionic numerics — literature and derived here.** Peschel, *J. Phys. A*
+**36**, L205 (2003), arXiv:cond-mat/0212631, eqs. (9)–(12), gives
+`ζ=(1+e^ε)⁻¹` and `Hᵀ=log[(1−C)/C]` using `Cij=⟨c†i cj⟩`. With instead
+`Cij=⟨c†j ci⟩`, for number-conserving Gaussian states on the same finite
+subsystem and `ρ=Z⁻¹ exp(−Σij c†i hij cj)`, the equivalent formula is
+`h=log[(I−C)C⁻¹]`. **Derived here**, inserting this into Casini's definition:
+
+`D(ρC‖ρD)=tr[C(log C−log D)+(I−C)(log(I−C)−log(I−D))]`.
+
+Matrix logarithms are applied separately: C and D need not commute. This
+formula assumes gauge-invariant Gaussian states; anomalous pairing requires
+the full Nambu/Majorana covariance with its convention-dependent factor 1/2.
+The displayed inverse is for spectra strictly in `(0,1)`; for zero/one modes
+use support limits, with `D=∞` when state support is not contained in reference
+support. Rottoli, Murciano & Calabrese, *JHEP* **06** (2023) 139, eq. (4.8),
+explicitly give `h=log[(I−C)/C]` and say the computation “must be performed at
+high precision”; they use up to 300 digits. Near 0 or 1, rounding destroys
+logarithms; clipping changes the state and must not be presented as a bound.
+
+**E. Classical comparison and thermal crossover — derived here / literature.**
+For a finite classical nearest-neighbour Gibbs model with positive weights,
+split `H=H_A+H_B+H_∂`. Summing B gives
+`−log p_A=βH_A−log Σ_{s_B} exp[−β(H_B+H_∂)]+const`: the correction depends
+only on A's boundary spins, though it can be nonlocal **along** that boundary.
+Thus the original interior couplings retain uniform β; this is not a theorem
+about arbitrary classical reference measures or effective bulk descriptions.
+The thermodynamic limit requires a Gibbs specification and care with infinite
+normalizations. By contrast the Lorentz-vacuum half-space modular weight is
+linear, but not every quantum reference state has a local ramp.
+Cardy & Tonni, arXiv:1608.01283, §3.2, eq. (32), give the exact finite-
+temperature interval weight in a 1+1 CFT. **Derived here:** its half-line
+limit gives `β_eff(x)=β(1−exp(−2πx/β))` in units `v=1` for `−log ρ`:
+linear `2πx` near the cut and approaching the uniform physical β far away.
+This is a CFT thermal-state result, not an arbitrary excited-state theorem.
+Wen, Ryu & Ludwig, arXiv:1807.04440, abstract, show approach to the thermal
+entanglement Hamiltonian after a special-class 1+1 CFT quench.
+
+**F. Novelty — conjecture, not a priority claim.** The exact joint demonstration
+in C remains a candidate numerical contribution, not established novelty.
+The slogan “causal order from entropy monotonicity, conformal factor from local
+temperature” is also unverified as new. **Literature:** Jacobson,
+arXiv:gr-qc/9504004, abstract, obtains the Einstein equation from horizon
+entropy proportional to area and `δQ=T dS`; Rovelli–Smerlak above already link
+clock rate, temperature and Tolman's equilibrium relation. Dribus,
+arXiv:1311.2148, abstract, quotes Sorkin's “order plus number equals geometry”:
+the counting measure supplies volume, not automatically a temperature.
+**Derived here:** data processing yields only an order of distinguishability
+for a chosen family of channels; reconstructing causal order requires the
+separate converse for all admissible state pairs, while recovering a metric
+scale from a temperature requires a normalized physical clock and additional
+geometric/equilibrium assumptions. No such reconstruction follows merely from
+the slogan.
+
 ## Clocks
 
 - The thermodynamic cost of timekeeping bounds clock accuracy. Erker et al.,
