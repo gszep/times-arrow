@@ -8,7 +8,9 @@ the left wall retreats at least that fast. The wall statement is about all state
 and walls that things can cross; a reflecting wall, for example, never leaks.
 
 Independent Poisson particles on a 2048-site ring move one site per step,
-reversing independently with probability `a`. Link intensities have background
+reversing independently with probability `a`: a phenomenological rate for
+scattering off a background at rest, independent of density, not conserving
+momentum, not derived from collisions. Link intensities have background
 1; initial deviations in both directions are two `4 cos²(π(x−xc)/24)` bumps,
 half-width 12, centred at `c−20` and `c+40`. Incoming deviations mix with
 weights `1−a,a`. Information per link is `(1+d)ln(1+d)−d`.
