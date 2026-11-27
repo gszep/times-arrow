@@ -430,4 +430,4 @@ def main : List String → IO Unit
       | throw (IO.userError "invalid profile arm, lattice (a power of two ≤ 16) or horizon")
     IO.println (Json.mkObj fields).compress
   | _ => throw (IO.userError
-      "usage: timesarrow contract | rand SEED STEP SITE | hpp SEED N T | hppinv SEED N T | hppecho SEED N T | hppinit MODE SEED N | walk SEED ARM N M T | walktally SEED ARM M T | walkprofilejson SEED ARM N M T")
+      "usage: timesarrow contract | rand SEED STEP SITE | hpp SEED N T | hppinv SEED N T | hppecho SEED N T | hppinit MODE SEED N | walk SEED ARM N M T | walktally SEED ARM M T | walkjson SEED ARM N M T | walkprofilejson SEED ARM N M T")
